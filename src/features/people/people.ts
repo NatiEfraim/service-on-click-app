@@ -1,4 +1,4 @@
-/** One person shape merged from `GET /users` (full), `get-approvers` (no unit) and `get-admins` (name and number only). */
+/** One person shape merged from `GET /users`, `get-approvers` (no unit) and `get-admins` (name only). */
 import type { AdminRow, ApproverRow, AppUser } from '@/lib/api/types';
 import { grantsFromApprover, grantsFromPermissionNames, type RoleGrant } from './permissions';
 

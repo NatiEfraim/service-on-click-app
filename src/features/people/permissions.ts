@@ -1,4 +1,4 @@
-/** Roles and the permissions matrix. A permission is `{role}_{booking_type_id}`; the server decides who may grant it. */
+/** Roles and the permissions matrix; a permission is `{role}_{booking_type_id}`. */
 import type { ApproverAssignment } from '@/lib/api/endpoints';
 import type { ApproverRow, Me, RolePermissionRow, UserPermissions } from '@/lib/api/types';
 import { ROLE_NAME } from '@/lib/labels';
@@ -131,9 +131,8 @@ const FLAG = /^is_(.+)$/;
 const isApproverSide = (role: string): boolean => role !== 'admin' && !NOT_A_GRANT.has(role);
 
 /**
- * Rows are the returned booking types, columns the `is_<role>` flags (plus "admin" for the super admin).
- * Server quirk: approver rows come from the caller's `admin_*` permissions, so they are empty for the super admin;
- * the grid then falls back to the admin answer's domains and the person's permission names.
+ * Rows are booking types, columns the `is_<role>` flags. Approver rows derive from the caller's `admin_*`
+ * permissions, so they are empty for the super admin; the grid then uses the admin answer and permission names.
  */
 export function buildMatrix({ approver, admin, permissionNames, caller, targetUuid }: MatrixSources): Matrix {
   const rows = new Map<number, MatrixRow>();

@@ -1,25 +1,17 @@
 import { jsPDF } from 'jspdf';
 
-/**
- * A table report as a PDF, built in the browser with jsPDF. Nothing is loaded from the network except the two Assistant font files that
- * ship with the app (`/fonts/Assistant-Regular.ttf`, `-Bold.ttf`: Hebrew + Latin subsets). A4, portrait - landscape from six columns up;
- * the header row repeats on every page; the first column sits on the right, as a Hebrew reader expects.
- *
- * Hebrew is laid out by jsPDF's own Unicode bidi engine, told that the text is logical (typed order), the paragraph is right-to-left and
- * the output should be visual, with mirrored brackets - the same options the finished example UI uses, which were checked glyph by glyph
- * against python-bidi on Hebrew mixed with digits, dates, Latin and brackets. Text with no Hebrew letter in it is placed as it is.
- */
+/** Client-side table report (jsPDF): A4, landscape from six columns, header repeated on every page. */
 
 export interface PdfReport {
   title: string;
-  /** Lines under the title (when it was made, how many rows, the filters). Wrapped to the page width. */
+  /** Wrapped to the page width. */
   subtitle: string;
-  /** Header cells, first column first (it is drawn rightmost). */
+  /** First column is drawn rightmost. */
   columns: string[];
   rows: string[][];
 }
 
-/** The two TTF files as base64 (what jsPDF's virtual file system takes). */
+/** TTF files as base64, for jsPDF's virtual file system. */
 export interface PdfFonts {
   regular: string;
   bold: string;
@@ -36,18 +28,17 @@ const GRAPE: [number, number, number] = [61, 49, 74];
 const BAND: [number, number, number] = [246, 245, 240];
 const RULE: [number, number, number] = [226, 224, 211];
 
-/** jsPDF bidi options: typed (logical) input, right-to-left paragraph, visual output, mirrored brackets. */
+/** jsPDF bidi options: logical RTL input, visual output, mirrored brackets. */
 export const BIDI = { isInputVisual: false, isOutputVisual: true, isInputRtl: true, isOutputRtl: false, isSymmetricSwapping: true } as const;
 
 const HEBREW = /[\u{0590}-\u{05ff}]/u;
-/** Direction marks (what `Intl` and copy-paste insert) and zero-width characters: invisible, and the font has no glyph for them. */
+/** Direction marks and zero-width characters; the font has no glyph for them. */
 const INVISIBLE = /[\u{200e}\u{200f}\u{61c}\u{202a}-\u{202e}\u{2066}-\u{2069}\u{200b}-\u{200d}\u{feff}]/gu;
 
 export function hasHebrew(text: string): boolean {
   return HEBREW.test(text);
 }
 
-/** The text as it is drawn: a string, without the invisible characters the font cannot show. */
 export function cleanText(value: unknown): string {
   return String(value ?? '').replace(INVISIBLE, '');
 }
@@ -74,7 +65,7 @@ async function fetchBase64(url: string): Promise<string> {
 
 let fontsPromise: Promise<PdfFonts> | null = null;
 
-/** Fetches the fonts once per page load; a failure is not remembered, so the next click tries again. */
+/** Fetches the fonts once per page load; a failure is not cached. */
 export function loadFonts(): Promise<PdfFonts> {
   if (!fontsPromise) {
     const pending = Promise.all([fetchBase64(FONT_URLS.regular), fetchBase64(FONT_URLS.bold)]).then(([regular, bold]) => ({ regular, bold }));
@@ -88,13 +79,13 @@ export function loadFonts(): Promise<PdfFonts> {
 
 type Align = 'left' | 'center' | 'right';
 
-/** Draws one line. Hebrew goes through the bidi engine; everything else is placed as it is. */
+/** Draws one line; only Hebrew text goes through the bidi engine. */
 function put(doc: jsPDF, value: string, x: number, y: number, align: Align): void {
   const text = cleanText(value);
   doc.text(text, x, y, hasHebrew(text) ? { align, ...BIDI } : { align });
 }
 
-/** The longest start of the text that fits `width` with an ellipsis after it. */
+/** Longest prefix that fits `width` with a trailing ellipsis. */
 export function fit(doc: jsPDF, value: string, width: number): string {
   const text = cleanText(value);
   if (doc.getTextWidth(text) <= width) return text;

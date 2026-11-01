@@ -1,42 +1,31 @@
 import { createZip, type ZipEntry, type ZipOptions } from './zip';
 
-/**
- * A small, dependency-free .xlsx writer: one worksheet, text / number / date cells, a right-to-left sheet view, column widths, an
- * auto-filter and a frozen, filled bold header row. An .xlsx is a ZIP of XML parts (Office Open XML); the parts written here are
- * [Content_Types].xml, _rels/.rels, xl/workbook.xml, xl/_rels/workbook.xml.rels, xl/styles.xml and xl/worksheets/sheet1.xml.
- * Text goes in as inline strings (no shared-strings part), so a cell is self-contained and the writer needs no lookup table.
- */
+/** Dependency-free single-sheet .xlsx writer; text is stored as inline strings (no shared-strings part). */
 
 export type XlsxCell = string | number | boolean | Date | null | undefined;
 
 export interface XlsxColumn {
   header: string;
-  /** Width in characters. Left out: fitted to the header and the first rows. */
+  /** Width in characters; default fits the header and first rows. */
   width?: number;
 }
 
 export interface XlsxSheet {
-  /** Tab name. Cleaned up to what Excel accepts (at most 31 characters, none of `[]:*?/\`). */
   name: string;
   columns: XlsxColumn[];
   rows: XlsxCell[][];
-  /** Open the sheet right-to-left (default: yes - the screens are Hebrew). */
+  /** Right-to-left view; default true. */
   rtl?: boolean;
 }
 
 export const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
-/** What Excel itself enforces. */
+/** Excel's own limits. */
 export const MAX_ROWS = 1_048_576;
 export const MAX_COLUMNS = 16_384;
 const MAX_CELL_TEXT = 32_767;
 
-// ---------- text
-
-/**
- * XML 1.0 allows tab, line feed, carriage return and the characters from U+0020 up - except the surrogate range (only as proper pairs)
- * and U+FFFE / U+FFFF. Anything else (other control characters, a lone surrogate) would make the whole file unreadable, so it is dropped.
- */
+/** Drops characters illegal in XML 1.0 (control chars, lone surrogates, U+FFFE / U+FFFF) that corrupt the file. */
 export function stripIllegalXmlChars(text: string): string {
   let out = '';
   for (let i = 0; i < text.length; i++) {
@@ -55,12 +44,11 @@ export function stripIllegalXmlChars(text: string): string {
   return out;
 }
 
-/** Text safe to put between tags or inside a double-quoted attribute. */
 export function escapeXml(text: string): string {
   return stripIllegalXmlChars(text).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[c] as string);
 }
 
-/** A tab name Excel accepts: no `[ ] : * ? / \`, not empty, no apostrophe at either end, at most 31 characters. */
+/** Excel tab name: max 31 characters, none of `[ ] : * ? / \`, no edge apostrophes. */
 export function safeSheetName(name: string, fallback = 'Sheet1'): string {
   let clean = stripIllegalXmlChars(name)
     .replace(/[[\]:*?/\\]/g, ' ')
@@ -76,7 +64,6 @@ export function safeSheetName(name: string, fallback = 'Sheet1'): string {
   return clean || fallback;
 }
 
-/** 0 -> A, 25 -> Z, 26 -> AA ... 16383 -> XFD. */
 export function columnName(index: number): string {
   let n = index + 1;
   let name = '';
@@ -88,16 +75,11 @@ export function columnName(index: number): string {
   return name;
 }
 
-/**
- * The date as Excel stores it: days since 1899-12-30, the fraction being the time of day. Excel has no time zones, so the local
- * wall-clock reading is used - the cell shows the same day and time the person sees on screen.
- */
+/** Days since 1899-12-30; Excel has no time zones, so the local wall-clock reading is used. */
 export function excelSerial(date: Date): number {
   const wall = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds());
   return wall / 86_400_000 + 25_569;
 }
-
-// ---------- cells
 
 const STYLE_HEADER = 1;
 const STYLE_DATE = 2;
@@ -122,7 +104,6 @@ function cellXml(ref: string, value: XlsxCell, style = 0): string {
   return `<c r="${ref}"${s} t="inlineStr"><is><t${needsPreserve(text) ? ' xml:space="preserve"' : ''}>${escapeXml(text)}</t></is></c>`;
 }
 
-/** The number of characters a cell shows (for fitting column widths). */
 function shownLength(value: XlsxCell): number {
   if (value === null || value === undefined) return 0;
   if (value instanceof Date) return 10;
@@ -131,14 +112,12 @@ function shownLength(value: XlsxCell): number {
   return Math.max(...value.split('\n').map((line) => line.length), 0);
 }
 
-/** Header and the first rows decide the width: enough for the longest text, never wider than a screenful. */
+/** Width from the header and a sample of rows, clamped to 10..50. */
 export function fitWidth(header: string, values: readonly XlsxCell[], sample = 300): number {
   let longest = header.length + 3; // room for the filter button
   for (let i = 0; i < Math.min(values.length, sample); i++) longest = Math.max(longest, shownLength(values[i]));
   return Math.min(50, Math.max(10, Math.round(longest * 1.15 + 2)));
 }
-
-// ---------- parts
 
 const XML_HEAD = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
 const NS_MAIN = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main';
@@ -170,7 +149,6 @@ export function workbookRelsXml(): string {
   );
 }
 
-/** `'Sheet name'!$A$1:$E$10` - the quote inside a name is doubled. */
 function qualified(sheetName: string, range: string): string {
   return `'${sheetName.replace(/'/g, "''")}'!${range}`;
 }
@@ -258,7 +236,6 @@ export function worksheetXml(sheet: XlsxSheet): string {
   );
 }
 
-/** All the parts of the package, in the order they are stored. */
 export function xlsxParts(sheet: XlsxSheet): { name: string; xml: string }[] {
   const name = safeSheetName(sheet.name);
   const range = `$A$1:$${columnName(sheet.columns.length - 1)}$${sheet.rows.length + 1}`;
@@ -272,14 +249,12 @@ export function xlsxParts(sheet: XlsxSheet): { name: string; xml: string }[] {
   ];
 }
 
-/** The .xlsx file as bytes. */
 export async function buildXlsxBytes(sheet: XlsxSheet, options?: ZipOptions): Promise<Uint8Array> {
   const encoder = new TextEncoder();
   const entries: ZipEntry[] = xlsxParts(sheet).map((part) => ({ name: part.name, data: encoder.encode(part.xml) }));
   return createZip(entries, options);
 }
 
-/** The .xlsx file, ready to download. */
 export async function buildXlsx(sheet: XlsxSheet, options?: ZipOptions): Promise<Blob> {
   return new Blob([(await buildXlsxBytes(sheet, options)) as BlobPart], { type: XLSX_MIME });
 }

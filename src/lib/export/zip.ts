@@ -1,22 +1,15 @@
-/**
- * A minimal, dependency-free ZIP writer (PKZIP 2.0 - what every .xlsx / .docx reader expects): local file headers, the data, then the
- * central directory and its end record. File names are UTF-8 (general purpose flag bit 11). No zip64: an archive is limited to 65,535
- * files and 4 GiB, which a spreadsheet never comes near.
- *
- * Deflate comes from the browser's own `CompressionStream('deflate-raw')` when there is one (Chrome 103+, Firefox 113+, Safari 16.4+,
- * Node 18+); otherwise - or when compression would not make an entry smaller - an entry is stored as it is.
- */
+/** Minimal ZIP writer (no zip64: max 65,535 files / 4 GiB); deflates via `CompressionStream` when available. */
 
 export interface ZipEntry {
-  /** Path inside the archive, forward slashes, no leading slash (e.g. `xl/workbook.xml`). */
+  /** Forward slashes, no leading slash. */
   name: string;
   data: Uint8Array;
 }
 
 export interface ZipOptions {
-  /** Modification time stamped on every entry (default: now). Pass a fixed date for reproducible output. */
+  /** Timestamp for every entry (default: now); fix it for reproducible output. */
   date?: Date;
-  /** `false` stores every entry uncompressed. Default: compress when the runtime can. */
+  /** `false` stores entries uncompressed. */
   compress?: boolean;
 }
 
@@ -39,7 +32,6 @@ function table(): Uint32Array {
   return t;
 }
 
-/** CRC-32 (IEEE 802.3, the one ZIP uses) of the bytes, as an unsigned 32 bit number. */
 export function crc32(bytes: Uint8Array): number {
   const t = table();
   let crc = 0xffffffff;
@@ -47,7 +39,7 @@ export function crc32(bytes: Uint8Array): number {
   return (crc ^ 0xffffffff) >>> 0;
 }
 
-/** MS-DOS date and time words (2 second resolution, years 1980..2107) - the only timestamp a basic ZIP carries. */
+/** MS-DOS date / time words (2 s resolution, 1980..2107). */
 export function dosDateTime(date: Date): { time: number; date: number } {
   const year = Math.min(2107, Math.max(1980, date.getFullYear()));
   return {
@@ -56,7 +48,7 @@ export function dosDateTime(date: Date): { time: number; date: number } {
   };
 }
 
-/** Raw deflate of the bytes, or `null` when this runtime has no `CompressionStream` / it does not know `deflate-raw`. */
+/** Raw deflate, or `null` when the runtime lacks `CompressionStream` / `deflate-raw`. */
 export async function deflateRaw(bytes: Uint8Array): Promise<Uint8Array | null> {
   if (typeof CompressionStream === 'undefined') return null;
   try {
@@ -78,7 +70,7 @@ interface Packed {
 
 const encoder = new TextEncoder();
 
-/** Build the archive. Entries keep the order given (put `[Content_Types].xml` first for an OOXML package). */
+/** Entries keep their order (put `[Content_Types].xml` first for OOXML). */
 export async function createZip(entries: readonly ZipEntry[], options: ZipOptions = {}): Promise<Uint8Array> {
   if (entries.length > 0xffff) throw new Error('zip: too many files');
   const stamp = dosDateTime(options.date ?? new Date());
