@@ -84,6 +84,9 @@ const ACTION_NOUN: Record<string, string> = {
   'audit.modify': 'לשנות את היסטוריית השינויים',
 };
 
+/** These say more than the generic "tried X and was blocked" (the booking, the kind of grant ...). */
+const HAS_OWN_DENIED_SENTENCE = new Set(['booking.status_change', 'booking.values.update', 'booking.create', 'user.permissions.change', 'audit.modify']);
+
 type Bag = Record<string, unknown> | unknown[] | null | undefined;
 
 /** `before` / `after` are objects - or an empty list: PHP writes an empty array as `[]`. */
@@ -242,6 +245,9 @@ export function auditSentence(row: AuditRowLike, names: AuditNames, context: Aud
   const denied = row.result === 'denied';
   const { before, after } = row;
   const target = row.entity_id != null ? String(row.entity_id) : '';
+
+  // A refused attempt: only the intent is known (nothing changed), so say what was tried - except where the sentence below knows more.
+  if (denied && ACTION_NOUN[row.action] && !HAS_OWN_DENIED_SENTENCE.has(row.action)) return `${who} ניסה/תה ${ACTION_NOUN[row.action]} ונחסם/ה`;
 
   switch (row.action) {
     case 'booking.status_change': {
