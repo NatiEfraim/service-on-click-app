@@ -1,0 +1,45 @@
+/* Service On Click - management console. Design system v3 (light only, floating top navigation), ported from the finished example UI.
+   Accent = the teal of the call card. Font: Assistant (OFL), self-hosted through @fontsource - nothing is loaded from the network. */
+[hidden] { display: none !important; }
+
+:root {
+  /* client palette: Pine 307473, Vintage Grape 3D314A, Mauve Shadow 684756, Bone DDDBCB, Emerald Depths 12664F.
+     Every text/background pair used was checked at >= 4.5:1. */
+  --bg: #F4F3EE; --surface: #fff; --surface-2: #FAF9F5; --hover: #F3F2EC; --line: #E2E0D3; --line-2: #EEEDE5;
+  --ink: #2B2433; --ink-2: #4A4254; --mute: #5F566A;
+  --accent: #307473; --accent-hover: #245A59; --accent-ink: #245A59; --accent-wash: #E3EFEE; --accent-soft: #DDDBCB; --accent-mid: #307473; --accent-teal: #12664F;
+  /* grape navigation bar, bone pill for the active screen, light bone ground, white cards */
+  --nav: #3D314A; --nav-edge: #2E2538; --nav-ink: #FFFFFF; --nav-pill: #DDDBCB; --nav-pill-ink: #3D314A;
+  --th-bg: #F6F5F0; --sel-bg: #E3EFEE; --insight-bg: #FAF9F5; --chart-a: #684756; --chart-b: #12664F;
+  --s1: #EEEDE5; --s2: #DDDBCB; --s3: #5C9C8D; --s4: #307473; --s5: #12664F;
+  --ok: #12664F; --ok-w: #E4F1EC; --warn: #8A5A12; --warn-w: #FBF4E6; --bad: #A23B32; --bad-w: #FBEFEC; --hold: #684756; --hold-w: #F3ECEF; --info: #307473; --info-w: #E3EFEE;
+  --r-sm: 8px; --r: 12px;
+  --shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 1px 3px rgba(16, 24, 40, .06);
+  --shadow-lg: 0 12px 32px -8px rgba(16, 24, 40, .18);
+  --font: "Assistant Variable", "Segoe UI", Arial, sans-serif;
+  color-scheme: light;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-padding-top: 96px; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--ink);
+  font: 400 15px/1.55 var(--font); font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+a { color: var(--accent); text-decoration: none; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+h1, h2, h3, p { overflow-wrap: anywhere; }
+
+.ico { width: 18px; height: 18px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.muted { color: var(--mute); }
+.small { font-size: 13px; }
+.num { text-align: end; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.ltr { direction: ltr; unicode-bidi: isolate; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

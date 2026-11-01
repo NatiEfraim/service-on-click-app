@@ -1,0 +1,54 @@
+import { describe, expect, it } from 'vitest';
+import { actionTone, commentError, COMMENT_MAX, domainIconSrc, statusTone } from './labels';
+
+describe('commentError (the rule the server enforces on a decision)', () => {
+  it('accepts Hebrew letters and spaces', () => {
+    expect(commentError('חסר מידע בבקשה', true)).toBeNull();
+  });
+
+  it('requires a comment when the action says so, and allows none otherwise', () => {
+    expect(commentError('   ', true)).toBe('יש לצרף הערה לביצוע פעולה זו');
+    expect(commentError('', false)).toBeNull();
+  });
+
+  it('rejects digits, punctuation and Latin letters', () => {
+    const message = 'ההערה יכולה להכיל אותיות בעברית ורווחים בלבד';
+    expect(commentError('בקשה 2', false)).toBe(message);
+    expect(commentError('לא, תודה', false)).toBe(message);
+    expect(commentError('abc', false)).toBe(message);
+  });
+
+  it(`rejects more than ${COMMENT_MAX} characters`, () => {
+    expect(commentError('א'.repeat(COMMENT_MAX), false)).toBeNull();
+    expect(commentError('א'.repeat(COMMENT_MAX + 1), false)).toContain(String(COMMENT_MAX));
+  });
+});
+
+describe('statusTone', () => {
+  it('colours the shared status numbers', () => {
+    expect(statusTone(5)).toBe('ok');
+    expect(statusTone(4)).toBe('bad');
+    expect(statusTone(7)).toBe('bad');
+    expect(statusTone(8)).toBe('hold');
+    expect(statusTone(3)).toBe('acc');
+    expect(statusTone(15)).toBe('acc');
+    expect(statusTone(1)).toBe('warn');
+  });
+});
+
+describe('actionTone', () => {
+  it('draws rejections and cancellations as destructive, supplier waits as a hold, the rest as the main action', () => {
+    expect(actionTone({ status_id: 4 })).toBe('danger');
+    expect(actionTone({ status_id: 16 })).toBe('danger');
+    expect(actionTone({ status_id: 9 })).toBe('hold');
+    expect(actionTone({ status_id: 15 })).toBe('primary');
+    expect(actionTone({ status_id: 3 })).toBe('primary');
+  });
+});
+
+describe('domainIconSrc', () => {
+  it('points at the bundled icon of a known domain and at nothing for an unknown one', () => {
+    expect(domainIconSrc(13)).toBe('/icons/domains/13.svg');
+    expect(domainIconSrc(99)).toBeNull();
+  });
+});
