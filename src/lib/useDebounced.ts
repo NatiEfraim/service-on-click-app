@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
-/** The value, but only after it has stopped changing for `delay` ms - for search boxes that query the API as the user types. */
+/** The value after it has stopped changing for `delay` ms. */
 export function useDebounced<T>(value: T, delay = 300): T {
   const [debounced, setDebounced] = useState(value);
   useEffect(() => {

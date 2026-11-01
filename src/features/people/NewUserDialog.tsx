@@ -12,10 +12,7 @@ import { useToast } from '@/providers/UiProvider';
 import { digitsOnly, fieldOfServerError, FULL_NAME_MAX, PERSONAL_NUMBER_MAX, PHONE_LENGTH, toNewUserBody, validateNewUser, type NewUserErrors, type NewUserField } from './newUser';
 import { invalidatePeople } from './queries';
 
-/**
- * Adds a person. The super admin chooses the unit; everybody else adds to their own unit (the server forces it). The department list is
- * the active departments of that unit. The server's own texts are shown for anything the form could not catch (an existing number...).
- */
+/** Adds a person. Only the super admin picks the unit; the server forces everyone else's own unit. */
 export function NewUserDialog({ onClose, onCreated }: { onClose: () => void; onCreated: (user: AppUser) => void }) {
   const client = useQueryClient();
   const toast = useToast();
@@ -50,7 +47,7 @@ export function NewUserDialog({ onClose, onCreated }: { onClose: () => void; onC
         if (field && messages[0] && !fromServer[field]) fromServer[field] = messages[0];
       }
       setErrors(fromServer);
-      // a message that belongs to no field (a refusal, the unit...) is shown once for the whole form
+      // messages tied to no field are shown once for the form
       setFormError(Object.keys(fromServer).length ? '' : apiError.message);
     },
   });

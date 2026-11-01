@@ -3,10 +3,7 @@
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback } from 'react';
 
-/**
- * The booking drawer is driven by `?booking=<serial>` so a booking can be linked to, the back button closes it, and any screen
- * can open one without knowing about the drawer. Other query parameters (filters) are left alone.
- */
+/** Drawer state lives in the URL (?booking=<serial>) so it can be linked and closed with Back. */
 export function useBookingDrawer() {
   const router = useRouter();
   const pathname = usePathname();

@@ -13,10 +13,7 @@ import { useToast } from '@/providers/UiProvider';
 
 const WARN_RATIOS = [0.5, 0.7, 0.8, 0.9];
 
-/**
- * The handling target of a booking type: the total time from a booking's opening to its closing. A booking older than that is
- * "over target" wherever it sits. An empty value removes the target. The server checks the range (1 hour .. 180 days).
- */
+/** Handling target of a booking type (opening to closing); empty removes it. Server range: 1 hour to 180 days. */
 export function TargetDialog({ bookingTypeId, current, onClose }: { bookingTypeId: number; current: SlaTarget | null; onClose: () => void }) {
   const client = useQueryClient();
   const toast = useToast();

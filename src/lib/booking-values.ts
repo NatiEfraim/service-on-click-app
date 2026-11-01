@@ -1,21 +1,13 @@
 import type { BookingValueNode, OptionNode } from './api/types';
 import { dmyToIso } from './format';
 
-/**
- * `booking_values` of a booking arrive as a tree with three kinds of nodes (see BookingValueNode):
- *  - a plain field, with `value`;
- *  - a choice, with `option_fields` (one option, an option that chains into another, or a list for a multi-select);
- *  - a group that carries child `form_fields` and may also have a choice of its own.
- * `describeValues` flattens that tree into lines a person reads: label, text, and how deep it sits.
- */
-
 export interface ValueLine {
   label: string;
-  /** What the booking holds; "—" when nothing was chosen or typed. */
+  /** "—" when nothing was chosen or typed. */
   text: string;
-  /** 0 for a top-level field, 1+ for the children of a group. */
+  /** 0 for a top-level field, 1+ for group children. */
   depth: number;
-  /** True for a group heading that has children below it. */
+  /** A group heading with children below it. */
   group: boolean;
 }
 
@@ -36,7 +28,7 @@ function optionLabel(option: OptionNode): string {
   return text;
 }
 
-/** The text of a chosen option, a chain of options, or a list of options (multi-select). */
+/** Text of a chosen option, an option chain, or a multi-select list. */
 export function optionText(options: OptionNode | OptionNode[] | undefined): string {
   if (!options) return '';
   const list = Array.isArray(options) ? options : [options];
@@ -46,14 +38,9 @@ export function optionText(options: OptionNode | OptionNode[] | undefined): stri
     .join(', ');
 }
 
-/** Field types whose value is a list of uploads: `file` (13) and `image` (23). */
 const UPLOAD_FIELD_TYPES = new Set(['file', 'image']);
 
-/**
- * A file / image field. The server lists its uploads inside `booking_values` too, each with a presigned URL that points straight
- * at the storage bucket - the app never uses those. The uploads are shown from `attachments` (served through the API with the
- * login cookie), so these nodes are left out of the details.
- */
+/** Upload nodes carry presigned bucket URLs the app never uses; uploads are shown from `attachments`. */
 export function isUploadNode(node: BookingValueNode): boolean {
   return UPLOAD_FIELD_TYPES.has(node.field_type?.name) || (Array.isArray(node.value) && node.value.length > 0 && node.value.every((item) => typeof item === 'object' && item !== null && 'type' in item && ['file', 'image'].includes(String((item as { type: unknown }).type))));
 }
@@ -61,7 +48,7 @@ export function isUploadNode(node: BookingValueNode): boolean {
 function plainText(value: unknown): string {
   if (typeof value === 'boolean') return value ? 'כן' : 'לא';
   if (Array.isArray(value)) {
-    // a list of plain values (e.g. several dates); anything that is not plain text or a number is not for display
+    // only plain text / numbers are displayed
     const items = value.filter((item): item is string | number => typeof item === 'string' || typeof item === 'number').map(String).filter(Boolean);
     return items.length ? items.join(', ') : EMPTY;
   }
@@ -69,6 +56,7 @@ function plainText(value: unknown): string {
   return EMPTY;
 }
 
+/** Flattens the `booking_values` tree into label / text / depth lines. */
 export function describeValues(nodes: BookingValueNode[] | undefined, depth = 0): ValueLine[] {
   const lines: ValueLine[] = [];
   for (const node of nodes ?? []) {
@@ -99,10 +87,7 @@ export function findValueNode(nodes: BookingValueNode[] | undefined, formFieldId
   return null;
 }
 
-/**
- * What to put into an `<input type="date|time">` for a field the approver may correct. The server prints dates `d/m/Y`
- * and times `HH:MM`; the inputs and the API want `Y-m-d` and `HH:MM`.
- */
+/** Initial `<input type="date|time">` value; the server prints `d/m/Y`, the input and API want `Y-m-d`. */
 export function editableInitialValue(nodes: BookingValueNode[] | undefined, formFieldId: number, kind: 'date' | 'time'): string {
   const node = findValueNode(nodes, formFieldId);
   const raw = node && present(node.value) ? String(node.value) : '';

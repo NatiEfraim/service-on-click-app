@@ -19,15 +19,10 @@ interface ActionDialogProps {
   booking: Target;
   action: BookingAction;
   onClose: () => void;
-  /** Called after the server accepted the decision. */
   onDone?: () => void;
 }
 
-/**
- * Confirm one decision (approve, reject, cancel, ...) with an optional / required comment.
- * - Sends the `version` the user saw; a stale one comes back 409.
- * - Sends one `Idempotency-Key` per decision: a double click or a retry after a lost answer returns the first result instead of acting twice.
- */
+/** Confirms one decision. Sends the seen `version` (stale = 409) and an `Idempotency-Key` per decision. */
 export function ActionDialog({ booking, action, onClose, onDone }: ActionDialogProps) {
   const client = useQueryClient();
   const toast = useToast();
@@ -41,7 +36,7 @@ export function ActionDialog({ booking, action, onClose, onDone }: ActionDialogP
     mutationFn: async () => {
       const text = comment.trim();
       const body = { status_id: action.status_id, version: booking.version, comment: text || null };
-      // the same decision may be re-sent with the same key (we do not know whether the first try arrived); a changed one needs a new key
+      // Reuse the key on retry (the first try may have arrived); a changed decision needs a new one.
       const fingerprint = JSON.stringify(body);
       if (attempt.current.fingerprint !== fingerprint) attempt.current = { key: newKey(), fingerprint };
       return bookingsApi.changeStatus(booking.serial_number, body, attempt.current.key);
@@ -54,11 +49,11 @@ export function ActionDialog({ booking, action, onClose, onDone }: ActionDialogP
     },
     onError: async (e) => {
       const apiError = e instanceof ApiError ? e : new ApiError(0, 'הפעולה נכשלה.');
-      // an answer (not a lost connection) ends this attempt: the next one is a new action
+      // A server answer (not a lost connection) ends this attempt.
       if (!apiError.offline && apiError.status < 500) attempt.current = { key: newKey(), fingerprint: '' };
 
       if (apiError.stale || apiError.denied) {
-        // changed under us / not ours to decide any more: show the message once, reload, and let the user look again
+        // Booking changed or no longer ours: show the message once and reload.
         toast(apiError.message, 'bad');
         await invalidateWork(client);
         onClose();

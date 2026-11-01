@@ -22,11 +22,10 @@ export const keys = {
 
   users: (query: string, page: number) => ['users', query, page] as const,
   usersAll: ['users'] as const,
-  /** One person's full record (unit, department, every permission) - found through the users search. */
   person: (uuid: string) => ['users', 'person', uuid] as const,
   approvers: (query: string) => ['approvers', query] as const,
   approversAll: ['approvers'] as const,
-  /** Everybody holding a role (approvers + vice approvers [+ admins for the super admin]), all pages, as the users screen shows them. */
+  /** Everyone holding a role, all pages, as the users screen shows them. */
   roleHolders: ['approvers', 'role-holders'] as const,
   admins: (query: string) => ['admins', query] as const,
   permissions: (kind: 'approver' | 'admin', uuid: string) => ['permissions', kind, uuid] as const,
@@ -40,10 +39,7 @@ export const keys = {
   syncFile: (id: number) => ['sync', 'file', id] as const,
 };
 
-/**
- * After a decision, a corrected value or a configuration change: everything that shows booking counts, ages or history is stale.
- * `me` and `catalog` stay (they only change through `refreshCatalog`).
- */
+/** Invalidates everything showing booking counts, ages or history; `me` and `catalog` are kept. */
 export function invalidateWork(client: QueryClient): Promise<unknown> {
   return Promise.all([
     client.invalidateQueries({ queryKey: keys.bookings }),

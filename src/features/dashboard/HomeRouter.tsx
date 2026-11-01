@@ -8,10 +8,7 @@ import { useSession } from '@/providers/SessionProvider';
 import { DomainDashboard } from './DomainDashboard';
 import { HomeScreen } from './HomeScreen';
 
-/**
- * `/` means different things to different people: admins and the super admin see the domain tiles, a domain commander sees the
- * dashboard of their own domain(s), and someone who only handles bookings goes straight to their queue.
- */
+/** Routes `/` by role: admins get domain tiles, commanders their domain, handlers their queue. */
 export function HomeRouter() {
   const { me } = useSession();
   const router = useRouter();

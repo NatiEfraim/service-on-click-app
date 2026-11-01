@@ -12,11 +12,7 @@ export interface FieldNode {
   children: FieldNode[];
 }
 
-/**
- * The form as the requester meets it: stand-alone fields in order, each followed by the fields that sit inside it (and theirs).
- * Only the stand-alone fields can be moved - the ones inside another field follow their parent.
- * A field whose parent is not in the list (it cannot happen today) is kept at the end rather than lost.
- */
+/** The form as a flat ordered tree; fields with a missing parent are kept at the end. */
 export function buildFieldTree(fields: readonly FormField[]): { roots: FieldNode[]; orphans: FormField[] } {
   const sorted = [...fields].sort(byPosition);
   const ids = new Set(sorted.map((field) => field.id));
@@ -62,10 +58,7 @@ export function moveItem<T>(items: readonly T[], from: number, to: number): T[] 
   return next;
 }
 
-/**
- * The fields as they will be once the server has saved `orderedIds` (what the optimistic update shows): the stand-alone fields get the
- * position of their place in the list, the rest stay as they are.
- */
+/** Fields as they will be after saving `orderedIds`, for the optimistic update. */
 export function applyOrder(fields: readonly FormField[], orderedIds: readonly number[]): FormField[] {
   const place = new Map(orderedIds.map((id, index) => [id, index]));
   return fields.map((field) => (place.has(field.id) ? { ...field, position: place.get(field.id) as number } : field));

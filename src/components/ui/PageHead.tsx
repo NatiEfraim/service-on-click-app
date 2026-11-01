@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-/** The title block at the top of a screen: heading, one sentence under it, and the screen's main actions on the far side. */
+/** Screen title block: heading, subtitle and main actions. */
 export function PageHead({ title, sub, actions, back }: { title: ReactNode; sub?: ReactNode; actions?: ReactNode; back?: ReactNode }) {
   return (
     <div className="page-head">

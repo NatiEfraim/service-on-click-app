@@ -12,10 +12,7 @@ import { safeNext } from '@/lib/safe-next';
 
 const PERSONAL_NUMBER = /^\d{7,8}$/;
 
-/**
- * Development login: the local API signs in by personal number alone and sets the HttpOnly session cookie itself - the app
- * never sees a token. Production signs in through ADFS (set NEXT_PUBLIC_DEV_LOGIN=false and NEXT_PUBLIC_LOGIN_URL).
- */
+/** Dev login by personal number (the API sets the HttpOnly cookie); production uses ADFS via NEXT_PUBLIC_LOGIN_URL. */
 export function LoginForm() {
   const redirected = useSearchParams().get('expired') === '1';
   const [personalNumber, setPersonalNumber] = useState('');
@@ -33,7 +30,7 @@ export function LoginForm() {
     setError('');
     try {
       await authApi.login(value);
-      // a hard navigation starts with empty caches, so nothing of a previous user can show
+      // Hard navigation clears caches so nothing of a previous user shows.
       window.location.assign(safeNext(new URLSearchParams(window.location.search).get('next'), window.location.origin));
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'ההתחברות נכשלה.');

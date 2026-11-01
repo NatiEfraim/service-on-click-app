@@ -1,15 +1,7 @@
-/**
- * Roles and permissions of a person: how they are listed, and the matrix the permissions dialog edits.
- *
- * A permission is `{role}_{booking_type_id}` (e.g. `vice_approver_8`). The server decides who may grant what and answers every call with the
- * rows the caller may change; this module only turns those answers into a grid, remembers what the user ticked, and builds the request
- * that carries exactly the booking types that changed. Nothing in here authorises anything.
- */
+/** Roles and the permissions matrix. A permission is `{role}_{booking_type_id}`; the server decides who may grant it. */
 import type { ApproverAssignment } from '@/lib/api/endpoints';
 import type { ApproverRow, Me, RolePermissionRow, UserPermissions } from '@/lib/api/types';
 import { ROLE_NAME } from '@/lib/labels';
-
-// ---------- role names
 
 /** The camp commander first, then the stages of the approval route. */
 const ROLE_ORDER = ['admin', 'approver', 'vice_approver', 'transportation_control_officer'];
@@ -26,16 +18,12 @@ const byRole = (a: string, b: string): number => roleRank(a) - roleRank(b) || a.
 
 export const roleLabel = (role: string): string => ROLE_NAME[role] ?? role;
 
-// ---------- permission names
-
 const PERMISSION_NAME = /^(.+)_(\d+)$/;
 
 export function parsePermissionName(name: string): { role: string; bookingTypeId: number } | null {
   const match = PERMISSION_NAME.exec(name.trim());
   return match ? { role: match[1], bookingTypeId: Number(match[2]) } : null;
 }
-
-// ---------- roles of a person, grouped by role
 
 export interface RoleGrant {
   role: string;
@@ -81,8 +69,6 @@ export function grantChip(grant: RoleGrant, domainName: (bookingTypeId: number) 
   };
 }
 
-// ---------- who is asking
-
 /** What decides which cells of the matrix are closed to the signed-in user. The server enforces the same rules. */
 export interface Caller {
   isSuperAdmin: boolean;
@@ -111,8 +97,6 @@ export function lockReason(caller: Caller, targetUuid: string, bookingTypeId: nu
   return null;
 }
 
-// ---------- the matrix
-
 export interface MatrixCell {
   value: boolean;
   /** Why it cannot be changed (shown as a tooltip), or `null`. */
@@ -137,7 +121,7 @@ export interface MatrixSources {
   approver: UserPermissions;
   /** `get-admin-permissions` - the super admin only */
   admin?: UserPermissions;
-  /** Every permission name of the person, from `GET /users`. Used when the server sends no approver rows to the super admin. */
+  /** The person's permission names from `GET /users`; fallback when the super admin gets no approver rows. */
   permissionNames: readonly string[];
   caller: Caller;
   targetUuid: string;
@@ -147,13 +131,9 @@ const FLAG = /^is_(.+)$/;
 const isApproverSide = (role: string): boolean => role !== 'admin' && !NOT_A_GRANT.has(role);
 
 /**
- * Rows are the booking types the server returned in `permissions`; columns are the roles that appear as `is_<role>` flags
- * (a flag only exists where the role applies to the domain). For the super admin an extra "admin" column comes from the
- * admin-permissions answer.
- *
- * Quirk of the server: the approver rows are derived from the CALLER's own `admin_*` permissions, which the super admin does not
- * have - so for the super admin they come back empty. Then the grid is built from the admin answer's domains and the person's own
- * permission names, with the roles named in `role_options`. (The server ignores a role that does not apply to a domain.)
+ * Rows are the returned booking types, columns the `is_<role>` flags (plus "admin" for the super admin).
+ * Server quirk: approver rows come from the caller's `admin_*` permissions, so they are empty for the super admin;
+ * the grid then falls back to the admin answer's domains and the person's permission names.
  */
 export function buildMatrix({ approver, admin, permissionNames, caller, targetUuid }: MatrixSources): Matrix {
   const rows = new Map<number, MatrixRow>();
@@ -189,14 +169,12 @@ export function buildMatrix({ approver, admin, permissionNames, caller, targetUu
   return { roles, rows: sorted };
 }
 
-// ---------- what the user ticked
-
 /** `role:bookingTypeId` -> ticked or not, only for the cells the user touched. */
 export type Edits = Readonly<Record<string, boolean>>;
 
 export const cellKey = (role: string, bookingTypeId: number): string => `${role}:${bookingTypeId}`;
 
-/** The value a cell shows: the user's edit, else what the server said. `undefined` when the role does not apply to the row. */
+/** Cell value: the user's edit, else the server's; `undefined` when the role does not apply. */
 export function shownValue(row: MatrixRow, role: string, edits: Edits): boolean | undefined {
   const cell = row.cells[role];
   if (!cell) return undefined;
@@ -223,10 +201,7 @@ export function pendingChanges(matrix: Matrix, edits: Edits): CellChange[] {
   return changes;
 }
 
-/**
- * `role_assignments` of `assign-approver-role`: ONLY the booking types that changed, each with the final value of every flag the
- * server asks for (it requires `is_approver` and `is_vice_approver` on every entry; a role that does not apply is ignored there).
- */
+/** `role_assignments` for `assign-approver-role`: changed booking types only, each with both required flags. */
 export function approverAssignments(matrix: Matrix, edits: Edits): ApproverAssignment[] {
   const changed = new Set(pendingChanges(matrix, edits).filter((change) => change.role !== 'admin').map((change) => change.bookingTypeId));
   return matrix.rows
@@ -251,9 +226,7 @@ export function adminAssignments(matrix: Matrix, edits: Edits): { booking_type_i
     .map((change) => ({ booking_type_id: change.bookingTypeId, is_admin: change.to }));
 }
 
-// ---------- the reason
-
-/** `reason` is optional for the server (max 500); the product decision is that every change of permissions states one. */
+/** The server's `reason` is optional (max 500); the product requires one for every change. */
 export const REASON_MAX = 500;
 
 export function reasonError(reason: string, required: boolean): string | null {

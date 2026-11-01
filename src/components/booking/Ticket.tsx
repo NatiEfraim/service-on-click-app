@@ -13,20 +13,18 @@ import { AgeBar, MiniRoute } from './RouteViz';
 
 interface TicketProps {
   booking: BookingRow;
-  /** Show the decision buttons the server offers (`actions`). Off for read-only lists. */
   showActions?: boolean;
   onAction?: (booking: BookingRow, action: BookingAction) => void;
 }
 
-/** One booking in a list: who, what, where on the route, how long, and the decisions available right now. */
+/** One booking in a list, with the decisions available right now. */
 export function Ticket({ booking, showActions = true, onAction }: TicketProps) {
   const { catalog, me, unitName } = useSession();
   const drawer = useBookingDrawer();
   const owner = booking.owner_name || booking.owner_personal_id || '—';
   const open = () => drawer.open(booking.serial_number);
 
-  // The card is clickable for mouse users; keyboard and screen-reader users get a real button (the heading) - a `role="button"`
-  // container would hide the decision buttons inside it from assistive technology.
+  // Card click is for mouse users; the heading is the real button (role="button" would hide inner buttons).
   return (
     <div
       className="ticket"

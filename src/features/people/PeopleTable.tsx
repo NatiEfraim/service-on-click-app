@@ -7,7 +7,7 @@ import { useSession } from '@/providers/SessionProvider';
 import { grantChip } from './permissions';
 import type { PersonRow } from './people';
 
-/** One row per person: who, where (when the list knows), the roles by domain, and the button that opens the permissions. */
+/** One row per person with roles by domain and a button that opens permissions. */
 export function PeopleTable({ rows, onOpen }: { rows: PersonRow[]; onOpen: (row: PersonRow) => void }) {
   const { typeName } = useSession();
   // `get-approvers` does not say where a person sits; only the full user list does
@@ -30,7 +30,7 @@ export function PeopleTable({ rows, onOpen }: { rows: PersonRow[]; onOpen: (row:
           {rows.map((row) => {
             const label = row.name ?? `ת״ז ${row.personalId ?? ''}`.trim();
             return (
-              // the row is a mouse shortcut; the button in its last cell is the keyboard and screen-reader way in
+              // mouse shortcut; the last-cell button is the keyboard path
               <tr key={row.uuid} className="clk" onClick={() => onOpen(row)}>
                 <td>
                   <div className="ppl-user">

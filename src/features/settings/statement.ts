@@ -1,9 +1,9 @@
-/** What the server stores when a statement is cleared - shown as an empty text box, not as text to edit. */
+/** Placeholder the server stores for a cleared statement; shown as an empty box. */
 export const NO_STATEMENT = 'לא קיימת הצהרה';
 
 export const statementFromServer = (text: string | null | undefined): string => (!text || text.trim() === NO_STATEMENT ? '' : text);
 
-/** Hebrew letters, Latin letters, digits, white space and `, . : ! @ % * $ ( ) { } [ ] / | \ - ' "` - what the server accepts in a statement. */
+/** Characters the server accepts in a statement. */
 const ALLOWED = /^[\p{Script=Hebrew}A-Za-z0-9\s,.:!@%*$(){}[\]/|\\\-'"]$/u;
 
 /** The characters of the text the server would refuse, each once. */

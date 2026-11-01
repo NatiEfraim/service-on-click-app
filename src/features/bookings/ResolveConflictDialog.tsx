@@ -10,10 +10,7 @@ import { invalidateWork } from '@/lib/api/keys';
 import type { BookingDetail, ConflictResolution } from '@/lib/api/types';
 import { useToast } from '@/providers/UiProvider';
 
-/**
- * A super admin settles a sync conflict: the mobile app changed the booking's status while a decision made here was still waiting.
- * `keep_internal` makes the app take our decision; `accept_external` drops ours. A reason is required and goes to the audit log.
- */
+/** Super admin settles a sync conflict: `keep_internal` or `accept_external`; a reason goes to the audit log. */
 export function ResolveConflictDialog({ booking, resolution, onClose }: { booking: BookingDetail; resolution: ConflictResolution; onClose: () => void }) {
   const client = useQueryClient();
   const toast = useToast();

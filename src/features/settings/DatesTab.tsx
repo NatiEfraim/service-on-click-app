@@ -42,10 +42,7 @@ function ImpactBody({ impact, typeName }: { impact: RestrictionImpact; typeName:
   );
 }
 
-/**
- * "תאריכים חסומים": days nobody can book. Blocking a day CANCELS the open bookings that sit on it, for the booking type in every unit, so a
- * change is first put to the server as a question (`impact`, nothing saved); only a list that cancels nothing is saved at once.
- */
+/** Blocked dates. Blocking cancels bookings, so changes are checked with `impact` first. */
 export function DatesTab({ unitId, bookingTypeId, settings, ownUnit, ownUnitId, typeName }: { unitId: number; bookingTypeId: number; settings: Settings; ownUnit: boolean; ownUnitId: number | null; typeName: string }) {
   const client = useQueryClient();
   const toast = useToast();
@@ -58,7 +55,7 @@ export function DatesTab({ unitId, bookingTypeId, settings, ownUnit, ownUnitId, 
   const [newDay, setNewDay] = useState('');
   const [error, setError] = useState('');
 
-  // follow the server's list when it changes (after a save, or somebody else's change) - adjusted during render
+  // sync with the server list, adjusted during render
   const serverKey = saved.join(',');
   const [seenKey, setSeenKey] = useState(serverKey);
   if (serverKey !== seenKey) {

@@ -1,4 +1,4 @@
-/* Users and permissions screen. Class names start with ppl- so nothing here leaks into other screens (this file is global once imported). */
+/* Users and permissions screen (prefix `ppl-`) */
 
 /* ---------- the list */
 .ppl-user { display: flex; gap: 10px; align-items: center; min-width: 0; }

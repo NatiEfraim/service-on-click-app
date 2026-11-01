@@ -1,7 +1,4 @@
-/**
- * What a unit or a department may be called: the rules of the server's `OrgRules`, with its Hebrew texts, so a mistake is caught before
- * the request and reads the same as when the server catches it. The server stays the judge (the names also never go to the mobile app).
- */
+/** Mirrors the server's `OrgRules` (with its Hebrew texts) for unit and department names. */
 
 export const NAME_MIN = 2;
 export const NAME_MAX = 40;

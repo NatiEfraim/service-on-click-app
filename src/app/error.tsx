@@ -2,7 +2,7 @@
 
 import { Button } from '@/components/ui/Button';
 
-/** Last resort for an unexpected error while rendering a screen. */
+/** Fallback for unexpected render errors. */
 export default function GlobalError({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
   return (
     <div className="login-wrap">

@@ -11,11 +11,7 @@ export type RouteMode = 'here' | 'hold' | 'stopped' | 'finished';
 const CONTROL_OFFICER_STATUSES = [14, 17, 18];
 const BARBER_STATUS = 11;
 
-/**
- * The stations a booking of this type travels through. Not every type has every step, and the server says so only through data:
- * the barber step exists for a type whose reachable statuses include "handled by the barber" (catalog), and the control-officer
- * step shows up when a booking is, or has been, in it (the stage exists only where that role is linked to the type).
- */
+/** Stations a booking travels through; barber and control-officer steps are derived from catalog and history. */
 export function routeFor(booking: Pick<BookingRow, 'booking_type_id' | 'stage'>, catalog: Catalog | undefined, history?: HistoryEntry[]): Station[] {
   const reachable = catalog?.booking_type_statuses?.[String(booking.booking_type_id)] ?? [];
   const hasBarber = booking.stage === 'barber_done' || reachable.includes(BARBER_STATUS);
@@ -32,13 +28,13 @@ export function routeFor(booking: Pick<BookingRow, 'booking_type_id' | 'stage'>,
   ];
 }
 
-/** Where on the route the booking is, and how to draw it: waiting at a station, on hold for a supplier, stopped, or finished. */
+/** Where the booking is on the route: at a station, on hold, stopped, or finished. */
 export function routePosition(booking: Pick<BookingRow, 'stage' | 'status_id'>, stations: Station[]): { here: number; mode: RouteMode } {
   let here = stations.findIndex((station) => station.id === booking.stage);
   let mode: RouteMode = 'here';
 
   if (booking.stage.startsWith('supplier')) {
-    // waiting for a supplier or for files: the decision stays with the domain commander
+    // Waiting for a supplier or files: the decision stays with the domain commander.
     here = stations.findIndex((station) => station.id === 'approver');
     mode = 'hold';
   }

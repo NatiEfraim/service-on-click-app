@@ -14,7 +14,7 @@ import { useSession } from '@/providers/SessionProvider';
 
 const PARAMS = { mine: true, open_only: true, per_page: 100, sort: 'stage_age_hours', dir: 'desc' } as const;
 
-/** The bookings that wait for this user right now (`mine=1`), longest-waiting first, grouped by the stage they sit in. */
+/** Bookings waiting for this user (`mine=1`), longest-waiting first, grouped by stage. */
 export function QueueScreen() {
   const { me, canAct } = useSession();
   const [stage, setStage] = useState<StageId | ''>('');

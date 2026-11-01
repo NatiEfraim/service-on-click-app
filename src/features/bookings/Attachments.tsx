@@ -10,10 +10,7 @@ import type { Attachment } from '@/lib/api/types';
 
 const isPdf = (attachment: Attachment) => (attachment.mime ?? '').toLowerCase() === 'application/pdf' || attachment.name.toLowerCase().endsWith('.pdf');
 
-/**
- * Full-screen viewer for images and PDFs. Escape / the close button / a click outside close it; the arrow keys (or the side buttons)
- * move between files - in a right-to-left page the right arrow goes back.
- */
+/** Full-screen viewer for images and PDFs; arrow keys are mirrored in RTL (right = previous). */
 function LightboxInner({ items, start, onClose }: { items: Attachment[]; start: number; onClose: () => void }) {
   const [index, setIndex] = useState(start);
   const ref = useRef<HTMLDivElement>(null);
@@ -30,8 +27,7 @@ function LightboxInner({ items, start, onClose }: { items: Attachment[]; start: 
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-    // go() only depends on items.length
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- go() depends only on items.length
   }, [many, items.length]);
 
   const item = items[index];
@@ -63,8 +59,7 @@ function LightboxInner({ items, start, onClose }: { items: Attachment[]; start: 
         {isPdf(item) ? (
           <iframe key={item.url} src={item.url} title={item.name} />
         ) : (
-          // the file needs the login cookie, so it cannot go through next/image
-          // eslint-disable-next-line @next/next/no-img-element
+          // eslint-disable-next-line @next/next/no-img-element -- needs the login cookie, so not next/image
           <img key={item.url} src={item.url} alt={item.name} />
         )}
         {many ? (
@@ -83,7 +78,7 @@ export function Lightbox(props: { items: Attachment[]; start: number; onClose: (
   return createPortal(<LightboxInner {...props} />, document.body);
 }
 
-/** The booking's files and images: thumbnails open in the viewer, other documents download, files not yet received say so. */
+/** The booking's files: images open in the viewer, other documents download. */
 export function AttachmentsPanel({ attachments }: { attachments: Attachment[] }) {
   const viewable = attachments.filter((attachment) => attachment.available && attachment.inline && attachment.url);
   const [open, setOpen] = useState<number | null>(null);

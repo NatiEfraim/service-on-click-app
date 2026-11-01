@@ -4,7 +4,7 @@ import { useSyncExternalStore } from 'react';
 
 const subscribe = () => () => {};
 
-/** False while the server renders and during hydration, true afterwards. Lets a portal wait for `document`. */
+/** False on the server and during hydration; lets a portal wait for `document`. */
 export function useIsClient(): boolean {
   return useSyncExternalStore(
     subscribe,

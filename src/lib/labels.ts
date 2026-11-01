@@ -1,12 +1,6 @@
 import type { BookingAction, ChangeSource, StageId } from './api/types';
 
-/**
- * Hebrew wording and colours shared by the screens. Wording follows the finished example UI
- * ("קריאות" - not "בקשות"; the audit log is "היסטוריית שינויים"). The palette is the client palette:
- * Vintage Grape 3D314A, Pine Blue 307473, Mauve Shadow 684756, Bone DDDBCB, Emerald Depths 12664F.
- */
-
-/** The order of the approval route; used wherever stages are listed. */
+/** Approval route order. */
 export const STAGE_ORDER: StageId[] = [
   'control_officer',
   'vice_approver',
@@ -30,7 +24,6 @@ export const STAGE_SHORT: Record<StageId, string> = {
   closed: 'סגורה',
 };
 
-/** Stage colours follow the route: early stages mauve, approval pine, supplier waits bone, realisation emerald. */
 export const STAGE_COLOR: Record<StageId, string> = {
   control_officer: '#684756',
   vice_approver: '#9C7F8C',
@@ -50,7 +43,7 @@ export const WAIT_LABEL: Record<string, string> = {
   realization: 'מימוש ההזמנה',
 };
 
-/** Role names (Spatie) -> what people call them. Used to label chips only, never to decide anything. */
+/** Display names for roles; labels only. */
 export const ROLE_NAME: Record<string, string> = {
   super_admin: 'מנהל מערכת',
   admin: 'מפקד מחנה',
@@ -60,7 +53,6 @@ export const ROLE_NAME: Record<string, string> = {
   user: 'משתמש',
 };
 
-/** Who made a status change / an audit row. */
 export const SOURCE_LABEL: Record<string, { label: string; tone: 'ext' | 'int' | 'sys' }> = {
   external: { label: 'אפליקציה', tone: 'ext' },
   internal: { label: 'פנימית', tone: 'int' },
@@ -72,7 +64,7 @@ export function sourceTag(source: ChangeSource | string | null | undefined) {
   return source ? SOURCE_LABEL[source] : undefined;
 }
 
-/** One colour per service domain - badges, ticket edges and charts (colour is never the only carrier of meaning). */
+/** One colour per service domain. */
 const DOMAIN_COLOR: Record<number, string> = {
   1: '#3D314A',
   2: '#5A4C66',
@@ -87,11 +79,11 @@ const DOMAIN_COLOR: Record<number, string> = {
 
 export const domainColor = (bookingTypeId: number): string => DOMAIN_COLOR[bookingTypeId] ?? '#64748b';
 
-/** Domains that have an illustration in /public/icons/domains (the external system's own icons). */
+/** Domains with an illustration in /public/icons/domains. */
 const DOMAIN_ICONS = new Set([1, 2, 3, 4, 5, 8, 10, 11, 13]);
 export const domainIconSrc = (bookingTypeId: number): string | null => (DOMAIN_ICONS.has(bookingTypeId) ? `/icons/domains/${bookingTypeId}.svg` : null);
 
-/** Colour class of a status chip. Status numbers are shared with the mobile app, so they are stable. */
+/** Chip tone per status id (ids are shared with the mobile app). */
 export type ChipTone = 'ok' | 'bad' | 'hold' | 'acc' | 'warn' | 'info' | '';
 
 export function statusTone(statusId: number): ChipTone {
@@ -102,21 +94,21 @@ export function statusTone(statusId: number): ChipTone {
   return 'warn';
 }
 
-/** A destructive decision (reject / cancel) is drawn red, a supplier wait purple, everything else as the main action. */
+/** Reject / cancel are destructive, supplier waits are "hold", the rest are primary. */
 export function actionTone(action: Pick<BookingAction, 'status_id'>): 'danger' | 'hold' | 'primary' {
   if ([4, 7, 16, 18].includes(action.status_id)) return 'danger';
   if ([8, 9, 10].includes(action.status_id)) return 'hold';
   return 'primary';
 }
 
-/** Field-type ids that carry a list of options (select, radio, checkbox, multi-select). */
+/** Field types with options: select, radio, checkbox, multi-select. */
 export const OPTION_FIELD_TYPES = [5, 8, 14, 20];
-/** Only a date or a time can be corrected by an approver. */
+/** Approvers may correct only dates and times. */
 export const EDITABLE_FIELD_TYPES = [3, 4];
 export const FIELD_TYPE_DATE = 3;
 export const FIELD_TYPE_TIME = 4;
 
-/** The comment rule the server enforces on a status change: Hebrew letters and spaces, at most 100 characters. */
+/** Server rule for status-change comments: Hebrew letters and spaces, max 100 characters. */
 export const COMMENT_MAX = 100;
 export const COMMENT_PATTERN = /^[א-ת ]+$/u;
 

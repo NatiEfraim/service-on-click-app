@@ -7,10 +7,7 @@ import type { AppUser } from '@/lib/api/types';
 import { useSession } from '@/providers/SessionProvider';
 import { loadAllPages, mergeRoleHolders, PAGE_SIZE, personFromUser } from './people';
 
-/**
- * Everybody who holds a role - approvers and vice approvers, plus the camp commanders for the super admin - merged into one list.
- * These people are few, so the lists are read whole (all pages) and searched in memory.
- */
+/** All role holders merged into one list; few enough to load whole and search in memory. */
 export function useRoleHolders(enabled: boolean) {
   const { me } = useSession();
   const withAdmins = me.is_super_admin;
@@ -30,7 +27,7 @@ export function useRoleHolders(enabled: boolean) {
 
 const toRows = (users: AppUser[]) => users.map(personFromUser);
 
-/** One page (20) of `GET /users`, optionally narrowed by a number or name prefix. There is no total: a full page means there may be more. */
+/** One page (20) of `GET /users`, optionally narrowed by prefix. No total: a full page means more may exist. */
 export function usePeoplePage(identifier: string, page: number, enabled: boolean) {
   return useQuery({
     queryKey: keys.users(identifier, page),
@@ -47,15 +44,12 @@ export interface PersonRef {
   personalId: string | null;
 }
 
-/**
- * The full record of one person (unit, department, every permission). The server has no "user by id" call, so the person is found
- * through the same search the screen uses - by personal number, or by ID number when there is none - and picked out by `uuid`.
- */
+/** Full record of one person. No "user by id" endpoint, so it searches by number and picks the match by `uuid`. */
 export async function findPerson(target: PersonRef, signal?: AbortSignal): Promise<AppUser | null> {
   const identifier = target.personalNumber ?? target.personalId;
   if (!identifier) return null;
 
-  // a number is a prefix match: a 7 digit number also matches the 8 digit ones that start with it
+  // numbers match by prefix, so longer numbers may also match
   for (let page = 1; page <= 3; page++) {
     const rows = (await peopleApi.users(identifier, page, signal)) ?? [];
     const found = rows.find((row) => row.uuid === target.uuid);
@@ -65,7 +59,7 @@ export async function findPerson(target: PersonRef, signal?: AbortSignal): Promi
   return null;
 }
 
-/** Read fresh every time the permissions dialog opens: nothing of it is kept once the dialog closes (`gcTime: 0`). */
+/** Read fresh on every dialog open; nothing is cached after close (`gcTime: 0`). */
 export function usePerson(target: PersonRef) {
   return useQuery({
     queryKey: keys.person(target.uuid),
@@ -75,10 +69,7 @@ export function usePerson(target: PersonRef) {
   });
 }
 
-/**
- * After anything that changes who someone is or may do: the lists on the screen (and the "handlers" filter of the requests screen) are
- * read again. A person's own record and permissions are not refetched - they are re-read whenever a dialog opens.
- */
+/** Refetch the people lists and the requests screen's handlers filter; dialogs re-read the record on open. */
 export function invalidatePeople(client: QueryClient): Promise<unknown> {
   return Promise.all([
     client.invalidateQueries({ queryKey: keys.usersAll, predicate: (query) => query.queryKey[1] !== 'person' }),

@@ -1,10 +1,6 @@
 import type { FieldType, FormField } from '@/lib/api/types';
 
-/**
- * The rules the server applies to the texts of a form (FormFieldRules / UpdateOptionFieldRequest), mirrored so a mistake is explained next to the
- * input instead of by the server's "one or more of the details is invalid". The server still has the last word (it also refuses the internal
- * name of a unit or a department, which only it knows).
- */
+/** Mirrors the server's text rules (FormFieldRules / UpdateOptionFieldRequest); the server has the final say. */
 
 export const FIELD_NAME_MIN = 2;
 export const FIELD_NAME_MAX = 50;
@@ -19,7 +15,7 @@ const OPTION_NAME_PATTERN = /^[a-zA-Z0-9א-ת\s"',.\-()]+$/u;
 /** Case-insensitive comparison key: the server compares names without regard to case or surrounding spaces. */
 export const nameKey = (name: string): string => name.trim().toLocaleLowerCase('he');
 
-/** The error for the name of a field, or null. `others` are the other fields of the form (the one being edited left out). */
+/** Error for a field name, or null. `others` excludes the field being edited. */
 export function fieldNameError(name: string, others: readonly Pick<FormField, 'field_display_name'>[]): string | null {
   const text = name.trim();
   if (text.length < FIELD_NAME_MIN || text.length > FIELD_NAME_MAX) return `שם השדה חייב להכיל בין ${FIELD_NAME_MIN} ל-${FIELD_NAME_MAX} תווים`;
@@ -36,7 +32,7 @@ export function parseOptionLines(text: string): string[] {
     .filter(Boolean);
 }
 
-/** The error for one option name among its siblings (`siblings` = the names that share its parent, itself left out), or null. */
+/** Error for an option name among its siblings (same parent, itself excluded), or null. */
 export function optionNameError(name: string, siblings: readonly string[]): string | null {
   const text = name.trim();
   if (!text) return 'יש להזין שם לאפשרות';
@@ -59,7 +55,7 @@ export function newOptionsError(options: readonly string[]): string | null {
   return null;
 }
 
-/** The Hebrew name of a field type: the server's list for the types a new field may have, a fallback for the others (a mobile-app field may use them). */
+/** Hebrew name of a field type; types a new field cannot have use a fallback. */
 const FALLBACK_TYPE_NAME: Record<number, string> = {
   12: 'סיסמה',
   15: 'שדה מוסתר',
@@ -74,10 +70,7 @@ export function fieldTypeName(fieldTypeId: number, fieldTypes: readonly Pick<Fie
   return fieldTypes.find((type) => type.id === fieldTypeId)?.display_name ?? FALLBACK_TYPE_NAME[fieldTypeId] ?? `סוג ${fieldTypeId}`;
 }
 
-/**
- * The types a field may be changed to. The server keeps a choice a choice and a plain field a plain field (the options would have to appear
- * or go), so only the types of the same family are offered.
- */
+/** Types a field may change to: the server keeps choice fields and plain fields in their own family. */
 export function retypeChoices(fieldTypes: readonly FieldType[], current: Pick<FieldType, 'has_options'> | undefined): FieldType[] {
   return fieldTypes.filter((type) => !current || type.has_options === current.has_options);
 }

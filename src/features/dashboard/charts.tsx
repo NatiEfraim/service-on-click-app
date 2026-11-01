@@ -6,7 +6,7 @@ import { STAGE_COLOR, STAGE_ORDER, STAGE_SHORT } from '@/lib/labels';
 
 const ALWAYS_SHOWN: StageId[] = ['vice_approver', 'approver', 'realization'];
 
-/** Stage pipeline: connected cells with the count of open bookings per stage, coloured by severity against the handling target. */
+/** Stage pipeline: open bookings per stage, coloured by severity against the handling target. */
 export function Pipeline({ byStage, analysis, onStage }: { byStage: Partial<Record<StageId, number>>; analysis: Record<string, StageAnalysis>; onStage: (stage: StageId) => void }) {
   const stages = STAGE_ORDER.filter((id) => byStage[id] || ALWAYS_SHOWN.includes(id));
   return (
@@ -34,7 +34,7 @@ export function Pipeline({ byStage, analysis, onStage }: { byStage: Partial<Reco
   );
 }
 
-/** Opened vs closed per day. Drawn as plain SVG (left to right = oldest to newest) so it needs no charting library. */
+/** Opened vs closed per day, as plain SVG (left to right = oldest to newest). */
 export function TrendChart({ points, width = 1200, height = 190 }: { points: TrendPoint[]; width?: number; height?: number }) {
   if (points.length < 2) return <div className="muted">אין מספיק נתונים להצגת מגמה.</div>;
 
@@ -76,12 +76,11 @@ export function TrendChart({ points, width = 1200, height = 190 }: { points: Tre
   );
 }
 
-/** Index the per-stage analysis by stage id. */
 export function indexStages(stages: StageAnalysis[]): Record<string, StageAnalysis> {
   return Object.fromEntries(stages.map((stage) => [stage.stage, stage]));
 }
 
-/** The stage where over-target bookings pile up (the worst severity first), or null when none. */
+/** The stage where over-target bookings pile up (worst first), or null. */
 export function worstStage(stages: StageAnalysis[]): StageAnalysis | null {
   return stages.find((s) => s.severity === 'critical') ?? stages.find((s) => s.severity === 'warning') ?? null;
 }

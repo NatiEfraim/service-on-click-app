@@ -16,7 +16,7 @@ import { Icon } from '@/components/ui/Icon';
 import { GlobalSearch } from './GlobalSearch';
 import { Logo } from './Logo';
 
-/** Close a dropdown when the user clicks elsewhere or presses Escape. */
+/** Closes a dropdown on outside click or Escape. */
 function useDismiss(open: boolean, close: () => void) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -123,7 +123,7 @@ export function TopBar() {
   const nav = buildNav(me);
   const hasQueue = nav.some((entry) => entry.kind === 'link' && entry.counter === 'queue');
 
-  // how many bookings wait for this user - the badge on the queue tab (shared with the dashboards, so no extra request there)
+  // Queue tab badge; shares its query with the dashboards.
   const overview = useQuery({ queryKey: keys.overview, queryFn: ({ signal }) => insightsApi.overview(signal), enabled: hasQueue, staleTime: 60_000 });
   const waiting = overview.data?.awaiting_me.count ?? 0;
 

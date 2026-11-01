@@ -1,6 +1,4 @@
-/* ---------- settings of a booking type: the domains page and the six tabs of a domain.
-   Builds on the shared classes (.card .card-head .toolbar .utabs .setting .frow .fields .preview-form .steps .dcard .chip .btn .field .input .notice);
-   everything here is prefixed `st-` and uses logical properties so it mirrors in RTL. */
+/* Settings screens (prefix `st-`, logical properties for RTL) */
 
 .st-title { display: flex; align-items: center; gap: 12px; }
 .st-sub-link { font-weight: 600; }

@@ -6,10 +6,7 @@ export interface OptionNode {
   children: OptionNode[];
 }
 
-/**
- * The options of one field as a tree: a category (`has_category`) holds the options inside it (the equipment sizes, for one). The list is
- * flat and ordered by id, as the server sends it. An option whose parent is not listed (the parent was archived) is shown at the top.
- */
+/** Builds the option tree from the flat list; options whose parent is missing (archived) go to the top. */
 export function buildOptionTree(options: readonly OptionRow[], formFieldId: number): OptionNode[] {
   const own = options.filter((option) => option.form_field_id === formFieldId).sort((a, b) => a.id - b.id);
   const nodes = new Map<number, OptionNode>(own.map((option) => [option.id, { option, children: [] }]));

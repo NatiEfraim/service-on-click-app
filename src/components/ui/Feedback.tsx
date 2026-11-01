@@ -5,7 +5,6 @@ import { Icon } from './Icon';
 
 type NoticeTone = '' | 'warn' | 'bad';
 
-/** An inline message: information (default), a warning, or an error. */
 export function Notice({ tone = '', children, action, className = '', style }: { tone?: NoticeTone; children: ReactNode; action?: ReactNode; className?: string; style?: CSSProperties }) {
   return (
     <div className={`notice ${tone} ${className}`.trim()} role={tone === 'bad' ? 'alert' : undefined} style={style}>
@@ -16,10 +15,10 @@ export function Notice({ tone = '', children, action, className = '', style }: {
   );
 }
 
-/** What a failed request looks like on a screen, with a retry. The text is the server's own Hebrew message. */
+/** A failed request with a retry; the text is the server's Hebrew message. */
 export function ErrorNotice({ error, onRetry, title = 'לא ניתן לטעון את המסך.' }: { error: unknown; onRetry?: () => void; title?: string }) {
   const message = error instanceof ApiError ? error.message : 'אירעה שגיאה. נסו שוב.';
-  // asking again does not help when the server refused (403/404/405: not yours, or no longer there)
+  // No retry when the server refused (403/404/405).
   const retryable = onRetry && !(error instanceof ApiError && error.denied);
   return (
     <Notice
@@ -46,7 +45,6 @@ export function EmptyState({ title, children }: { title: string; children?: Reac
   );
 }
 
-/** Grey placeholder lines while a screen loads. */
 export function Loading({ rows = 6 }: { rows?: number }) {
   return (
     <div role="status" aria-label="טוען">
@@ -57,7 +55,7 @@ export function Loading({ rows = 6 }: { rows?: number }) {
   );
 }
 
-/** "No access to this screen" - shown instead of a screen the signed-in user's capabilities do not include. */
+/** Shown instead of a screen the user's capabilities do not include. */
 export function Denied({ children = 'אין לך גישה למסך זה.' }: { children?: ReactNode }) {
   return (
     <div className="card">

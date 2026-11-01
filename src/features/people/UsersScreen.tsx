@@ -18,10 +18,7 @@ import './people.css';
 
 type Tab = 'holders' | 'all';
 
-/**
- * Users and permissions. "בעלי תפקידים" lists the people who hold a role (loaded whole, searched in memory); "כל המשתמשים" pages through
- * everybody the signed-in user may see (the server narrows it: an admin sees their own unit) and searches on the server.
- */
+/** Users and permissions: role holders search in memory, all users page and search on the server. */
 export function UsersScreen() {
   const { me } = useSession();
   const [tab, setTab] = useState<Tab>('holders');
@@ -29,12 +26,12 @@ export function UsersScreen() {
   const [creating, setCreating] = useState(false);
   const [permissionsFor, setPermissionsFor] = useState<PermissionsTarget | null>(null);
 
-  // the box filters the loaded role holders at once; the server is asked only after the typing pauses
+  // local filter is instant; the server is queried after typing pauses
   const typed = useMemo(() => parseSearch(text), [text]);
   const settledText = useDebounced(text, 300);
   const settled = useMemo(() => parseSearch(settledText), [settledText]);
 
-  // the page number belongs to one search: a new search starts again at page 1 (derived, so no effect has to reset it)
+  // page is tied to one search; a new search restarts at 1 (derived, no reset effect)
   const [paging, setPaging] = useState({ key: '', page: 1 });
   const page = paging.key === settled.identifier ? paging.page : 1;
 
@@ -140,7 +137,7 @@ export function UsersScreen() {
         <NewUserDialog
           onClose={() => setCreating(false)}
           onCreated={(user) => {
-            // show the new person: everybody, narrowed to their number
+            // show the new person: all users, filtered by their number
             setTab('all');
             setText(user.personal_number ?? '');
           }}

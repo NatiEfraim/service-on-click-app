@@ -5,7 +5,7 @@ import { routeFor, routePosition } from './route';
 const catalog = {
   booking_type_statuses: {
     '1': [1, 3, 4, 5, 6, 7, 15, 16],
-    '5': [1, 3, 4, 5, 6, 7, 11, 12, 13, 15, 16], // barber: can be "handled by the barber" (11)
+    '5': [1, 3, 4, 5, 6, 7, 11, 12, 13, 15, 16],
   },
 } as unknown as Catalog;
 

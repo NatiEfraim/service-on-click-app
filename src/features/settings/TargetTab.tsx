@@ -11,12 +11,12 @@ import { keys } from '@/lib/api/keys';
 import { fmtLongHours } from '@/lib/format';
 import { useSession } from '@/providers/SessionProvider';
 
-/** "יעד טיפול": the total time from a booking's opening to its closing. Edited with the same dialog as the dashboard's. */
+/** Handling target (opening to closing), edited with the dashboard's dialog. */
 export function TargetTab({ bookingTypeId }: { bookingTypeId: number }) {
   const { me, can } = useSession();
   const [editing, setEditing] = useState(false);
 
-  // the handling targets are listed for admins and the super admin; anyone else is pointed to the dashboard, which shows the figure
+  // targets are listed for admins only; others are pointed to the dashboard
   const canSee = can('targets.manage');
   const canEdit = canSee && (me.is_super_admin || me.permissions.includes(`admin_${bookingTypeId}`));
   const query = useQuery({ queryKey: keys.targets, queryFn: ({ signal }) => insightsApi.targets(signal), enabled: canSee, staleTime: 60_000 });

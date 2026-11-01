@@ -17,10 +17,7 @@ import { UnitDialog } from './UnitDialog';
 import { useAfterOrgChange } from './useAfterOrgChange';
 import './org.css';
 
-/**
- * Units and departments (super admin). A unit has a letter - the only thing the mobile app knows - and a name people see here.
- * Departments exist only in this system. Choosing a unit shows its departments.
- */
+/** Units and departments (super admin). The unit letter is all the mobile app knows; departments are local. */
 export function OrgScreen() {
   const toast = useToast();
   const afterChange = useAfterOrgChange();
@@ -43,7 +40,7 @@ export function OrgScreen() {
     },
     onError: async (e) => {
       const apiError = e instanceof ApiError ? e : new ApiError(0, 'הפעולה נכשלה.');
-      // shown next to the table it concerns; a 409 ("people are still in it") also means the head counts may be old
+      // 409 (people still assigned) also means the head counts may be stale
       setActionError(apiError.message);
       if (apiError.stale) await afterChange();
     },
@@ -105,7 +102,7 @@ export function OrgScreen() {
                 {units.map((unit) => {
                   const isSelected = unit.id === selected?.id;
                   return (
-                    // the row is a mouse shortcut; the name in it is the keyboard way to choose the unit
+                    // mouse shortcut; the name inside is the keyboard path
                     <tr key={unit.id} className={`clk${isSelected ? ' sel' : ''}`} onClick={() => pick(unit.id)}>
                       <td>
                         <span className="code">{unit.code}</span>

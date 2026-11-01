@@ -20,7 +20,7 @@ export type ColumnKey =
   | 'overdue'
   | 'handling';
 
-/** list with "הכל" | free text | date range | yes / no | a minimum number of days | none */
+/** Filter kind: list, text, date range, yes/no, minimum days, or none. */
 export type FilterKind = 'select' | 'text' | 'dates' | 'yesno' | 'min_days' | null;
 
 export interface ReportColumn {
@@ -122,7 +122,7 @@ export interface SortState {
   dir: 'asc' | 'desc';
 }
 
-/** A sorted copy. Numbers by value, text by the Hebrew collation (numbers inside text by value); empty values always last. */
+/** Sorted copy: numbers by value, text by Hebrew collation; empty values last. */
 export function sortRows(rows: readonly ReportRow[], sort: SortState): ReportRow[] {
   const accessor = columnOf(sort.key).sort;
   const factor = sort.dir === 'asc' ? 1 : -1;

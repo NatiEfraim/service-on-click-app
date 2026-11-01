@@ -2,7 +2,7 @@ import { routeFor, routePosition } from '@/features/bookings/route';
 import type { BookingRow, Catalog, HistoryEntry } from '@/lib/api/types';
 import { fmtHours } from '@/lib/format';
 
-/** The full approval route with the booking's position - the drawer's "מסלול האישור". */
+/** The full approval route with the booking's position. */
 export function Rail({ booking, catalog, history }: { booking: BookingRow; catalog: Catalog; history?: HistoryEntry[] }) {
   const stations = routeFor(booking, catalog, history);
   const { here, mode } = routePosition(booking, stations);
@@ -27,7 +27,7 @@ export function Rail({ booking, catalog, history }: { booking: BookingRow; catal
   );
 }
 
-/** A row of dots - the route at a glance, for lists. */
+/** The route as a row of dots, for lists. */
 export function MiniRoute({ booking, catalog }: { booking: BookingRow; catalog: Catalog }) {
   const stations = routeFor(booking, catalog);
   const { here, mode } = routePosition(booking, stations);
@@ -42,7 +42,7 @@ export function MiniRoute({ booking, catalog }: { booking: BookingRow; catalog: 
   );
 }
 
-/** Age since opening against the domain's handling target; red when it is over, amber when it is close. */
+/** Age against the handling target; red when over, amber when close. */
 export function AgeBar({ booking }: { booking: Pick<BookingRow, 'stage' | 'total_age_hours' | 'stage_age_hours' | 'target_hours' | 'overdue'> }) {
   if (booking.stage === 'closed') return <span className="muted small">סגורה</span>;
 

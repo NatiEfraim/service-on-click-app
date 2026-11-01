@@ -1,11 +1,7 @@
 import axios, { AxiosError, type AxiosRequestConfig } from 'axios';
 import type { Envelope, Paginated } from './types';
 
-/**
- * One axios instance for the whole app. Every call is relative (`/api/...`) and goes through the Next.js proxy
- * (next.config.ts), so the browser has one origin and the API's HttpOnly login cookie travels by itself:
- * the app never reads, stores or sends a token.
- */
+/** Single axios instance; calls go through the Next.js proxy so the HttpOnly login cookie is sent automatically. */
 export const http = axios.create({
   baseURL: '/api',
   withCredentials: true,
@@ -15,7 +11,7 @@ export const http = axios.create({
 
 const HEBREW = /[֐-׿]/;
 
-/** Said when the server's own text cannot be shown (no answer, a technical English message, an empty body). */
+/** Used when the server's own text cannot be shown (no answer, English message, empty body). */
 const FALLBACK_MESSAGE: Record<number, string> = {
   0: 'אין תקשורת עם השרת. בדקו את החיבור ונסו שוב.',
   400: 'הבקשה אינה תקינה.',
@@ -33,14 +29,9 @@ function fallbackFor(status: number): string {
   return FALLBACK_MESSAGE[status] ?? (status >= 500 ? FALLBACK_MESSAGE[500] : 'הפעולה נכשלה.');
 }
 
-/**
- * What the API answers with, in the one shape the UI needs.
- * - `403/404/405` carry one deliberately vague text (the system never says whether a record exists): shown as is.
- * - `409` means the record changed under the user (stale `version`, or an open sync conflict): reload and retry.
- * - `422` shows the server's Hebrew text (a business rule `{message}` or the first field error).
- */
+/** Normalised API failure; 403/404/405 share one vague message so record existence is never revealed. */
 export class ApiError extends Error {
-  /** 0 = the server did not answer at all. */
+  /** 0 = the server did not answer. */
   readonly status: number;
   readonly fieldErrors: Record<string, string[]>;
 
@@ -51,23 +42,19 @@ export class ApiError extends Error {
     this.fieldErrors = fieldErrors;
   }
 
-  /** 401: not logged in (or the session ended). */
   get unauthenticated(): boolean {
     return this.status === 401;
   }
-  /** 403 / 404 / 405: refused. The text is always the same on purpose. */
   get denied(): boolean {
     return this.status === 403 || this.status === 404 || this.status === 405;
   }
-  /** 409: someone changed it first - reload the record and let the user retry. */
+  /** 409: the record changed under the user; reload and retry. */
   get stale(): boolean {
     return this.status === 409;
   }
-  /** 422: the input was not valid. */
   get invalid(): boolean {
     return this.status === 422;
   }
-  /** No answer from the server. */
   get offline(): boolean {
     return this.status === 0;
   }
@@ -105,7 +92,7 @@ export function toApiError(error: unknown): ApiError {
   let message: string | null = null;
 
   if (typeof data === 'string') {
-    // e.g. the 429 answer is plain text, not json
+    // 429 answers are plain text
     message = HEBREW.test(data) && data.length < 300 ? data.trim() : null;
   } else if (data && typeof data === 'object') {
     const body = data as { message?: unknown; errors?: unknown };
@@ -116,12 +103,10 @@ export function toApiError(error: unknown): ApiError {
   return new ApiError(status, message ?? fallbackFor(status), normalizeFieldErrors((data as { errors?: unknown } | null)?.errors));
 }
 
-// ---------- 401 handling
-
 type UnauthorizedHandler = () => void;
 let onUnauthorized: UnauthorizedHandler | null = null;
 
-/** The session layer registers what to do when the server says "not logged in" (clear caches, go to the login page). */
+/** Registers the session layer's reaction to a 401. */
 export function setUnauthorizedHandler(handler: UnauthorizedHandler | null): void {
   onUnauthorized = handler;
 }
@@ -132,18 +117,16 @@ http.interceptors.response.use(
     if (axios.isCancel(error)) return Promise.reject(error);
     const apiError = toApiError(error);
     const url = axios.isAxiosError(error) ? (error.config?.url ?? '') : '';
-    // a wrong personal number on the login form is not "the session ended"
+    // a failed login is not an expired session
     if (apiError.unauthenticated && !url.endsWith('/login')) onUnauthorized?.();
     return Promise.reject(apiError);
   },
 );
 
-// ---------- request helpers
-
 export type ParamValue = string | number | boolean | null | undefined | readonly (string | number)[];
 export type Params = Record<string, ParamValue>;
 
-/** Drops empty values and turns lists into the comma separated strings the API expects (`types=1,2`). */
+/** Drops empty values; lists become comma-separated strings (`types=1,2`). */
 export function cleanParams(params?: Params): Record<string, string | number> | undefined {
   if (!params) return undefined;
   const out: Record<string, string | number> = {};
@@ -170,7 +153,7 @@ export async function getPage<T>(url: string, params?: Params, signal?: AbortSig
   return response.data;
 }
 
-/** A write. Returns the whole envelope because the server's `message` is often the text to show the user. */
+/** A write; returns the full envelope because the server `message` is often shown to the user. */
 export async function send<T = unknown>(
   method: 'post' | 'put' | 'patch' | 'delete',
   url: string,
@@ -178,6 +161,6 @@ export async function send<T = unknown>(
   config?: Pick<AxiosRequestConfig, 'headers' | 'params' | 'signal'>,
 ): Promise<Envelope<T>> {
   const response = await http.request<Envelope<T>>({ method, url, data: body, ...config });
-  // a few legacy endpoints answer 204 / an empty body
+  // some endpoints answer 204 / empty body
   return response.data && typeof response.data === 'object' ? response.data : ({ data: undefined as T } as Envelope<T>);
 }

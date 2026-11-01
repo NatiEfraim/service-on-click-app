@@ -10,7 +10,7 @@ import { bookingsApi } from '@/lib/api/endpoints';
 import { keys } from '@/lib/api/keys';
 import { useBookingDrawer } from '@/features/bookings/useBookingDrawer';
 
-/** Top-bar search: a serial number, a personal / ID number or a name. `/` focuses it from anywhere. */
+/** Top-bar search by serial, personal / ID number or name. `/` focuses it. */
 export function GlobalSearch() {
   const router = useRouter();
   const drawer = useBookingDrawer();

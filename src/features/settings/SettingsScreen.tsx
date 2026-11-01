@@ -32,10 +32,7 @@ const toId = (raw: string | undefined): number => {
   return Number.isInteger(value) && value > 0 ? value : 0;
 };
 
-/**
- * The settings of one service domain in one unit, in six tabs kept in the URL (`?tab=form|target|refs|dates|options|statement`).
- * Whatever the signed-in user may not change is shown read-only: the server says so (`can_edit_global`) and refuses the call anyway.
- */
+/** Settings of one domain in one unit; the tab lives in the URL (`?tab=`). Read-only where the server forbids edits. */
 export function SettingsScreen() {
   const params = useParams<{ unitId: string; bookingTypeId: string }>();
   const router = useRouter();

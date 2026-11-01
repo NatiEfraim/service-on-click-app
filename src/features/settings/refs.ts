@@ -28,7 +28,7 @@ export type RefInputKind = 'number' | 'time' | 'phone' | 'boolean' | 'text';
 
 const TIME_VALUE = /^([01]\d|2[0-3]):[0-5]\d$/;
 
-/** How a key is edited, read off its current value (the server's own value says whether it is a count, a time of day, a switch or text). */
+/** Input kind (count, time, switch or text), inferred from the current value. */
 export function refInputKind(key: string, value: unknown): RefInputKind {
   if (typeof value === 'boolean') return 'boolean';
   if (typeof value === 'number') return 'number';
@@ -65,10 +65,7 @@ export function draftProblems(original: Record<string, unknown>, draft: RefDraft
   return problems;
 }
 
-/**
- * What `PUT system-references` takes for one setting: EVERY key of it (the server rejects a key it does not know and keeps the ones it is not
- * given), numbers as numbers and switches as booleans.
- */
+/** Body for `PUT system-references`: every key of the setting, numbers as numbers, switches as booleans. */
 export function draftToValue(original: Record<string, unknown>, draft: RefDraft): Record<string, unknown> {
   return Object.fromEntries(
     Object.entries(original).map(([key, current]) => {

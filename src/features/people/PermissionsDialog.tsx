@@ -64,11 +64,7 @@ function successMessage(saved: SavedPart[]): string {
   return 'שיוך המחלקה עודכן.';
 }
 
-/**
- * The permissions of one person: the department, and a matrix of booking types (rows) by roles (columns). A cell the signed-in
- * user may not change is closed with the reason as a tooltip. Saving sends only the booking types that changed, with a reason
- * that is required whenever a permission changes; the server's own answer is shown when it refuses.
- */
+/** Department and permissions matrix of one person; saving sends only changed booking types, with a required reason. */
 export function PermissionsDialog({ target, onClose }: { target: PermissionsTarget; onClose: () => void }) {
   const client = useQueryClient();
   const toast = useToast();
@@ -76,7 +72,7 @@ export function PermissionsDialog({ target, onClose }: { target: PermissionsTarg
   const caller = useMemo(() => callerFrom(me), [me]);
   const ids = useId();
 
-  // read fresh every time the dialog opens, and dropped when it closes
+  // read fresh on open, dropped on close
   const person = usePerson(target);
   const approver = useQuery({
     queryKey: keys.permissions('approver', target.uuid),
@@ -122,7 +118,7 @@ export function PermissionsDialog({ target, onClose }: { target: PermissionsTarg
   const departmentChanged = departmentEdit !== null && chosenDepartment !== currentDepartment;
   const changeCount = changes.length + (departmentChanged ? 1 : 0);
 
-  // the active departments of the person's unit; their current one stays selectable even if it was switched off since
+  // active departments of the unit; the current one stays selectable even if disabled
   const departments = personData ? catalog.departments.filter((department) => department.unit_id === personData.unit_id && department.is_active !== false) : [];
   const inactiveCurrent =
     personData && personData.department_id !== null && !departments.some((department) => department.id === personData.department_id)
@@ -166,14 +162,14 @@ export function PermissionsDialog({ target, onClose }: { target: PermissionsTarg
       const { apiError, saved } = failure;
 
       if (saved.length) {
-        // part of it went through: the lists must show that, and so must this dialog
+        // partial success: refresh the lists and this dialog
         setAlreadySaved(`כבר נשמרו: ${saved.map((part) => SAVED_PART_LABEL[part]).join(', ')}.`);
         const own = target.uuid === me.user.uuid ? client.invalidateQueries({ queryKey: keys.me }) : Promise.resolve();
         await Promise.all([invalidatePeople(client), own, reload()]);
       }
 
       if (apiError.stale) {
-        // someone changed the person first: show what is there now, keep what the user ticked
+        // changed by someone else: show the current state, keep the user's ticks
         toast(apiError.message, 'bad');
         await reload();
         return;

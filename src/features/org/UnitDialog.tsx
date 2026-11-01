@@ -12,10 +12,7 @@ import { cleanCode, CODE_MAX, isUnnamed, NAME_MAX, validateUnit, type UnitErrors
 import { useAfterOrgChange } from './useAfterOrgChange';
 import './org.css';
 
-/**
- * Add a unit or rename one. The letter is what the mobile app knows, so it is fixed once the unit exists (an edit sends the same letter);
- * only the name people see here changes. Refusals of the server (422, 409, 403) are shown in the dialog as they come.
- */
+/** Add or rename a unit. The letter is fixed once created (the mobile app relies on it); edits resend it. */
 export function UnitDialog({ unit, units, onClose, onSaved }: { unit: OrgUnit | null; units: readonly OrgUnit[]; onClose: () => void; onSaved: (id: number) => void }) {
   const toast = useToast();
   const afterChange = useAfterOrgChange();

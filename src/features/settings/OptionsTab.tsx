@@ -14,10 +14,7 @@ import { optionNameError } from './fieldRules';
 import { buildOptionTree, choiceFields, countOptions, fieldPath, type OptionNode } from './options';
 import { handleWriteError, useReloadSettings } from './useSettings';
 
-/**
- * Rename one option. The server rewrites every attribute a save leaves out (see SaveOptionBody), so the option's own parent, category flag
- * and field type travel with the new name; its type is read first because the settings list does not carry it.
- */
+/** Rename an option; the server resets omitted attributes, so parent, category and type are resent. */
 function RenameDialog({ unitId, bookingTypeId, field, option, siblings, onClose }: { unitId: number; bookingTypeId: number; field: FormField; option: OptionRow; siblings: string[]; onClose: () => void }) {
   const toast = useToast();
   const reload = useReloadSettings(unitId, bookingTypeId);
@@ -115,7 +112,7 @@ function OptionRows({ nodes, depth, canEdit, onRename, onRemove, lastRoot }: { n
       {nodes.map((node) => {
         const { option } = node;
         const isCategory = node.children.length > 0;
-        // a choice must keep at least one option; a category must lose its options first (the database would move them to the top)
+        // a choice keeps at least one option; a category must be emptied first
         const blocked = isCategory ? 'יש להסיר קודם את האפשרויות שבתוך הקטגוריה' : lastRoot && depth === 0 ? 'שדה בחירה חייב לכלול לפחות אפשרות אחת' : '';
         return (
           <div key={option.id}>
@@ -152,7 +149,7 @@ function AddOption({ unitId, bookingTypeId, field, tree, options }: { unitId: nu
   const siblings = options.filter((option) => option.form_field_id === field.id && option.parent_id === parentId).map((option) => option.name);
 
   const mutation = useMutation({
-    // a new option is a plain choice: not a category, not a free-input one (an omitted is_input would turn it into one in some booking types)
+    // plain choice; is_input must be explicit or some booking types make it free-input
     mutationFn: () => settingsApi.saveOption(field.id, { option_name: name.trim(), parent_option_id: parentId, has_category: false, is_input: false }),
     onSuccess: async () => {
       toast('האפשרות נוספה.', 'ok');
@@ -219,10 +216,7 @@ function AddOption({ unitId, bookingTypeId, field, tree, options }: { unitId: nu
   );
 }
 
-/**
- * "אפשרויות בחירה": the options of the select / radio / checkbox / multi-select fields. Added, renamed and removed one at a time (the super
- * admin only); an option that bookings chose is archived by the server when removed, any other is deleted.
- */
+/** Choice options (super admin only). The server archives a removed option that bookings used, otherwise deletes it. */
 export function OptionsTab({ unitId, bookingTypeId, settings }: { unitId: number; bookingTypeId: number; settings: Settings }) {
   const toast = useToast();
   const confirm = useConfirm();

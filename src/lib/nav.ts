@@ -1,14 +1,8 @@
 import type { Capability, Me } from './api/types';
 
-/**
- * Who sees which menu item. Everything comes from what the server said in `GET /me` (`capabilities`, `is_*`, `permissions`);
- * the server still enforces every call, so a missing item is a convenience, not a lock.
- */
+/** Menu visibility is a convenience built from `GET /me`; the server enforces every call. */
 
-/**
- * Whether the user holds a role that acts on bookings (approver, vice approver, control officer) on at least one type.
- * Only used to decide whether the "waiting for me" queue is worth a menu item; each booking's `actions` decide the buttons.
- */
+/** Holds an approver, vice approver or control officer role on at least one type. */
 export function canAct(me: Me): boolean {
   return me.permissions.some((permission) => /^(approver|vice_approver|transportation_control_officer)_\d+$/.test(permission));
 }
@@ -22,9 +16,8 @@ export interface NavLink {
   id: string;
   href: string;
   label: string;
-  /** Matches these paths as "current" too (a drill-down belongs to its parent). */
+  /** Extra paths that count as "current". */
   also?: string[];
-  /** Key of the live counter shown next to the label. */
   counter?: 'queue';
 }
 
@@ -76,7 +69,7 @@ export function buildNav(me: Me): NavEntry[] {
   return entries;
 }
 
-/** The screen a user lands on at `/`. */
+/** Which screen `/` shows. */
 export function homeKind(me: Me): 'tiles' | 'dashboard' | 'queue' | 'requests' {
   if (me.is_handler_only) return 'queue';
   if (me.is_super_admin || me.is_admin) return can(me, 'dashboard.view') ? 'tiles' : 'requests';

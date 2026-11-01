@@ -1,6 +1,6 @@
 import type { BookingListParams } from '@/lib/api/endpoints';
 
-/** The screen's quick views. Each one is a fixed combination of the API's filters. */
+/** Quick views; each is a fixed combination of the API's filters. */
 export type ViewId = 'open' | 'mine' | 'overdue' | 'decide' | 'all';
 export type SortKey = NonNullable<BookingListParams['sort']>;
 
@@ -14,7 +14,7 @@ export interface RequestFilters {
   handler: string;
   from: string;
   to: string;
-  /** serial numbers (comma separated) - what a dashboard figure is made of */
+  /** Comma-separated serials behind a dashboard figure. */
   ids: string;
   sort: SortKey;
   dir: 'asc' | 'desc';
@@ -49,7 +49,7 @@ const VIEWS: ViewId[] = ['open', 'mine', 'overdue', 'decide', 'all'];
 const SORT_KEYS = SORTS.map((s) => s.sort);
 const TEXT_KEYS = ['q', 'types', 'stage', 'statuses', 'units', 'handler', 'from', 'to', 'ids'] as const;
 
-/** URL -> filters. Anything unknown or malformed falls back to the default, so a hand-edited link never breaks the screen. */
+/** URL -> filters; unknown or malformed values fall back to the default. */
 export function parseFilters(params: URLSearchParams): RequestFilters {
   const filters: RequestFilters = { ...DEFAULT_FILTERS };
 
@@ -68,9 +68,9 @@ export function parseFilters(params: URLSearchParams): RequestFilters {
   return filters;
 }
 
-/** filters -> URL, leaving out whatever is the default so links stay short. */
+/** filters -> URL, omitting defaults to keep links short. */
 export function toSearchParams(filters: RequestFilters, keep?: URLSearchParams): URLSearchParams {
-  // other query parameters (the open booking drawer) are not ours to touch
+  // Keep other query params (e.g. the open drawer).
   const params = new URLSearchParams(keep?.toString() ?? '');
   for (const key of ['view', 'sort', 'dir', 'page', ...TEXT_KEYS]) params.delete(key);
 
@@ -107,7 +107,7 @@ export function toApiParams(filters: RequestFilters, perPage = 25): BookingListP
   };
 }
 
-/** How many of the "advanced" filters are on (for the button's badge). */
+/** Count of active advanced filters (button badge). */
 export function advancedCount(filters: RequestFilters): number {
   return (['types', 'stage', 'statuses', 'units', 'from', 'to', 'handler'] as const).filter((key) => filters[key]).length;
 }

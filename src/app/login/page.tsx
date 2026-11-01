@@ -5,7 +5,7 @@ import { LoginForm } from '@/features/auth/LoginForm';
 export const metadata: Metadata = { title: 'התחברות' };
 
 export default function LoginPage() {
-  // the form reads `?expired=` / `?next=` from the address
+  // The form reads `?expired=` and `?next=`.
   return (
     <Suspense fallback={null}>
       <LoginForm />

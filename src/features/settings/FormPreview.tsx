@@ -74,7 +74,7 @@ function PreviewField({ node, options }: { node: FieldNode; options: readonly Op
   );
 }
 
-/** "How the form will look to the requester": the fields in order, each with the control its type draws; the fields inside another follow it, indented. */
+/** Preview of the form as the requester sees it; nested fields are indented under their parent. */
 export function FormPreview({ roots, options }: { roots: readonly FieldNode[]; options: readonly OptionRow[] }) {
   return (
     <div className="st-form-preview">

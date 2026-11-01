@@ -11,7 +11,7 @@ import { useToast } from '@/providers/UiProvider';
 import { NAME_MAX, validateDepartment } from './rules';
 import { useAfterOrgChange } from './useAfterOrgChange';
 
-/** Add a department to a unit, or rename one. Departments exist only here: their names never go to the mobile app. */
+/** Add or rename a department of a unit. */
 export function DepartmentDialog({ unit, department, onClose }: { unit: OrgUnit; department: OrgDepartment | null; onClose: () => void }) {
   const toast = useToast();
   const afterChange = useAfterOrgChange();

@@ -14,10 +14,7 @@ import type { StageId } from '@/lib/api/types';
 import { domainColor, domainIconSrc, STAGE_COLOR, STAGE_ORDER, STAGE_SHORT } from '@/lib/labels';
 import { useSession } from '@/providers/SessionProvider';
 
-/**
- * The main screen of an admin / super admin: a tile per service domain with its open and over-target counts, and open bookings
- * by domain and stage. A tile opens that domain's dashboard; a bar segment opens the bookings in it.
- */
+/** Admin home: a tile per domain with open and over-target counts, and open bookings by domain and stage. */
 export function HomeScreen() {
   const router = useRouter();
   const { typeName } = useSession();
@@ -47,7 +44,7 @@ export function HomeScreen() {
           <Link key={domain.booking_type_id} href={`/dashboard?types=${domain.booking_type_id}`} className="dtile" style={{ '--dc': domainColor(domain.booking_type_id) } as CSSProperties}>
             <span className="dtile-ic">
               {domainIconSrc(domain.booking_type_id) ? (
-                // eslint-disable-next-line @next/next/no-img-element
+                // eslint-disable-next-line @next/next/no-img-element -- static svg
                 <img src={domainIconSrc(domain.booking_type_id)!} alt="" width={36} height={36} />
               ) : (
                 <Icon name="layers" />

@@ -18,7 +18,7 @@ function RefRow({ reference, bookingTypeId, unitId, readOnly }: { reference: Sys
   const [error, setError] = useState('');
   const [problems, setProblems] = useState<Record<string, string>>({});
 
-  // when the server's value changes (after a save, or somebody else's change) the inputs follow it - adjusted during render
+  // sync inputs with the server value, adjusted during render
   const serverKey = JSON.stringify(reference.value);
   const [seenKey, setSeenKey] = useState(serverKey);
   if (serverKey !== seenKey) {
@@ -112,10 +112,7 @@ function RefRow({ reference, bookingTypeId, unitId, readOnly }: { reference: Sys
   );
 }
 
-/**
- * "הגדרות תפעול": the numbers, hours and phone numbers the booking flow runs on. The server saves a setting only for the signed-in user's
- * OWN unit, so for another unit (a super admin looking at a unit that is not theirs) the values are shown and cannot be edited.
- */
+/** Operating settings. The server saves only the user's own unit, so other units are read-only. */
 export function OperationsTab({ unitId, bookingTypeId, settings, ownUnit }: { unitId: number; bookingTypeId: number; settings: Settings; ownUnit: boolean }) {
   const references = settings.system_references.filter((reference) => !isDatesReference(reference));
   return (

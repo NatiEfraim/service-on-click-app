@@ -233,7 +233,7 @@ function Body({ booking }: { booking: BookingDetail }) {
   );
 }
 
-/** One booking in full: where it is on the route, the decisions the server offers, its values, comments, files and timeline. */
+/** One booking in full: route, offered decisions, values, comments, files and timeline. */
 export function BookingDrawer({ serial, onClose }: { serial: number; onClose: () => void }) {
   const query = useQuery({ queryKey: keys.bookingDetail(serial), queryFn: ({ signal }) => bookingsApi.get(serial, signal), staleTime: 5_000, retry: false });
 

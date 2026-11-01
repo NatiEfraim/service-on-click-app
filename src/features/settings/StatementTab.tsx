@@ -13,7 +13,7 @@ import { handleWriteError, useReloadSettings } from './useSettings';
 
 type ShowTime = '0' | '1';
 
-/** "הצהרה": the text the requester must agree to, when it appears (as the form opens / when it is sent), and whether it is on. */
+/** Statement the requester must agree to: text, timing and on/off. */
 export function StatementTab({ unitId, bookingTypeId, settings }: { unitId: number; bookingTypeId: number; settings: Settings }) {
   const toast = useToast();
   const reload = useReloadSettings(unitId, bookingTypeId);
@@ -28,7 +28,7 @@ export function StatementTab({ unitId, bookingTypeId, settings }: { unitId: numb
   const [problem, setProblem] = useState('');
   const [error, setError] = useState('');
 
-  // follow the server after a save, or somebody else's change - adjusted during render
+  // sync with the server value, adjusted during render
   const serverKey = JSON.stringify([serverText, server?.is_active ?? false, server?.show_time ?? 1]);
   const [seenKey, setSeenKey] = useState(serverKey);
   if (serverKey !== seenKey) {

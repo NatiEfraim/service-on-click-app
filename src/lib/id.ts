@@ -1,7 +1,4 @@
-/**
- * A unique string for the `Idempotency-Key` header (max 80 chars). `crypto.randomUUID` only exists in secure contexts
- * (https or localhost); an intranet page on plain http falls back to `getRandomValues`, then to Math.random.
- */
+/** `Idempotency-Key` value; `randomUUID` needs a secure context, so plain http falls back to random bytes. */
 export function newKey(): string {
   const c = typeof globalThis !== 'undefined' ? globalThis.crypto : undefined;
   if (c && typeof c.randomUUID === 'function') return c.randomUUID();

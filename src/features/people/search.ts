@@ -1,8 +1,4 @@
-/**
- * The search box of the users screen. The server (`GET /users/{identifier}`) reads a string of digits as the start of a personal number
- * or ID number (1 to 9 digits - anything longer is a 422), anything else as the start of a full name with the spaces left out.
- * This module turns what the user typed into that identifier, and filters a list that is already in memory the same way.
- */
+/** Search text to `GET /users/{identifier}`: 1-9 digits are a number prefix (longer is a 422), else a name prefix. */
 
 /** `UserService::MAX_LEN`: the longest digit string the server accepts. */
 export const MAX_SEARCH_DIGITS = 9;
@@ -17,7 +13,7 @@ export interface ParsedSearch {
   message?: string;
 }
 
-/** Characters that would end or reshape the `/users/{identifier}` path segment. They never occur in a name or a number. */
+/** Characters that would break the `/users/{identifier}` path segment. */
 const PATH_CHARS = /[/\\?#%]/g;
 
 export function parseSearch(raw: string): ParsedSearch {
@@ -41,7 +37,7 @@ interface Searchable {
 
 const squash = (value: string | null | undefined): string => (value ?? '').replace(/\s+/g, '').toLowerCase();
 
-/** The same rule the server applies, for a list that was loaded whole: a number starts with the digits, a name starts with the letters. */
+/** The server's rule applied to a fully loaded list: number or name prefix. */
 export function matchesSearch(person: Searchable, search: ParsedSearch): boolean {
   switch (search.kind) {
     case 'all':

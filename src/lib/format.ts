@@ -1,5 +1,3 @@
-/** Formatting for dates, durations and names. Everything shown to people is Hebrew (he-IL). */
-
 const DASH = '—';
 
 const dateTime = new Intl.DateTimeFormat('he-IL', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -7,11 +5,7 @@ const dateOnly = new Intl.DateTimeFormat('he-IL', { day: '2-digit', month: '2-di
 const dateLong = new Intl.DateTimeFormat('he-IL', { weekday: 'long', day: 'numeric', month: 'long' });
 const timeOnly = new Intl.DateTimeFormat('he-IL', { hour: '2-digit', minute: '2-digit' });
 
-/**
- * The API sends instants as ISO 8601 with an offset ("2026-11-01T14:16:15+00:00"), but the audit log sends a zone-less
- * "2026-11-01 14:16:15.038910" - which is UTC. `new Date()` would read that as local time and show it hours off.
- * A bare `Y-m-d` is a calendar day, not an instant: the time zone must not move it.
- */
+/** The audit log sends zone-less UTC ("2026-11-01 14:16:15.038910"); a bare `Y-m-d` is a local calendar day. */
 export function parseServerDate(value: string): Date {
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return new Date(`${value}T00:00:00`);
   const naive = /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})(?:\.(\d+))?$/.exec(value);
@@ -35,7 +29,7 @@ export function fmtDate(value: string | number | Date | null | undefined): strin
   return date ? dateOnly.format(date) : DASH;
 }
 
-/** "יום ראשון, 1 בנובמבר" - the day heading of the history feed. */
+/** Day heading of the history feed. */
 export function fmtDayHeading(value: string | number | Date | null | undefined): string {
   const date = toDate(value);
   return date ? dateLong.format(date) : DASH;
@@ -54,13 +48,12 @@ export function fmtHours(hours: number | null | undefined): string {
   return `${Math.round((hours / 24) * 10) / 10} ימים`;
 }
 
-/** The dashboard's wording: whole hours under two days, days above. */
+/** Whole hours under two days, days above. */
 export function fmtLongHours(hours: number | null | undefined): string {
   if (hours === null || hours === undefined) return DASH;
   return hours >= 48 ? `${Math.round((hours / 24) * 10) / 10} ימים` : `${Math.round(hours)} שעות`;
 }
 
-/** "לפני 5 דק'" - how long ago. */
 export function fmtAgo(value: string | number | Date | null | undefined, now: number = Date.now()): string {
   const date = toDate(value);
   if (!date) return DASH;
@@ -71,7 +64,7 @@ export function fmtAgo(value: string | number | Date | null | undefined, now: nu
   return `לפני ${Math.round(minutes / 1440)} ימים`;
 }
 
-/** The round avatar's letters: the first letter of the first two words. */
+/** Avatar letters: first letter of the first two words. */
 export function initials(name: string | null | undefined): string {
   const words = (name ?? '').trim().split(/\s+/).filter(Boolean);
   return words
@@ -80,13 +73,13 @@ export function initials(name: string | null | undefined): string {
     .join('');
 }
 
-/** `Y-m-d` of a local date (what the API takes and what `<input type="date">` holds). */
+/** `Y-m-d` of a local date. */
 export function toDayString(date: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
-/** The server prints booking dates as `d/m/Y`; an `<input type="date">` wants `Y-m-d`. Anything else comes back unchanged. */
+/** Server `d/m/Y` -> `Y-m-d`; other input is returned unchanged. */
 export function dmyToIso(value: string): string {
   const match = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(value.trim());
   if (!match) return value;

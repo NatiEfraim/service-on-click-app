@@ -9,17 +9,17 @@ export function Chip({ tone = '', children, title }: { tone?: ChipTone; children
   );
 }
 
-/** The status of a booking; its colour comes from the status number (shared with the mobile app). */
+/** Booking status; the colour comes from the status number (shared with the mobile app). */
 export function StatusChip({ statusId, label }: { statusId: number; label: string }) {
   return <Chip tone={statusTone(statusId)}>{label}</Chip>;
 }
 
-/** "נדרשת הכרעה" - the mobile app changed the booking while a decision made here was waiting. */
+/** Sync conflict: the mobile app changed the booking while a decision here was pending. */
 export function NeedsDecision() {
   return <Chip tone="bad">נדרשת הכרעה</Chip>;
 }
 
-/** Where a change came from: the mobile app, a person here, or automatic. */
+/** Origin of a change: mobile app, person, or automatic. */
 export function SourceTag({ source }: { source: string | null | undefined }) {
   const tag = sourceTag(source);
   return tag ? <span className={`tag ${tag.tone}`}>{tag.label}</span> : null;

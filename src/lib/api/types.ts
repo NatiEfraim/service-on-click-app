@@ -1,9 +1,4 @@
-/**
- * Types of the service-on-click-api admin contract (docs/admin-api.md of the API project), checked against live responses.
- * The UI is built from `Me.capabilities` and each booking's `actions` - nothing in here is a rule, only a shape.
- */
-
-// ---------- envelopes
+/** Response shapes of the service-on-click-api admin contract. */
 
 export interface PageMeta {
   total: number;
@@ -17,13 +12,10 @@ export interface Paginated<T> {
   meta: PageMeta;
 }
 
-/** `{ data, message? }` - the shape of every single-record answer. */
 export interface Envelope<T> {
   data: T;
   message?: string;
 }
-
-// ---------- start-up: who am I, what can I see
 
 export type Capability =
   | 'audit.view'
@@ -55,7 +47,7 @@ export interface Me {
   capabilities: Record<Capability, boolean>;
   is_super_admin: boolean;
   is_admin: boolean;
-  /** A vice approver / control officer on every type they manage: the queue is their only screen. */
+  /** Vice approver / control officer on every managed type: the queue is their only screen. */
   is_handler_only: boolean;
   managed_booking_types: number[];
   dashboard_booking_types: number[];
@@ -110,11 +102,10 @@ export interface CatalogUnit {
   id: number;
   /** The unit's letter - the only thing the mobile app knows. */
   code: string;
-  /** The name people see in this system. */
   name: string;
 }
 
-/** The catalog lists ACTIVE departments only, as `{ id, unit_id, name }` (`is_active` is never sent; the organisation screen has it). */
+/** The catalog lists active departments only; `is_active` is never sent here. */
 export interface CatalogDepartment {
   id: number;
   unit_id: number;
@@ -133,15 +124,13 @@ export interface Catalog {
   stages: CatalogStage[];
   roles: CatalogRole[];
   booking_types: CatalogBookingType[];
-  /** booking type id -> the status ids that type can reach. */
+  /** booking type id -> reachable status ids */
   booking_type_statuses: Record<string, number[]>;
   groups: CatalogGroup[];
   units: CatalogUnit[];
   departments: CatalogDepartment[];
   action_types: CatalogActionType[];
 }
-
-// ---------- bookings
 
 export interface BookingAction {
   status_id: number;
@@ -185,20 +174,17 @@ export interface FieldTypeRef {
   name: string;
 }
 
-/** A chosen option; a choice can chain further (`option_fields`) and a multi-select is an array of these. */
+/** A chosen option; may chain further via `option_fields`, a multi-select is an array. */
 export interface OptionNode {
   display_name: string;
   field_type?: FieldTypeRef;
-  /** Free text / quantity that goes with the option (e.g. "other: special size"). */
+  /** Free text / quantity that goes with the option. */
   value?: string | number | null;
   option_fields?: OptionNode | OptionNode[];
   parent_option_id?: number | null;
 }
 
-/**
- * One entry of `booking_values`. Three shapes share it: a plain field (`value`), a choice (`option_fields`), and a
- * group that carries child fields (`form_fields`) - which can also have a choice of its own.
- */
+/** One `booking_values` entry: a plain field, a choice, or a group with child `form_fields`. */
 export interface BookingValueNode {
   id?: number;
   form_field_id?: number;
@@ -209,7 +195,7 @@ export interface BookingValueNode {
   field_type: FieldTypeRef;
   editable?: boolean;
   is_required?: boolean;
-  /** A plain value; for a multi-date a list of strings; for a file / image field a list of upload descriptors (never displayed - see `isUploadNode`). */
+  /** Multi-date: list of strings; file / image: upload descriptors (never displayed, see `isUploadNode`). */
   value?: string | number | boolean | null | unknown[];
   option_fields?: OptionNode | OptionNode[];
   form_fields?: BookingValueNode[];
@@ -225,7 +211,7 @@ export interface BookingPerson {
 export interface BookingComment {
   id: number;
   comment: string;
-  /** Already formatted by the server, `d/m/Y`. */
+  /** Server-formatted `d/m/Y`. */
   created_at: string;
   user: BookingPerson | null;
 }
@@ -247,11 +233,11 @@ export interface Attachment {
   id: number;
   name: string;
   mime: string | null;
-  /** True for images and PDFs: shown in the page. False: offer a download. */
+  /** Images and PDFs are shown in the page; others are downloaded. */
   inline: boolean;
   /** False until the bytes arrive from the mobile app. */
   available: boolean;
-  /** Relative (`/api/...`), needs the login cookie. Null while not available. */
+  /** Relative (`/api/...`); needs the login cookie. */
   url: string | null;
 }
 
@@ -284,11 +270,11 @@ export interface BookingDetail extends BookingRow {
   can_edit_values: boolean;
   editable_fields: EditableField[];
   sync: BookingSync;
-  /** The audit rows of this booking - super admin only, otherwise null. */
+  /** Super admin only, otherwise null. */
   audit: BookingAuditRow[] | null;
 }
 
-/** An audit row as embedded in a booking: the same as `AuditRow` without the fields that are implied by the booking itself. */
+/** `AuditRow` without the fields implied by the booking. */
 export type BookingAuditRow = Pick<AuditRow, 'occurred_at' | 'actor_id' | 'actor_name' | 'source' | 'action' | 'before' | 'after' | 'reason' | 'result' | 'correlation_id'>;
 
 export interface StatusChangeResult {
@@ -304,8 +290,6 @@ export interface ValuesUpdateResult {
   version: number;
   changed: string[];
 }
-
-// ---------- dashboards
 
 export interface StageBucket {
   count: number;
@@ -458,15 +442,13 @@ export interface Reports {
   truncated: boolean;
 }
 
-// ---------- settings of a booking type
-
 export interface SystemReference {
   id: number;
   name: string;
   title: string;
   description: string | null;
   field_type_id: number;
-  /** The decoded settings, e.g. `{ stock_cars: 15 }` or `{ dates: ["2026-12-01"] }`. */
+  /** Decoded settings, e.g. `{ stock_cars: 15 }`. */
   value: Record<string, unknown>;
 }
 
@@ -480,9 +462,9 @@ export interface FormField {
   editable: boolean;
   position: number;
   version: number;
-  /** How many bookings hold a value for the field. */
+  /** Bookings holding a value for the field. */
   used_by: number;
-  /** Made in this system (`int_...`) as opposed to one of the mobile app's. */
+  /** Created here (`int_...`), not by the mobile app. */
   is_custom: boolean;
   can_change_type: boolean;
   can_remove: boolean;
@@ -547,7 +529,7 @@ export interface DeleteFieldResult {
   used_by: number;
 }
 
-/** What the server answers to a created / changed form field: the field as the form editor needs it, plus the names of its options. */
+/** A created / changed form field plus its option names. */
 export interface FieldSnapshot {
   id: number;
   field_name: string;
@@ -563,7 +545,7 @@ export interface FieldSnapshot {
   options: string[];
 }
 
-/** The option `PUT update-option` saved, with the attributes the server derived (type, payload section, free-input flag). */
+/** The option saved by `update-option`, with server-derived attributes. */
 export interface SavedOption {
   option_id: number;
   uuid: string;
@@ -576,7 +558,7 @@ export interface SavedOption {
   is_input: boolean;
 }
 
-/** One row of `GET get-siblings-options/{optionId}` - the only read that tells an option's `field_type_id`. */
+/** The only read that returns an option's `field_type_id`. */
 export interface OptionSibling {
   option_id: number;
   option_name: string;
@@ -589,11 +571,8 @@ export interface OptionSibling {
 
 export interface OptionSiblings {
   parent: { id: number | null; name: string | null };
-  /** The option itself and the options that share its parent. */
   siblings: OptionSibling[];
 }
-
-// ---------- people and organisation
 
 export interface NamedRef {
   id: number;
@@ -601,10 +580,7 @@ export interface NamedRef {
   display_name: string;
 }
 
-/**
- * A row of `GET /users`. People the mobile app brought in (through their bookings) are known by ID number only until someone
- * adds them here: their `name` and `personal_number` are null.
- */
+/** Users the mobile app brought in have null `name` and `personal_number` until added here. */
 export interface AppUser {
   uuid: string;
   name: string | null;
@@ -619,11 +595,7 @@ export interface AppUser {
   permissions: NamedRef[];
 }
 
-/**
- * A row of `get-approvers` (and of the answer to `assign-admin-role`). `permissions` holds ONE entry per booking type - the server
- * de-duplicates by type - so a person who is both approver and vice approver of a type shows only one of the two here.
- * The exact flags per type come from `get-approver-permissions`.
- */
+/** `permissions` has one entry per booking type (server de-duplicates); exact flags come from `get-approver-permissions`. */
 export interface ApproverRow {
   uuid: string;
   full_name: string | null;
@@ -643,14 +615,11 @@ export interface RolePermissionRow {
   name: string;
   display_name: string;
   icon: string | null;
-  /** `is_approver`, `is_vice_approver`, ... one flag per role that applies to the type. */
+  /** One flag per applicable role (`is_approver`, `is_vice_approver`, ...). */
   [flag: string]: unknown;
 }
 
-/**
- * `get-approver-permissions` / `get-admin-permissions`. `permissions` has one row per booking type the CALLER may grant on - for the
- * super admin the approver version of it is empty today (the server derives the types from the caller's own `admin_*` permissions).
- */
+/** `permissions`: one row per booking type the caller may grant on (empty for the super admin's approver version). */
 export interface UserPermissions {
   role_options?: Record<string, number>;
   user: { full_name: string | null; personal_number: string | null };
@@ -672,8 +641,6 @@ export interface OrgUnit {
   users: number;
   departments: OrgDepartment[];
 }
-
-// ---------- audit and sync (super admin)
 
 export type AuditResult = 'success' | 'denied' | 'failed';
 

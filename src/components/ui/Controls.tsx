@@ -9,7 +9,7 @@ export interface SegOption<T extends string> {
   count?: number;
 }
 
-/** A segmented control (a row of toggle buttons where exactly one is pressed). */
+/** Segmented control: a row of toggle buttons, exactly one pressed. */
 export function Seg<T extends string>({ options, value, onChange, label }: { options: SegOption<T>[]; value: T; onChange: (value: T) => void; label: string }) {
   return (
     <div className="seg" role="group" aria-label={label}>
@@ -23,10 +23,7 @@ export function Seg<T extends string>({ options, value, onChange, label }: { opt
   );
 }
 
-/**
- * Tabs for a settings-like card (`.utabs`), following the WAI-ARIA tabs pattern: one tab is in the tab order, the arrow keys move
- * between tabs (in a right-to-left page the left arrow goes to the NEXT tab), Home / End jump to the first / last.
- */
+/** WAI-ARIA tabs; arrow keys are mirrored in RTL (left = next). */
 export function Tabs<T extends string>({ tabs, value, onChange, label }: { tabs: { id: T; label: string }[]; value: T; onChange: (id: T) => void; label: string }) {
   const refs = useRef(new Map<T, HTMLButtonElement>());
 
@@ -66,7 +63,7 @@ export function Tabs<T extends string>({ tabs, value, onChange, label }: { tabs:
   );
 }
 
-/** Previous / next with a page counter. `total` is optional (some lists do not know it). */
+/** Previous / next with a page counter; `total` is optional. */
 export function Pager({ page, lastPage, total, noun = 'קריאות', onPage, prevLabel = 'הקודם', nextLabel = 'הבא', hasNext }: {
   page: number;
   lastPage?: number;
@@ -75,7 +72,6 @@ export function Pager({ page, lastPage, total, noun = 'קריאות', onPage, pr
   onPage: (page: number) => void;
   prevLabel?: string;
   nextLabel?: string;
-  /** When the last page is unknown. */
   hasNext?: boolean;
 }) {
   const canNext = hasNext ?? (lastPage !== undefined && page < lastPage);

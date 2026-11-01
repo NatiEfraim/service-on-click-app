@@ -9,10 +9,9 @@ export interface ModalProps {
   title: string;
   onClose: () => void;
   children: ReactNode;
-  /** Buttons row. */
   footer?: ReactNode;
   wide?: boolean;
-  /** While true the dialog cannot be closed (a request is in flight). */
+  /** Blocks closing while a request is in flight. */
   busy?: boolean;
   initialFocus?: RefObject<HTMLElement | null>;
 }
@@ -36,7 +35,7 @@ function ModalInner({ title, onClose, children, footer, wide, busy, initialFocus
   );
 }
 
-/** A centred dialog on top of everything (including the booking drawer). Render it only while it is open. */
+/** Centred dialog above the drawer. Render it only while open. */
 export function Modal(props: ModalProps) {
   const isClient = useIsClient();
   if (!isClient) return null;

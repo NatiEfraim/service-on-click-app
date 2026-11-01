@@ -8,7 +8,6 @@ import { useIsClient } from './useIsClient';
 
 interface DrawerProps {
   title: ReactNode;
-  /** Plain-text name for screen readers. */
   label: string;
   onClose: () => void;
   children: ReactNode;
@@ -36,7 +35,7 @@ function DrawerInner({ title, label, onClose, children }: DrawerProps) {
   );
 }
 
-/** The side panel the booking opens in. */
+/** Side panel the booking opens in. */
 export function Drawer(props: DrawerProps) {
   const isClient = useIsClient();
   if (!isClient) return null;

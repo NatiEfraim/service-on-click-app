@@ -41,10 +41,7 @@ function parseTypes(raw: string | null): number[] {
     .filter((n) => Number.isInteger(n) && n > 0);
 }
 
-/**
- * Everything about the bookings of one service domain (or of all the domains of a domain commander):
- * counts against the handling target, where bookings wait, how long each stage takes, and opened vs closed.
- */
+/** Dashboard of one service domain (or all of a commander's domains): targets, waiting, stage times, flow. */
 export function DomainDashboard() {
   const router = useRouter();
   const search = useSearchParams();

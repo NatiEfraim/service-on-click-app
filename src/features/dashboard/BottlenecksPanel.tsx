@@ -8,10 +8,7 @@ import { fmtHours } from '@/lib/format';
 
 const TOP = 8;
 
-/**
- * Who the open bookings are waiting for: the load on each role holder (open bookings per person at a stage) and how the people
- * who handled bookings in the window perform. From `GET /bottlenecks` - the complement of the stage table above it.
- */
+/** Load per role holder and handler performance, from `GET /bottlenecks`. */
 export function BottlenecksPanel({ types, days }: { types: number[]; days: number }) {
   const params = { types, days };
   const query = useQuery({ queryKey: keys.bottlenecks(params), queryFn: ({ signal }) => insightsApi.bottlenecks(params, signal), staleTime: 60_000 });

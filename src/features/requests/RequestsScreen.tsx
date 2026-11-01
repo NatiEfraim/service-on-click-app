@@ -16,10 +16,7 @@ import { STAGE_ORDER, STAGE_SHORT } from '@/lib/labels';
 import { useSession } from '@/providers/SessionProvider';
 import { advancedCount, DEFAULT_FILTERS, parseFilters, SORTS, toApiParams, toSearchParams, type RequestFilters, type ViewId } from './filters';
 
-/**
- * Every booking the user may see. All filters live in the URL (`/requests?view=overdue&types=3&stage=approver`), so a dashboard figure,
- * a bookmark and the back button all land on the same list.
- */
+/** Every booking the user may see; filters live in the URL so links and Back reproduce the list. */
 export function RequestsScreen() {
   const { me, catalog, can, canAct } = useSession();
   const router = useRouter();
@@ -39,8 +36,7 @@ export function RequestsScreen() {
     [filters, pathname, router, search],
   );
 
-  // the search box types freely and updates the URL once the user pauses; when the URL changes by itself (back button,
-  // "clear") the box follows it - adjusted during render, which is how React wants derived state kept in step
+  // The box updates the URL after a pause and follows URL changes (Back, clear); synced during render.
   const [text, setText] = useState(filters.q);
   const [seenQ, setSeenQ] = useState(filters.q);
   if (filters.q !== seenQ) {
@@ -56,7 +52,7 @@ export function RequestsScreen() {
   const apiParams = useMemo(() => toApiParams(filters), [filters]);
   const query = useQuery({ queryKey: keys.bookingList(apiParams), queryFn: ({ signal }) => bookingsApi.list(apiParams, signal), placeholderData: (previous) => previous });
 
-  // people who moved bookings (the "handler" filter) - only offered to whoever manages users
+  // Handler filter options; only for users who manage users.
   const handlers = useQuery({ queryKey: keys.approvers(''), queryFn: ({ signal }) => peopleApi.approvers('', signal), enabled: can('users.manage'), staleTime: 5 * 60_000 });
 
   const views: { id: ViewId; label: string }[] = [

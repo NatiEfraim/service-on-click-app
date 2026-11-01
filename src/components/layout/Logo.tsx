@@ -1,4 +1,3 @@
-/** The Service On Click mark (from the example UI). */
 export function Logo() {
   return (
     <svg viewBox="0 0 34 34" aria-hidden="true" focusable="false">

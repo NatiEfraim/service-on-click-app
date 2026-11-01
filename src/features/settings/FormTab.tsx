@@ -139,10 +139,7 @@ function SortableGroup({ node, ordinal, settings, actions, disabled }: { node: F
   );
 }
 
-/**
- * "מבנה הטופס": the fields in the order the requester meets them, with a live preview. The super admin (`can_edit_global`) adds, changes,
- * removes and drags fields; everybody else sees the same list read-only. Only stand-alone fields move - the ones inside another follow it.
- */
+/** Form structure with preview; editing needs `can_edit_global`, only top-level fields drag. */
 export function FormTab({ unitId, bookingTypeId, settings }: { unitId: number; bookingTypeId: number; settings: Settings }) {
   const client = useQueryClient();
   const toast = useToast();
@@ -180,7 +177,7 @@ export function FormTab({ unitId, bookingTypeId, settings }: { unitId: number; b
     },
     onSuccess: () => toast('סדר השדות נשמר.', 'ok'),
     onError: async (e, _ids, context) => {
-      // put the old order back, then say why (a 409 means the form is not what this screen showed)
+      // roll back the optimistic order (409: the form changed)
       if (context?.previous) client.setQueryData(queryKey, context.previous);
       const apiError = toApiError(e);
       if (apiError.stale || apiError.denied) await handleWriteError(e, toast, reload);

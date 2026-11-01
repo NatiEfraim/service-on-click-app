@@ -2,25 +2,24 @@ import type { AuditRow, BookingAuditRow } from './api/types';
 import { fmtLongHours } from './format';
 import { ROLE_NAME } from './labels';
 
-/** A full audit row, or the shorter one embedded in a booking (no ids: the booking itself is the context). */
+/** A full audit row, or the shorter one embedded in a booking. */
 export type AuditRowLike = BookingAuditRow & Partial<Pick<AuditRow, 'actor_type' | 'entity_id' | 'booking_serial' | 'unit_id' | 'booking_type_id'>>;
 
-/** What the surrounding screen already knows about the row (the booking it is shown on). */
+/** The booking the row is shown on. */
 export interface AuditContext {
   serial?: number;
   bookingTypeId?: number;
 }
 
-/** What the sentence builder needs to name things; the session provides them. */
+/** Name lookups supplied by the session. */
 export interface AuditNames {
   typeName: (bookingTypeId: number) => string;
   unitName: (unitId: number | null | undefined) => string;
   departmentName: (departmentId: number | null | undefined) => string | null;
-  /** Name of a status id; without it a status is just "סטטוס N". */
   statusName?: (statusId: number) => string;
 }
 
-/** The status a decision moves a booking to -> what the person did. */
+/** Target status id -> what the person did. */
 const VERB: Record<number, string> = {
   3: 'אישר/ה סופית',
   4: 'דחה/תה',
@@ -37,7 +36,7 @@ const VERB: Record<number, string> = {
   18: 'דחה/תה כרמ"ד תו"ב',
 };
 
-/** Keys of a booking type's settings (`system_reference` values) in the words people use. */
+/** Setting keys (`system_reference` values) in user-facing words. */
 const SETTING_LABEL: Record<string, string> = {
   contact_phone: 'טלפון',
   start_time: 'משעה',
@@ -57,7 +56,7 @@ const SETTING_LABEL: Record<string, string> = {
   dates: 'תאריכים חסומים',
 };
 
-/** A name for each action - used when a refused attempt has no sentence of its own. */
+/** Action names for refused attempts that have no sentence of their own. */
 const ACTION_NOUN: Record<string, string> = {
   'booking.status_change': 'לשנות סטטוס של קריאה',
   'booking.values.update': 'לעדכן פרטים בקריאה',
@@ -84,12 +83,12 @@ const ACTION_NOUN: Record<string, string> = {
   'audit.modify': 'לשנות את היסטוריית השינויים',
 };
 
-/** These say more than the generic "tried X and was blocked" (the booking, the kind of grant ...). */
+/** Actions whose denied sentence is more specific than the generic one. */
 const HAS_OWN_DENIED_SENTENCE = new Set(['booking.status_change', 'booking.values.update', 'booking.create', 'user.permissions.change', 'audit.modify']);
 
 type Bag = Record<string, unknown> | unknown[] | null | undefined;
 
-/** `before` / `after` are objects - or an empty list: PHP writes an empty array as `[]`. */
+/** `before` / `after` may be `[]` (PHP serialises an empty array that way). */
 function asRecord(bag: Bag): Record<string, unknown> {
   return bag && typeof bag === 'object' && !Array.isArray(bag) ? (bag as Record<string, unknown>) : {};
 }
@@ -118,7 +117,7 @@ const list = (bag: Bag, key: string): unknown[] => {
 
 const quote = (value: string): string => `"${value}"`;
 
-/** `2026-12-27` -> `27.12.2026` (booking dates are calendar days: no time zone involved). */
+/** `2026-12-27` -> `27.12.2026` (calendar day, no time zone). */
 function showValue(value: unknown): string {
   if (value === null || value === undefined || value === '') return '—';
   const raw = String(value);
@@ -137,7 +136,7 @@ function statusLabel(names: AuditNames, id: number | null): string {
   return names.statusName ? names.statusName(id) : `סטטוס ${id}`;
 }
 
-/** Who did it: a person by name, or the machine that did it. */
+/** The person's name, or the automated process that acted. */
 export function auditActor(row: Pick<AuditRowLike, 'actor_name' | 'actor_id' | 'source'> & Partial<Pick<AuditRow, 'actor_type'>>): string {
   if (row.actor_name) return row.actor_name;
   if (row.actor_id === 'sync:import') return 'תהליך הקליטה מהאפליקציה';
@@ -148,7 +147,7 @@ export function auditActor(row: Pick<AuditRowLike, 'actor_name' | 'actor_id' | '
   return 'המערכת';
 }
 
-/** The permissions of `user_N` are everybody's base permission and never interesting; the rest are `{role}_{booking type id}`. */
+/** `user_N` is everyone's base permission and is skipped; the rest are `{role}_{booking type id}`. */
 function permissionChange(before: unknown[], after: unknown[], names: AuditNames): string {
   const parse = (items: unknown[]) =>
     items
@@ -171,7 +170,7 @@ function permissionChange(before: unknown[], after: unknown[], names: AuditNames
   return parts.join(' | ');
 }
 
-/** What changed among a form field's options (`{ optionId: { name, parent_id } }`, only the options that changed). */
+/** Option changes; the payload holds only changed options (`{ optionId: { name, parent_id } }`). */
 function optionChanges(before: Bag, after: Bag, removing: boolean): string[] {
   const was = asRecord(before);
   const now = asRecord(after);
@@ -195,7 +194,7 @@ function optionChanges(before: Bag, after: Bag, removing: boolean): string[] {
   return out;
 }
 
-/** One setting of a booking type: a value changed, or a list of dates (blocked dates) that grew or shrank. */
+/** A changed value, or blocked dates that were added / removed. */
 function settingChanges(before: Bag, after: Bag): string[] {
   const was = asRecord(before);
   const now = asRecord(after);
@@ -218,7 +217,6 @@ function settingChanges(before: Bag, after: Bag): string[] {
   return out;
 }
 
-/** The changes of a form field between two snapshots, as sentences about the field `name`. */
 function fieldChanges(before: Bag, after: Bag): { rename: string | null; others: string[] } {
   const oldName = text(before, 'field_display_name');
   const newName = text(after, 'field_display_name') || oldName;
@@ -232,11 +230,7 @@ function fieldChanges(before: Bag, after: Bag): { rename: string | null; others:
   return { rename: oldName && newName !== oldName ? oldName : null, others };
 }
 
-/**
- * One plain-language sentence for an audit row ("היסטוריית שינויים"). The payload keys used here are the ones the server really writes
- * (checked against live rows). Unknown actions fall back to "who: action", so a new server-side action never breaks the screen;
- * the raw before / after values stay available on the row.
- */
+/** One-sentence summary of an audit row; unknown actions fall back to "who: action". */
 export function auditSentence(row: AuditRowLike, names: AuditNames, context: AuditContext = {}): string {
   const who = auditActor(row);
   const serial = row.booking_serial ?? context.serial ?? '';
@@ -246,7 +240,7 @@ export function auditSentence(row: AuditRowLike, names: AuditNames, context: Aud
   const { before, after } = row;
   const target = row.entity_id != null ? String(row.entity_id) : '';
 
-  // A refused attempt: only the intent is known (nothing changed), so say what was tried - except where the sentence below knows more.
+  // refused attempt: only the intent is known
   if (denied && ACTION_NOUN[row.action] && !HAS_OWN_DENIED_SENTENCE.has(row.action)) return `${who} ניסה/תה ${ACTION_NOUN[row.action]} ונחסם/ה`;
 
   switch (row.action) {
@@ -374,14 +368,14 @@ export function auditSentence(row: AuditRowLike, names: AuditNames, context: Aud
   }
 }
 
-/** The icon family of an audit row: booking / config / user / org / sync / audit, or "denied" / "failed" for a refused or broken one. */
+/** Icon family: the action prefix, or "denied" / "failed" by result. */
 export function auditCategory(row: Pick<AuditRow, 'result' | 'action'>): string {
   if (row.result === 'denied') return 'denied';
   if (row.result === 'failed') return 'failed';
   return row.action.split('.')[0] || 'audit';
 }
 
-/** The families the history can be filtered by: the `action` prefix the server understands. */
+/** Filter families, as `action` prefixes the server understands. */
 export const AUDIT_CATEGORIES = [
   { id: '', label: 'הכל' },
   { id: 'booking.', label: 'קריאות' },
@@ -391,10 +385,7 @@ export const AUDIT_CATEGORIES = [
   { id: 'sync.', label: 'סנכרון' },
 ] as const;
 
-/**
- * The reason column. A person's comment is shown as written; the machine codes the server puts on a refused attempt are put into words.
- * Returns null when there is nothing to say.
- */
+/** Shows a person's comment as written and translates the server's refusal codes; null when empty. */
 export function auditReason(row: Pick<AuditRow, 'reason' | 'result'>, names?: Pick<AuditNames, 'statusName'>): string | null {
   const reason = row.reason?.trim();
   if (!reason) return null;

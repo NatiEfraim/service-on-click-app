@@ -7,7 +7,6 @@ interface ButtonProps extends ComponentProps<'button'> {
   variant?: ButtonVariant;
   size?: 'sm' | 'md';
   icon?: IconName;
-  /** Shows a spinner and disables the button. */
   loading?: boolean;
 }
 

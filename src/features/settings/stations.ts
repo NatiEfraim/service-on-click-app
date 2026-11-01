@@ -1,13 +1,10 @@
 import { routeFor } from '@/features/bookings/route';
 import type { Catalog, SettingsManager, StageId } from '@/lib/api/types';
 
-/** Statuses only a control officer sets (14 handling, 17 approved, 18 rejected): a type that can reach them has that station. */
+/** Statuses only a control officer sets (14, 17, 18); a type reaching them has that station. */
 const CONTROL_OFFICER_STATUSES = [14, 17, 18];
 
-/**
- * Which people hold a station of the approval route. The roles are the ones `GET settings` lists for each person (`managers[].roles`);
- * the barber's "done" step is closed by the vice approver and confirmed by the approver, realisation belongs to the approver.
- */
+/** Roles (from `managers[].roles`) that hold each approval-route station. */
 const STATION_ROLES: Partial<Record<StageId, string[]>> = {
   control_officer: ['transportation_control_officer'],
   vice_approver: ['vice_approver'],
@@ -34,16 +31,12 @@ export function campCommanders(managers: readonly SettingsManager[]): string[] {
   return peopleWithRoles(managers, ['admin']);
 }
 
-/**
- * The stations of a booking type that someone must hold, with the people who do. Not every type has every step, and the server says so only
- * through the statuses the type can reach: the barber's step where "handled by the barber" (11) is reachable, the control officer's where one
- * of his statuses is. Opening and closing have no holder and are left out.
- */
+/** Stations of a booking type with their holders, inferred from its reachable statuses. */
 export function stationsForType(bookingTypeId: number, catalog: Pick<Catalog, 'booking_type_statuses'>, managers: readonly SettingsManager[]): StationPeople[] {
   const reachable = catalog.booking_type_statuses?.[String(bookingTypeId)] ?? [];
   const hasControlOfficer = reachable.some((statusId) => CONTROL_OFFICER_STATUSES.includes(statusId));
 
-  // routeFor owns the labels and the barber rule; the stage tells it whether the control officer's step belongs to the route
+  // routeFor owns labels and the barber rule; the stage says whether the control officer step applies
   const route = routeFor({ booking_type_id: bookingTypeId, stage: hasControlOfficer ? 'control_officer' : 'vice_approver' }, catalog as Catalog);
 
   return route.flatMap((station) => {

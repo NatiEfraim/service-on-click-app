@@ -12,10 +12,7 @@ import type { BookingDetail } from '@/lib/api/types';
 import { FIELD_TYPE_TIME } from '@/lib/labels';
 import { useToast } from '@/providers/UiProvider';
 
-/**
- * Correct the date / time of a booking while it is the user's turn (before the final approval).
- * Only the fields in `editable_fields` are offered and only the ones that changed are sent, with the `version` that was shown.
- */
+/** Edits a booking's date / time: only `editable_fields`, only changed values, with the seen `version`. */
 export function EditValuesDialog({ booking, onClose }: { booking: BookingDetail; onClose: () => void }) {
   const client = useQueryClient();
   const toast = useToast();

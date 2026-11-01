@@ -1,4 +1,4 @@
-/** Hand-drawn, stroke-only icons (24x24), the set of the example UI plus a few more. Decorative: always `aria-hidden`. */
+/** Stroke-only 24x24 icons. Decorative: always `aria-hidden`. */
 const PATHS = {
   home: 'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z',
   inbox: 'M3 13h5l2 3h4l2-3h5M5 5h14l2 8v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-6z',

@@ -21,10 +21,7 @@ interface FieldDialogProps {
   onClose: () => void;
 }
 
-/**
- * Add a field, or change one: its name, whether it is required, whether an approver may correct it and - only where the server says
- * (`can_change_type`) - its type. A change sends only what differs, with the `version` that was shown (a stale one is a 409).
- */
+/** Add or edit a field. An edit sends only the changed values with the shown `version` (stale means 409). */
 export function FieldDialog({ unitId, bookingTypeId, settings, field, onClose }: FieldDialogProps) {
   const toast = useToast();
   const reload = useReloadSettings(unitId, bookingTypeId);

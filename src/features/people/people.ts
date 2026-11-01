@@ -1,9 +1,4 @@
-/**
- * The people of the users screen in one shape. Three endpoints describe a person differently:
- * - `GET /users` has the unit, the department and every permission,
- * - `get-approvers` has the permissions per domain but not where the person sits,
- * - `get-admins` has only the name and the number.
- */
+/** One person shape merged from `GET /users` (full), `get-approvers` (no unit) and `get-admins` (name and number only). */
 import type { AdminRow, ApproverRow, AppUser } from '@/lib/api/types';
 import { grantsFromApprover, grantsFromPermissionNames, type RoleGrant } from './permissions';
 
@@ -88,10 +83,7 @@ export function mergeRoleHolders(approvers: readonly ApproverRow[], admins: read
   return [...people.values()].sort(compareByName);
 }
 
-/**
- * Reads a list that comes 20 to a page without a total, page after page, until a page is not full (or `maxPages` is reached).
- * The role holders are few, so the screen loads them whole and filters in memory.
- */
+/** Reads a 20-per-page list with no total until a page is not full (or `maxPages`). */
 export async function loadAllPages<T>(
   fetchPage: (page: number) => Promise<readonly T[] | null | undefined>,
   { pageSize = PAGE_SIZE, maxPages = 10 }: { pageSize?: number; maxPages?: number } = {},
