@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { DomainIcon } from '@/components/booking/DomainBadge';
 import { Card } from '@/components/ui/Card';
+import { FadeIn } from '@/components/ui/FadeIn';
 import { EmptyState, ErrorNotice, Loading } from '@/components/ui/Feedback';
 import { Icon } from '@/components/ui/Icon';
 import { PageHead } from '@/components/ui/PageHead';
@@ -18,21 +19,25 @@ import { StageBars, StageColumns } from './StageBars';
 /** Matches the .chart-fade transition in screens.css. */
 const CHART_FADE_MS = 130;
 
-/** Domains shown as one tile on the home screen (booking type ids); the icon is the first type's. */
+/** The whole screen fading in once its data arrives: a rare, whole-page moment, so a little longer than a list. */
+const HOME_FADE_MS = 420;
+
+/** Domains shown as one tile on the home screen (booking type ids), with the mobile app's category icon (shirt, car, sandwich). */
 const TILE_GROUPS = [
-  { name: 'רכב', types: [1, 2], iconType: 1 },
-  { name: 'ציוד', types: [3, 4], iconType: 3 },
-  { name: 'מזון', types: [10, 11], iconType: 10 },
+  { name: 'רכב', types: [1, 2], iconType: 1, iconSrc: '/icons/groups/car.svg' },
+  { name: 'ציוד', types: [3, 4], iconType: 3, iconSrc: '/icons/groups/equipment.svg' },
+  { name: 'מזון', types: [10, 11], iconType: 10, iconSrc: '/icons/groups/food.svg' },
 ];
 
 /** Icon, name and counts of a domain tile (or of a group, or of one domain inside an opened group). */
-function TileBody({ iconType, name, open, overdue }) {
+function TileBody({ iconType, iconSrc, name, open, overdue }) {
+  const src = iconSrc ?? domainIconSrc(iconType);
   return (
     <>
       <span className="dtile-ic">
-        {domainIconSrc(iconType) ? (
+        {src ? (
           // eslint-disable-next-line @next/next/no-img-element -- static svg
-          <img src={domainIconSrc(iconType)} alt="" width={36} height={36} />
+          <img src={src} alt="" width={36} height={36} />
         ) : (
           <Icon name="layers" />
         )}
@@ -101,7 +106,7 @@ export function HomeScreen() {
     const key = group ? group.name : String(domain.booking_type_id);
     let tile = tiles.find((t) => t.key === key);
     if (!tile) {
-      tile = { key, name: domain.name, iconType: group?.iconType ?? domain.booking_type_id, members: [], open: 0, overdue: 0 };
+      tile = { key, name: domain.name, iconType: group?.iconType ?? domain.booking_type_id, iconSrc: group?.iconSrc, members: [], open: 0, overdue: 0 };
       tiles.push(tile);
     }
     tile.members.push(domain);
@@ -114,8 +119,9 @@ export function HomeScreen() {
   const barber = tiles.findIndex((t) => t.members.some((m) => m.booking_type_id === 5));
   if (food >= 0 && barber >= 0) [tiles[food], tiles[barber]] = [tiles[barber], tiles[food]];
 
+  // everything appears together, fading in, once the data is here
   return (
-    <>
+    <FadeIn duration={HOME_FADE_MS}>
       <PageHead
         title="מסך ראשי"
         sub={`${domains.length} תחומי שירות, ${open} קריאות פתוחות${over ? `, ${over} מהן חורגות מיעד הטיפול` : ''}. בחרו תחום כדי לפתוח את הדשבורד שלו.`}
@@ -131,7 +137,7 @@ export function HomeScreen() {
             ) : (
               // Hover (or focus) opens the group into its domains; each one links to its own dashboard.
               <div key={tile.key} className="dtile dgroup" tabIndex={0} aria-label={`${tile.name}: ${tile.members.map((m) => m.name).join(', ')}`} style={{ '--dc': domainColor(tile.members[0].booking_type_id) }}>
-                <TileBody iconType={tile.iconType} name={tile.name} open={tile.open} overdue={tile.overdue} />
+                <TileBody iconType={tile.iconType} iconSrc={tile.iconSrc} name={tile.name} open={tile.open} overdue={tile.overdue} />
                 <span className="dgroup-menu">
                   {tile.members.map((domain) => (
                     <Link key={domain.booking_type_id} href={`/dashboard?types=${domain.booking_type_id}`} className="dgroup-item" style={{ '--dc': domainColor(domain.booking_type_id) }}>
@@ -172,6 +178,6 @@ export function HomeScreen() {
         <StageBars byTypeStage={byTypeStage} onPickType={setPickedType} pickedType={shownType} />
       </Card>
       </div>
-    </>
+    </FadeIn>
   );
 }
