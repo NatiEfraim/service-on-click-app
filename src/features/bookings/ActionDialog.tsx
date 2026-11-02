@@ -20,10 +20,12 @@ interface ActionDialogProps {
   action: BookingAction;
   onClose: () => void;
   onDone?: () => void;
+  /** When given, the caller animates the row out and reloads the lists itself. */
+  onDecided?: (outcome: 'ok' | 'bad') => void;
 }
 
 /** Confirms one decision. Sends the seen `version` (stale = 409) and an `Idempotency-Key` per decision. */
-export function ActionDialog({ booking, action, onClose, onDone }: ActionDialogProps) {
+export function ActionDialog({ booking, action, onClose, onDone, onDecided }: ActionDialogProps) {
   const client = useQueryClient();
   const toast = useToast();
   const { statusLabel } = useSession();
@@ -43,6 +45,12 @@ export function ActionDialog({ booking, action, onClose, onDone }: ActionDialogP
     },
     onSuccess: async (result) => {
       toast(result.message || 'הקריאה עודכנה.', 'ok');
+      if (onDecided) {
+        onDecided(actionTone(action) === 'danger' ? 'bad' : 'ok');
+        onDone?.();
+        onClose();
+        return;
+      }
       await invalidateWork(client);
       onDone?.();
       onClose();

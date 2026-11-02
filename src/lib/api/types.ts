@@ -486,6 +486,10 @@ export interface OptionRow {
   category_name: string | null;
   has_category: boolean;
   gender: number;
+  /** Not sent by the settings endpoint yet; when missing the type is read from `get-siblings-options`. */
+  field_type_id?: number | null;
+  /** A typed-in value (number / closed text) rather than a choice. */
+  is_input?: boolean;
 }
 
 export interface Statement {

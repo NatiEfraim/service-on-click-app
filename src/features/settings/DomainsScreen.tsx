@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import type { CSSProperties } from 'react';
 import { DomainBadge } from '@/components/booking/DomainBadge';
 import { Button } from '@/components/ui/Button';
+import { SmoothSize } from '@/components/ui/SmoothSize';
 import { EmptyState, Loading } from '@/components/ui/Feedback';
 import { Icon } from '@/components/ui/Icon';
 import { PageHead } from '@/components/ui/PageHead';
@@ -15,7 +16,7 @@ import { useSettingsQuery } from './useSettings';
 import './settings.css';
 
 /** One domain: its approval route with whoever holds each station, and the way into its settings. */
-function DomainCard({ unitId, bookingTypeId }: { unitId: number; bookingTypeId: number }) {
+function DomainCard({ unitId, bookingTypeId, index }: { unitId: number; bookingTypeId: number; index: number }) {
   const { catalog, typeName, me } = useSession();
   const query = useSettingsQuery(unitId, bookingTypeId);
   const name = typeName(bookingTypeId);
@@ -25,7 +26,7 @@ function DomainCard({ unitId, bookingTypeId }: { unitId: number; bookingTypeId: 
   const stations = query.data ? stationsForType(bookingTypeId, catalog, managers) : [];
 
   return (
-    <section className="card dcard" style={{ '--dc': domainColor(bookingTypeId) } as CSSProperties} aria-label={name}>
+    <section className="card dcard" style={{ '--dc': domainColor(bookingTypeId), animationDelay: `${index * 40}ms` } as CSSProperties} aria-label={name}>
       <div className="card-head">
         <DomainBadge bookingTypeId={bookingTypeId} />
         <div>
@@ -41,6 +42,7 @@ function DomainCard({ unitId, bookingTypeId }: { unitId: number; bookingTypeId: 
         ) : null}
       </div>
 
+      <SmoothSize className="st-card-body">
       {query.isPending ? (
         <div className="st-card-skel">
           <Loading rows={4} />
@@ -65,6 +67,7 @@ function DomainCard({ unitId, bookingTypeId }: { unitId: number; bookingTypeId: 
           ))}
         </ol>
       )}
+      </SmoothSize>
 
       <div className="card-foot">
         <Link className="btn sm primary" href={`/manage/settings/${unitId}/${bookingTypeId}`}>
@@ -121,8 +124,8 @@ export function DomainsScreen() {
         <EmptyState title="אין תחומים בניהולך" />
       ) : (
         <div className="st-domains">
-          {typeIds.map((id) => (
-            <DomainCard key={`${unitId}-${id}`} unitId={unitId} bookingTypeId={id} />
+          {typeIds.map((id, index) => (
+            <DomainCard key={`${unitId}-${id}`} unitId={unitId} bookingTypeId={id} index={index} />
           ))}
         </div>
       )}

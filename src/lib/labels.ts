@@ -24,15 +24,16 @@ export const STAGE_SHORT: Record<StageId, string> = {
   closed: 'סגורה',
 };
 
+/** One distinct hue per stage, in stage order (a colour-blind-checked categorical set: neighbours never share a hue family). */
 export const STAGE_COLOR: Record<StageId, string> = {
-  control_officer: '#6366F1',
-  vice_approver: '#3B82F6',
-  approver: '#0EA5E9',
-  supplier_files: '#A78BFA',
-  supplier_approval: '#8B5CF6',
-  supplier_number: '#7C3AED',
-  realization: '#1E40AF',
-  barber_done: '#0891B2',
+  control_officer: '#2A78D6',
+  vice_approver: '#EB6834',
+  approver: '#1BAF7A',
+  supplier_files: '#EDA100',
+  supplier_approval: '#E87BA4',
+  supplier_number: '#008300',
+  realization: '#6250D6',
+  barber_done: '#E34948',
   closed: '#64748B',
 };
 

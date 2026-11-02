@@ -36,12 +36,23 @@
 .insight .btn { margin-inline-start: auto; }
 
 /* ---------- tickets: the call card list, the list unit used everywhere */
-.tickets { display: grid; }
+/* clip: a decided row slides fully out without widening the page */
+.tickets { display: grid; overflow-x: clip; }
 .ticket {
   --dc: var(--line); display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 13px 18px;
   border-bottom: 1px solid var(--line-2); border-inline-start: 4px solid var(--dc); cursor: pointer;
 }
 .ticket:last-child { border-bottom: 0; }
+/* a decided row turns solid green ✓ / red ✗, then slides out right / left (Ticket.useLeave) */
+.ticket.leaving { position: relative; pointer-events: none; }
+.ticket-stamp {
+  position: absolute; inset: 0; z-index: 1; display: grid; place-items: center; color: #fff;
+  animation: fade 200ms var(--ease-out);
+}
+.ticket.ok .ticket-stamp { background: var(--ok); }
+.ticket.bad .ticket-stamp { background: var(--bad); }
+.ticket-stamp .ico { width: 30px; height: 30px; stroke-width: 2.8; animation: stamp-in 260ms var(--ease-out) 60ms both; }
+@keyframes stamp-in { from { opacity: 0; transform: scale(0.6); } }
 .ticket:hover { background: var(--hover); }
 .ticket .t1 { font-weight: 700; font-size: 15px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .ticket .t2 { font-size: 13.5px; color: var(--mute); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 2px; }
@@ -75,6 +86,15 @@ img.dico { width: 18px; height: 18px; object-fit: contain; flex: none; vertical-
 }
 
 /* ---------- bars and list rows (main screen, attention lists) */
+/* "needs attention" rows on the dashboard */
+.attn { list-style: none; margin: 0; padding: 0; }
+.attn li + li { border-top: 1px solid var(--line-2); }
+.attn a { display: grid; grid-template-columns: 10px 1fr auto; gap: 12px; align-items: center; padding: 14px 18px; color: inherit; }
+.attn a:hover { background: var(--hover); }
+.attn i { width: 8px; height: 8px; border-radius: 50%; }
+.attn a > span { display: grid; gap: 2px; }
+.attn .ico { color: var(--mute); }
+
 .hbar { display: grid; grid-template-columns: 170px 1fr 36px; gap: 12px; align-items: center; padding: 8px 18px; }
 .hbar:hover { background: var(--hover); }
 .hbar .lab { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; }
@@ -82,7 +102,14 @@ img.dico { width: 18px; height: 18px; object-fit: contain; flex: none; vertical-
 .hbar .track button { border: 0; padding: 0; cursor: pointer; height: 100%; }
 .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--ink-2); padding: 10px 18px 14px; }
 .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-inline-end: 6px; vertical-align: -1px; }
-svg.chart text { fill: var(--mute); font-size: 11px; font-family: var(--font); }
+svg.chart text { fill: var(--mute); font-size: 13px; font-family: var(--font); }
+.trend-box { position: relative; width: 100%; }
+.trend-box svg { display: block; cursor: crosshair; }
+.trend-tip {
+  position: absolute; top: 8px; width: 140px; pointer-events: none; display: grid; gap: 2px; padding: 8px 10px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-sm); box-shadow: var(--shadow-lg); font-size: 13px;
+}
+.trend-tip i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-inline-end: 6px; }
 .li { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; padding: 12px 18px; border-bottom: 1px solid var(--line-2); }
 .li:last-child { border-bottom: 0; }
 .li .t1 { font-weight: 700; } .li .t2 { font-size: 13.5px; color: var(--mute); }

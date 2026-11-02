@@ -1,8 +1,19 @@
 'use client';
 
-import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
+import { cssTransition, toast as toastify, ToastContainer } from 'react-toastify';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
+
+/** As in Rio: a toast rises from below while fading in, and fades out in place (keyframes in components.css). */
+const RiseFade = cssTransition({ enter: 'toast-rise-in', exit: 'toast-fade-out', collapseDuration: 180 });
+
+/** Toastify's own look (white card, coloured icon, close button, progress bar), same as Rio. */
+const toast: ToastFn = (message, kind = '') => {
+  if (kind === 'ok') toastify.success(message);
+  else if (kind === 'bad') toastify.error(message);
+  else toastify.info(message);
+};
 
 /** Toasts and a promise-based confirmation dialog, available everywhere under the providers. */
 
@@ -21,22 +32,7 @@ type ConfirmFn = (options: ConfirmOptions) => Promise<boolean>;
 const ToastContext = createContext<ToastFn>(() => {});
 const ConfirmContext = createContext<ConfirmFn>(() => Promise.resolve(false));
 
-interface ToastItem {
-  id: number;
-  message: string;
-  kind: ToastKind;
-}
-
 export function UiProvider({ children }: { children: ReactNode }) {
-  const [toasts, setToasts] = useState<ToastItem[]>([]);
-  const nextId = useRef(1);
-
-  const toast = useCallback<ToastFn>((message, kind = '') => {
-    const id = nextId.current++;
-    setToasts((items) => [...items, { id, message, kind }]);
-    window.setTimeout(() => setToasts((items) => items.filter((item) => item.id !== id)), 5000);
-  }, []);
-
   const [pending, setPending] = useState<{ options: ConfirmOptions; resolve: (answer: boolean) => void } | null>(null);
   const confirm = useCallback<ConfirmFn>(
     (options) =>
@@ -51,19 +47,11 @@ export function UiProvider({ children }: { children: ReactNode }) {
     setPending(null);
   };
 
-  const toastValue = useMemo(() => toast, [toast]);
-
   return (
-    <ToastContext.Provider value={toastValue}>
+    <ToastContext.Provider value={toast}>
       <ConfirmContext.Provider value={confirm}>
         {children}
-        <div className="toasts" aria-live="polite">
-          {toasts.map((item) => (
-            <div key={item.id} className={`toast ${item.kind}`.trim()} role="status">
-              {item.message}
-            </div>
-          ))}
-        </div>
+        <ToastContainer position="bottom-left" autoClose={2500} rtl stacked pauseOnFocusLoss={false} transition={RiseFade} />
         {pending ? (
           <Modal
             title={pending.options.title}

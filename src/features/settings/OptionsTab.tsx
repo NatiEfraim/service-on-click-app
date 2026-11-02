@@ -2,133 +2,66 @@
 
 import { useMutation } from '@tanstack/react-query';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useId, useMemo, useState, type CSSProperties } from 'react';
+import { useMemo, useState, type CSSProperties } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chips';
 import { EmptyState } from '@/components/ui/Feedback';
-import { Modal } from '@/components/ui/Modal';
 import { settingsApi } from '@/lib/api/endpoints';
-import type { FormField, OptionRow, Settings } from '@/lib/api/types';
+import type { FieldType, OptionRow, Settings } from '@/lib/api/types';
+import { OPTION_FIELD_TYPES } from '@/lib/labels';
 import { useConfirm, useToast } from '@/providers/UiProvider';
-import { optionNameError } from './fieldRules';
+import { fieldTypeName } from './fieldRules';
+import { FIELD_TYPE_TEXT, OptionDialog, type OptionTarget } from './OptionDialog';
 import { buildOptionTree, choiceFields, countOptions, fieldPath, type OptionNode } from './options';
 import { handleWriteError, useReloadSettings } from './useSettings';
 
-/** Rename an option; the server resets omitted attributes, so parent, category and type are resent. */
-function RenameDialog({ unitId, bookingTypeId, field, option, siblings, onClose }: { unitId: number; bookingTypeId: number; field: FormField; option: OptionRow; siblings: string[]; onClose: () => void }) {
-  const toast = useToast();
-  const reload = useReloadSettings(unitId, bookingTypeId);
-  const ids = useId();
-  const [name, setName] = useState(option.name);
-  const [problem, setProblem] = useState('');
-  const [error, setError] = useState('');
-
-  const mutation = useMutation({
-    mutationFn: async () => {
-      const group = (await settingsApi.optionSiblings(option.id)).siblings;
-      const fieldTypeId = group.find((sibling) => sibling.option_id === option.id)?.field_type_id ?? null;
-      return settingsApi.saveOption(field.id, {
-        option_id: option.id,
-        option_name: name.trim(),
-        parent_option_id: option.parent_id,
-        has_category: option.has_category,
-        ...(fieldTypeId !== null ? { field_type_id: fieldTypeId } : {}),
-        is_input: false,
-      });
-    },
-    onSuccess: async () => {
-      toast('שם האפשרות עודכן.', 'ok');
-      await reload();
-      onClose();
-    },
-    onError: async (e) => {
-      const shown = await handleWriteError(e, toast, reload);
-      if (shown) setError(shown.message);
-      else onClose();
-    },
-  });
-
-  function submit() {
-    const found = name.trim() === option.name ? 'לא בוצע שינוי.' : optionNameError(name, siblings);
-    setProblem(found ?? '');
-    if (found) return;
-    setError('');
-    mutation.mutate();
-  }
-
-  return (
-    <Modal
-      title="שינוי שם אפשרות"
-      onClose={onClose}
-      busy={mutation.isPending}
-      footer={
-        <>
-          <Button variant="primary" loading={mutation.isPending} onClick={submit}>
-            שמירה
-          </Button>
-          <Button onClick={onClose} disabled={mutation.isPending}>
-            ביטול
-          </Button>
-        </>
-      }
-    >
-      <label className="field">
-        <span>
-          שם חדש לאפשרות בשדה &quot;{field.field_display_name}&quot;
-        </span>
-        <input
-          className="input"
-          maxLength={50}
-          value={name}
-          aria-invalid={problem ? true : undefined}
-          aria-describedby={`${ids}-err`}
-          onChange={(event) => {
-            setName(event.target.value);
-            setProblem('');
-          }}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') submit();
-          }}
-        />
-      </label>
-      <div id={`${ids}-err`} className="err" aria-live="polite">
-        {problem}
-      </div>
-      <p className="small muted" style={{ margin: 0 }}>
-        השינוי נשמר מיד, נרשם בהיסטוריית השינויים ונשלח גם לאפליקציה.
-      </p>
-      {error ? (
-        <div className="err" role="alert">
-          {error}
-        </div>
-      ) : null}
-    </Modal>
-  );
+/** Sub-options hang under a list-type option; a typed value or closed text has none (as in the mobile app). */
+function canHoldChildren(option: OptionRow): boolean {
+  if (option.is_input) return false;
+  if (option.field_type_id != null) return OPTION_FIELD_TYPES.includes(option.field_type_id);
+  return option.has_category;
 }
 
-function OptionRows({ nodes, depth, canEdit, onRename, onRemove, lastRoot }: { nodes: OptionNode[]; depth: number; canEdit: boolean; onRename: (option: OptionRow) => void; onRemove: (node: OptionNode) => void; lastRoot: boolean }) {
+function OptionRows({ nodes, depth, canEdit, fieldTypes, onEdit, onAddChild, onRemove, lastRoot }: {
+  nodes: OptionNode[];
+  depth: number;
+  canEdit: boolean;
+  fieldTypes: readonly FieldType[];
+  onEdit: (option: OptionRow) => void;
+  onAddChild: (parent: OptionRow) => void;
+  onRemove: (node: OptionNode) => void;
+  lastRoot: boolean;
+}) {
   return (
     <>
       {nodes.map((node) => {
         const { option } = node;
         const isCategory = node.children.length > 0;
         // a choice keeps at least one option; a category must be emptied first
-        const blocked = isCategory ? 'יש להסיר קודם את האפשרויות שבתוך הקטגוריה' : lastRoot && depth === 0 ? 'שדה בחירה חייב לכלול לפחות אפשרות אחת' : '';
+        const blocked = isCategory ? 'יש להסיר קודם את תתי האפשרויות' : lastRoot && depth === 0 ? 'שדה בחירה חייב לכלול לפחות אפשרות אחת' : '';
+        const typed = option.field_type_id != null && option.field_type_id !== FIELD_TYPE_TEXT;
         return (
           <div key={option.id}>
             <div className={`st-opt${isCategory ? ' cat' : ''}`} style={{ '--depth': depth } as CSSProperties}>
               <span className="name">{option.name}</span>
-              {isCategory ? <Chip>קטגוריה · {node.children.length}</Chip> : null}
+              {option.is_input ? <Chip tone="acc">הזנת ערך</Chip> : null}
+              {typed ? <Chip>{fieldTypeName(option.field_type_id!, fieldTypes)}</Chip> : null}
+              {isCategory ? <Chip>{node.children.length} תתי-אפשרויות</Chip> : null}
               {canEdit ? (
                 <span className="st-actions">
-                  <Button size="sm" icon="edit" aria-label={`שינוי שם האפשרות ${option.name}`} onClick={() => onRename(option)}>
-                    שינוי שם
+                  {canHoldChildren(option) ? (
+                    <Button size="sm" icon="plus" aria-label={`הוספת תת-אפשרות ל${option.name}`} title="הוספת תת-אפשרות" onClick={() => onAddChild(option)} />
+                  ) : null}
+                  <Button size="sm" icon="edit" aria-label={`עריכת האפשרות ${option.name}`} onClick={() => onEdit(option)}>
+                    עריכה
                   </Button>
                   <Button size="sm" variant="danger" icon="trash" aria-label={`הסרת האפשרות ${option.name}`} title={blocked || 'הסרה מהטופס'} disabled={Boolean(blocked)} onClick={() => onRemove(node)} />
                 </span>
               ) : null}
             </div>
-            {isCategory ? <OptionRows nodes={node.children} depth={depth + 1} canEdit={canEdit} onRename={onRename} onRemove={onRemove} lastRoot={false} /> : null}
+            {isCategory ? (
+              <OptionRows nodes={node.children} depth={depth + 1} canEdit={canEdit} fieldTypes={fieldTypes} onEdit={onEdit} onAddChild={onAddChild} onRemove={onRemove} lastRoot={false} />
+            ) : null}
           </div>
         );
       })}
@@ -136,87 +69,7 @@ function OptionRows({ nodes, depth, canEdit, onRename, onRemove, lastRoot }: { n
   );
 }
 
-function AddOption({ unitId, bookingTypeId, field, tree, options }: { unitId: number; bookingTypeId: number; field: FormField; tree: OptionNode[]; options: readonly OptionRow[] }) {
-  const toast = useToast();
-  const reload = useReloadSettings(unitId, bookingTypeId);
-  const ids = useId();
-  const categories = tree.filter((node) => node.option.has_category);
-  const [name, setName] = useState('');
-  const [parent, setParent] = useState('');
-  const [problem, setProblem] = useState('');
-
-  const parentId = parent === '' ? null : Number(parent);
-  const siblings = options.filter((option) => option.form_field_id === field.id && option.parent_id === parentId).map((option) => option.name);
-
-  const mutation = useMutation({
-    // plain choice; is_input must be explicit or some booking types make it free-input
-    mutationFn: () => settingsApi.saveOption(field.id, { option_name: name.trim(), parent_option_id: parentId, has_category: false, is_input: false }),
-    onSuccess: async () => {
-      toast('האפשרות נוספה.', 'ok');
-      setName('');
-      await reload();
-    },
-    onError: async (e) => {
-      const shown = await handleWriteError(e, toast, reload);
-      if (shown) setProblem(shown.message);
-    },
-  });
-
-  function submit() {
-    const found = optionNameError(name, siblings);
-    setProblem(found ?? '');
-    if (!found) mutation.mutate();
-  }
-
-  return (
-    <div className="st-opt-add">
-      <div className="st-add-row">
-        <label className="field">
-          <span>אפשרות חדשה</span>
-          <input
-            className="input"
-            maxLength={50}
-            value={name}
-            aria-invalid={problem ? true : undefined}
-            aria-describedby={`${ids}-err`}
-            style={{ width: 240 }}
-            onChange={(event) => {
-              setName(event.target.value);
-              setProblem('');
-            }}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') {
-                event.preventDefault();
-                submit();
-              }
-            }}
-          />
-        </label>
-        {categories.length ? (
-          <label className="field">
-            <span>מיקום</span>
-            <select className="input" value={parent} onChange={(event) => setParent(event.target.value)}>
-              <option value="">ברמה העליונה</option>
-              {categories.map((node) => (
-                <option key={node.option.id} value={node.option.id}>
-                  בתוך {node.option.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : null}
-        <Button icon="plus" loading={mutation.isPending} onClick={submit}>
-          הוספה
-        </Button>
-      </div>
-      <div id={`${ids}-err`} className="err" aria-live="polite">
-        {problem}
-      </div>
-    </div>
-  );
-}
-
-/** Choice options (super admin only). The server archives a removed option that bookings used, otherwise deletes it. */
+/** Choice options at any depth (super admin only), as in the mobile app. A removed option bookings used is archived, otherwise deleted. */
 export function OptionsTab({ unitId, bookingTypeId, settings }: { unitId: number; bookingTypeId: number; settings: Settings }) {
   const toast = useToast();
   const confirm = useConfirm();
@@ -225,7 +78,7 @@ export function OptionsTab({ unitId, bookingTypeId, settings }: { unitId: number
   const pathname = usePathname();
   const search = useSearchParams();
   const canEdit = settings.can_edit_global;
-  const [renaming, setRenaming] = useState<OptionRow | null>(null);
+  const [target, setTarget] = useState<OptionTarget | null>(null);
 
   const fields = useMemo(() => choiceFields(settings.form_fields).sort((a, b) => a.position - b.position || a.id - b.id), [settings.form_fields]);
   const wanted = Number(search.get('field'));
@@ -263,7 +116,11 @@ export function OptionsTab({ unitId, bookingTypeId, settings }: { unitId: number
     if (ok) removal.mutate(node.option);
   }
 
-  const siblingsOf = (option: OptionRow) => settings.options.filter((other) => other.form_field_id === option.form_field_id && other.parent_id === option.parent_id && other.id !== option.id).map((other) => other.name);
+  // names already used at the level the dialog writes to
+  const siblingsFor = ({ option, parent }: OptionTarget) => {
+    const parentId = parent?.id ?? option?.parent_id ?? null;
+    return settings.options.filter((other) => other.form_field_id === current.id && other.parent_id === parentId && other.id !== option?.id).map((other) => other.name);
+  };
 
   return (
     <div className="st-opt-split">
@@ -277,20 +134,44 @@ export function OptionsTab({ unitId, bookingTypeId, settings }: { unitId: number
       </nav>
       <div className="st-opt-main">
         <div className="st-opt-head">
-          <h3>{fieldPath(current, settings.form_fields)}</h3>
+          <div className="st-opt-title">
+            <h3>{fieldPath(current, settings.form_fields)}</h3>
+            {canEdit ? (
+              <Button size="sm" variant="primary" icon="plus" onClick={() => setTarget({ parent: null })}>
+                הוספת אפשרות
+              </Button>
+            ) : null}
+          </div>
           <span className="small muted">
-            {canEdit ? 'אפשרות שכבר נבחרה בקריאות מועברת לארכיון ולא נמחקת. כל שינוי נשלח גם לאפליקציה.' : 'עריכת אפשרויות בחירה שמורה למנהל מערכת.'}
+            {canEdit ? 'לכל אפשרות יש סוג: בחירה, רשימה עם תתי-אפשרויות, או הזנת ערך. אפשרות שכבר נבחרה בקריאות מועברת לארכיון ולא נמחקת.' : 'עריכת אפשרויות בחירה שמורה למנהל מערכת.'}
           </span>
         </div>
-        {canEdit ? <AddOption key={current.id} unitId={unitId} bookingTypeId={bookingTypeId} field={current} tree={tree} options={settings.options} /> : null}
         {tree.length ? (
-          <OptionRows nodes={tree} depth={0} canEdit={canEdit} onRename={setRenaming} onRemove={(node) => void askRemove(node)} lastRoot={tree.length === 1} />
+          <OptionRows
+            nodes={tree}
+            depth={0}
+            canEdit={canEdit}
+            fieldTypes={settings.field_types}
+            onEdit={(option) => setTarget({ option, parent: null })}
+            onAddChild={(parent) => setTarget({ parent })}
+            onRemove={(node) => void askRemove(node)}
+            lastRoot={tree.length === 1}
+          />
         ) : (
           <EmptyState title="אין אפשרויות בשדה זה" />
         )}
       </div>
-      {renaming ? (
-        <RenameDialog unitId={unitId} bookingTypeId={bookingTypeId} field={current} option={renaming} siblings={siblingsOf(renaming)} onClose={() => setRenaming(null)} />
+      {target ? (
+        <OptionDialog
+          key={`${target.option?.id ?? 'new'}-${target.parent?.id ?? 'root'}`}
+          unitId={unitId}
+          bookingTypeId={bookingTypeId}
+          settings={settings}
+          field={current}
+          target={target}
+          siblings={siblingsFor(target)}
+          onClose={() => setTarget(null)}
+        />
       ) : null}
     </div>
   );

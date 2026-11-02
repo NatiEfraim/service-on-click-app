@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Ticket } from '@/components/booking/Ticket';
 import { EmptyState, ErrorNotice, Loading } from '@/components/ui/Feedback';
 import { PageHead } from '@/components/ui/PageHead';
+import { SmoothSize } from '@/components/ui/SmoothSize';
 import { useStatusAction } from '@/features/bookings/useStatusAction';
 import { bookingsApi } from '@/lib/api/endpoints';
 import { keys } from '@/lib/api/keys';
@@ -18,7 +19,7 @@ const PARAMS = { mine: true, open_only: true, per_page: 100, sort: 'stage_age_ho
 export function QueueScreen() {
   const { me, canAct } = useSession();
   const [stage, setStage] = useState<StageId | ''>('');
-  const action = useStatusAction();
+  const action = useStatusAction({ animateOut: true });
   const query = useQuery({ queryKey: keys.bookingList(PARAMS), queryFn: ({ signal }) => bookingsApi.list(PARAMS, signal) });
 
   const title = me.is_handler_only ? 'הקריאות שלי לטיפול' : 'ממתין לטיפולי';
@@ -43,7 +44,7 @@ export function QueueScreen() {
             : undefined
         }
       />
-      <section className="card">
+      <SmoothSize as="section" className="card">
         {query.isPending ? (
           <div className="card-body">
             <Loading rows={6} />
@@ -75,7 +76,7 @@ export function QueueScreen() {
             </div>
             <div className="tickets">
               {shown.map((row) => (
-                <Ticket key={row.serial_number} booking={row} onAction={action.start} />
+                <Ticket key={row.serial_number} booking={row} onAction={action.start} outcome={action.outcomes[row.serial_number]} />
               ))}
             </div>
             {query.data.meta.total > rows.length ? (
@@ -85,7 +86,7 @@ export function QueueScreen() {
             ) : null}
           </>
         )}
-      </section>
+      </SmoothSize>
       {action.dialog}
     </div>
   );

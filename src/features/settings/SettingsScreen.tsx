@@ -7,6 +7,7 @@ import { Tabs } from '@/components/ui/Controls';
 import { Denied, ErrorNotice, Loading } from '@/components/ui/Feedback';
 import { Icon } from '@/components/ui/Icon';
 import { PageHead } from '@/components/ui/PageHead';
+import { SmoothSize } from '@/components/ui/SmoothSize';
 import { useSession } from '@/providers/SessionProvider';
 import { DatesTab } from './DatesTab';
 import { FormTab } from './FormTab';
@@ -105,14 +106,14 @@ export function SettingsScreen() {
       />
       <section className="card st-tabs-card" aria-label={`הגדרות ${name}`}>
         <Tabs tabs={tabs} value={tab} onChange={setTab} label="הגדרות התחום" />
-        <div className="st-panel" role="tabpanel" aria-label={tabs.find((candidate) => candidate.id === tab)?.label}>
-          {tab === 'form' && me.is_super_admin ?<FormTab unitId={unitId} bookingTypeId={bookingTypeId} settings={settings} /> : null}
+        <SmoothSize className="st-panel" role="tabpanel" aria-label={tabs.find((candidate) => candidate.id === tab)?.label}>
+          {tab === 'form' && me.is_super_admin ? <FormTab unitId={unitId} bookingTypeId={bookingTypeId} settings={settings} /> : null}
           {tab === 'target' ? <TargetTab bookingTypeId={bookingTypeId} /> : null}
           {tab === 'refs' ? <OperationsTab unitId={unitId} bookingTypeId={bookingTypeId} settings={settings} ownUnit={ownUnit} /> : null}
           {tab === 'dates' ? <DatesTab unitId={unitId} bookingTypeId={bookingTypeId} settings={settings} ownUnit={ownUnit} ownUnitId={me.user.unit_id} typeName={name} /> : null}
           {tab === 'options' ? <OptionsTab unitId={unitId} bookingTypeId={bookingTypeId} settings={settings} /> : null}
           {tab === 'statement' ? <StatementTab unitId={unitId} bookingTypeId={bookingTypeId} settings={settings} /> : null}
-        </div>
+        </SmoothSize>
       </section>
     </>
   );

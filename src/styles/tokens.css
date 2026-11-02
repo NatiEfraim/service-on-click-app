@@ -17,6 +17,8 @@
   --shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 1px 3px rgba(16, 24, 40, .06);
   --shadow-lg: 0 12px 32px -8px rgba(16, 24, 40, .18);
   --font: "Assistant Variable", "Segoe UI", Arial, sans-serif;
+  /* motion: strong ease-out for anything entering or answering a press */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   color-scheme: light;
 }
 
