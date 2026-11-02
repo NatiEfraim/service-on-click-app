@@ -1,0 +1,111 @@
+'use client';
+
+import { useMutation } from '@tanstack/react-query';
+import { useId, useState } from 'react';
+import { Button } from '@/components/ui/Button';
+import { FormError } from '@/components/ui/Feedback';
+import { Field } from '@/components/ui/Field';
+import { Modal } from '@/components/ui/Modal';
+import { ApiError } from '@/lib/api/client';
+import { orgApi } from '@/lib/api/endpoints';
+
+import { useToast } from '@/providers/UiProvider';
+import { cleanCode, CODE_MAX, isUnnamed, NAME_MAX, validateUnit } from './rules';
+import { useAfterOrgChange } from './useAfterOrgChange';
+import './org.css';
+
+/** Add or rename a unit. The letter is fixed once created (the mobile app relies on it); edits resend it. */
+export function UnitDialog({ unit, units, onClose, onSaved }) {
+  const toast = useToast();
+  const afterChange = useAfterOrgChange();
+  const formId = useId();
+
+  const [code, setCode] = useState(unit?.code ?? '');
+  const [name, setName] = useState(unit && !isUnnamed(unit) ? unit.name : '');
+  const [errors, setErrors] = useState({});
+  const [formError, setFormError] = useState('');
+
+  const mutation = useMutation({
+    mutationFn: (input) => (unit ? orgApi.updateUnit(unit.id, { code: unit.code, name: input.name }) : orgApi.createUnit(input)),
+    onSuccess: async (result) => {
+      toast(result.message || 'היחידה נשמרה.', 'ok');
+      onSaved(result.data.id);
+      onClose();
+      await afterChange();
+    },
+    onError: (e) => setFormError(e instanceof ApiError ? e.message : 'השמירה נכשלה.'),
+  });
+
+  function submit(event) {
+    event.preventDefault();
+    setFormError('');
+    const others = units.filter((other) => other.id !== unit?.id);
+    const found = validateUnit({ code, name }, others);
+    setErrors(found);
+    if (Object.keys(found).length) return;
+    mutation.mutate({ code: code.trim().toUpperCase(), name: name.trim() });
+  }
+
+  return (
+    <Modal
+      title={unit ? `עריכת היחידה ${unit.code}` : 'יחידה חדשה'}
+      onClose={onClose}
+      busy={mutation.isPending}
+      footer={
+        <>
+          <Button type="submit" form={formId} variant="primary" loading={mutation.isPending}>
+            שמירה
+          </Button>
+          <Button onClick={onClose} disabled={mutation.isPending}>
+            ביטול
+          </Button>
+        </>
+      }
+    >
+      <form id={formId} onSubmit={submit} noValidate style={{ display: 'grid', gap: 14 }}>
+        <div className="cols2">
+          <div>
+            <Field label="אות (מוצגת באפליקציה)">
+              <input
+                className="input org-code"
+                dir="ltr"
+                style={{ textAlign: 'start' }}
+                value={code}
+                maxLength={CODE_MAX}
+                readOnly={unit !== null}
+                autoComplete="off"
+                aria-invalid={errors.code ? true : undefined}
+                aria-describedby={`${formId}-code-error`}
+                onChange={(event) => setCode(cleanCode(event.target.value))}
+              />
+            </Field>
+            <div id={`${formId}-code-error`} className="err" aria-live="polite">
+              {errors.code}
+            </div>
+          </div>
+          <div>
+            <Field label="שם היחידה (פנימי)">
+              <input
+                className="input"
+                value={name}
+                maxLength={NAME_MAX}
+                autoComplete="off"
+                placeholder="למשל: כנף צפון"
+                aria-invalid={errors.name ? true : undefined}
+                aria-describedby={`${formId}-name-error`}
+                onChange={(event) => setName(event.target.value)}
+              />
+            </Field>
+            <div id={`${formId}-name-error`} className="err" aria-live="polite">
+              {errors.name}
+            </div>
+          </div>
+        </div>
+        <p className="small muted" style={{ margin: 0 }}>
+          {unit ? 'שינוי השם נשאר במערכת הפנימית. האות אינה ניתנת לשינוי, כי האפליקציה מזהה את היחידה לפיה.' : 'לאפליקציה תישלח רק האות. השם נשאר כאן, והאות לא ניתנת לשינוי אחרי היצירה.'}
+        </p>
+        <FormError>{formError}</FormError>
+      </form>
+    </Modal>
+  );
+}

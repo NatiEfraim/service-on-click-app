@@ -1,0 +1,198 @@
+import { jsPDF } from 'jspdf';
+
+
+
+
+
+export const FONT_URLS = { regular: '/fonts/Assistant-Regular.ttf', bold: '/fonts/Assistant-Bold.ttf' };
+
+const FAMILY = 'Assistant';
+const MARGIN = 32;
+const MAX_COLUMN_WIDTH = 170;
+const INK = [43, 36, 51];
+const MUTE = [95, 86, 106];
+const GRAPE = [61, 49, 74];
+const BAND = [246, 245, 240];
+const RULE = [226, 224, 211];
+
+/** jsPDF bidi options: logical RTL input, visual output, mirrored brackets. */
+export const BIDI = { isInputVisual: false, isOutputVisual: true, isInputRtl: true, isOutputRtl: false, isSymmetricSwapping: true };
+
+const HEBREW = /[\u{0590}-\u{05ff}]/u;
+/** Direction marks and zero-width characters; the font has no glyph for them. */
+const INVISIBLE = /[\u{200e}\u{200f}\u{61c}\u{202a}-\u{202e}\u{2066}-\u{2069}\u{200b}-\u{200d}\u{feff}]/gu;
+
+export function hasHebrew(text) {
+  return HEBREW.test(text);
+}
+
+export function cleanText(value) {
+  return String(value ?? '').replace(INVISIBLE, '');
+}
+
+/** Smaller type when there are many columns; the row height follows. */
+export function fontSizeFor(columnCount) {
+  if (columnCount <= 5) return 9.5;
+  if (columnCount <= 8) return 9;
+  if (columnCount <= 11) return 8;
+  return 7;
+}
+
+export function bytesToBase64(bytes) {
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(binary);
+}
+
+async function fetchBase64(url) {
+  const response = await fetch(url, { cache: 'force-cache' });
+  if (!response.ok) throw new Error(`font ${url}: ${response.status}`);
+  return bytesToBase64(new Uint8Array(await response.arrayBuffer()));
+}
+
+let fontsPromise = null;
+
+/** Fetches the fonts once per page load; a failure is not cached. */
+export function loadFonts() {
+  if (!fontsPromise) {
+    const pending = Promise.all([fetchBase64(FONT_URLS.regular), fetchBase64(FONT_URLS.bold)]).then(([regular, bold]) => ({ regular, bold }));
+    pending.catch(() => {
+      if (fontsPromise === pending) fontsPromise = null;
+    });
+    fontsPromise = pending;
+  }
+  return fontsPromise;
+}
+
+
+
+/** Draws one line; only Hebrew text goes through the bidi engine. */
+function put(doc, value, x, y, align) {
+  const text = cleanText(value);
+  doc.text(text, x, y, hasHebrew(text) ? { align, ...BIDI } : { align });
+}
+
+/** Longest prefix that fits `width` with a trailing ellipsis. */
+export function fit(doc, value, width) {
+  const text = cleanText(value);
+  if (doc.getTextWidth(text) <= width) return text;
+  let lo = 0;
+  let hi = text.length;
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2);
+    if (doc.getTextWidth(`${text.slice(0, mid)}…`) <= width) lo = mid;
+    else hi = mid - 1;
+  }
+  return `${text.slice(0, lo).trimEnd()}…`;
+}
+
+const nextTick = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+
+
+/** Lays the report out on pages and returns the open document (so a test can look at it); `buildPdf` is the one to call. */
+export async function buildPdfDocument(report, fonts, emptyText = 'אין נתונים להצגה') {
+  const { columns, rows } = report;
+  const doc = new jsPDF({ orientation: columns.length > 5 ? 'landscape' : 'portrait', unit: 'pt', format: 'a4', compress: true });
+  doc.setProperties({ title: 'Service On Click report', creator: 'Service On Click' });
+  doc.addFileToVFS('Assistant-Regular.ttf', fonts.regular);
+  doc.addFont('Assistant-Regular.ttf', FAMILY, 'normal');
+  doc.addFileToVFS('Assistant-Bold.ttf', fonts.bold);
+  doc.addFont('Assistant-Bold.ttf', FAMILY, 'bold');
+
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const right = pageW - MARGIN;
+  const fs = fontSizeFor(columns.length);
+  const rowH = Math.round(fs * 2);
+  const pad = columns.length > 9 ? 3.5 : 5;
+
+  // column widths: as wide as the longest of (a sample of) the texts, then scaled to fill the page
+  const cells = rows.map((row) => columns.map((_, i) => cleanText(row[i])));
+  doc.setFontSize(fs);
+  doc.setFont(FAMILY, 'bold');
+  const headerWidths = columns.map((label) => doc.getTextWidth(cleanText(label)));
+  doc.setFont(FAMILY, 'normal');
+  const stride = Math.max(1, Math.ceil(cells.length / 400));
+  const natural = columns.map((_, i) => {
+    let widest = headerWidths[i] + 2 * pad + 4;
+    for (let r = 0; r < cells.length; r += stride) widest = Math.max(widest, doc.getTextWidth(cells[r][i]) + 2 * pad);
+    return Math.min(MAX_COLUMN_WIDTH, widest);
+  });
+  const scale = (pageW - 2 * MARGIN) / natural.reduce((sum, w) => sum + w, 0);
+  const widths = natural.map((w) => w * scale);
+
+  const drawHeader = (y) => {
+    doc.setFillColor(...GRAPE);
+    doc.rect(MARGIN, y, pageW - 2 * MARGIN, rowH + 2, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont(FAMILY, 'bold');
+    doc.setFontSize(fs);
+    let x = right;
+    columns.forEach((label, i) => {
+      put(doc, fit(doc, label, widths[i] - 2 * pad), x - pad, y + rowH * 0.7, 'right');
+      x -= widths[i];
+    });
+    doc.setFont(FAMILY, 'normal');
+    doc.setTextColor(...INK);
+    return y + rowH + 2;
+  };
+
+  // title block
+  doc.setFont(FAMILY, 'bold');
+  doc.setFontSize(16);
+  doc.setTextColor(...INK);
+  put(doc, report.title, right, MARGIN + 10, 'right');
+  doc.setFont(FAMILY, 'normal');
+  doc.setFontSize(9.5);
+  doc.setTextColor(...MUTE);
+  const subtitleLines = doc.splitTextToSize(cleanText(report.subtitle), pageW - 2 * MARGIN);
+  subtitleLines.forEach((line, i) => put(doc, line, right, MARGIN + 28 + i * 13, 'right'));
+  doc.setFontSize(fs);
+  doc.setTextColor(...INK);
+
+  let y = drawHeader(MARGIN + 36 + subtitleLines.length * 13);
+
+  if (cells.length === 0) {
+    doc.setTextColor(...MUTE);
+    put(doc, emptyText, right - pad, y + rowH * 0.7, 'right');
+  }
+
+  for (let r = 0; r < cells.length; r++) {
+    if (y + rowH > pageH - MARGIN - 14) {
+      doc.addPage();
+      y = drawHeader(MARGIN);
+    }
+    if (r % 2) {
+      doc.setFillColor(...BAND);
+      doc.rect(MARGIN, y, pageW - 2 * MARGIN, rowH, 'F');
+    }
+    let x = right;
+    cells[r].forEach((value, i) => {
+      put(doc, fit(doc, value, widths[i] - 2 * pad), x - pad, y + rowH * 0.67, 'right');
+      x -= widths[i];
+    });
+    doc.setDrawColor(...RULE);
+    doc.line(MARGIN, y + rowH, pageW - MARGIN, y + rowH);
+    y += rowH;
+    // a long report must not freeze the page (the spinner on the button keeps turning)
+    if (r % 250 === 249) await nextTick();
+  }
+
+  const pages = doc.getNumberOfPages();
+  for (let p = 1; p <= pages; p++) {
+    doc.setPage(p);
+    doc.setFont(FAMILY, 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(...MUTE);
+    put(doc, `עמוד ${p} מתוך ${pages}`, pageW / 2, pageH - 16, 'center');
+  }
+  return doc;
+}
+
+/** The PDF, ready to download. Fetches the fonts the first time (they are cached after that). */
+export async function buildPdf(report, options = {}) {
+  const fonts = options.fonts ?? (await loadFonts());
+  const doc = await buildPdfDocument(report, fonts, options.emptyText);
+  return doc.output('blob');
+}

@@ -1,0 +1,75 @@
+
+import { ApiError } from '@/lib/api/client';
+import { Button } from './Button';
+import { Icon } from './Icon';
+
+
+
+export function Notice({ tone = '', children, action, className = '', style }) {
+  return (
+    <div className={`notice ${tone} ${className}`.trim()} role={tone === 'bad' ? 'alert' : undefined} style={style}>
+      <Icon name={tone === 'bad' || tone === 'warn' ? 'alert' : 'info'} />
+      <div>{children}</div>
+      {action}
+    </div>
+  );
+}
+
+/** A failed request with a retry; the text is the server's Hebrew message. */
+export function ErrorNotice({ error, onRetry, title = 'לא ניתן לטעון את המסך.' }) {
+  const message = error instanceof ApiError ? error.message : 'אירעה שגיאה. נסו שוב.';
+  // No retry when the server refused (403/404/405).
+  const retryable = onRetry && !(error instanceof ApiError && error.denied);
+  return (
+    <Notice
+      tone="bad"
+      action={
+        retryable ? (
+          <Button size="sm" onClick={onRetry}>
+            נסו שוב
+          </Button>
+        ) : undefined
+      }
+    >
+      <b>{title}</b> {message}
+    </Notice>
+  );
+}
+
+/** The error line of a form or dialog (a server answer that is not tied to one field); renders nothing when empty. */
+export function FormError({ children }) {
+  if (!children) return null;
+  return (
+    <div className="err" role="alert">
+      {children}
+    </div>
+  );
+}
+
+export function EmptyState({ title, children }) {
+  return (
+    <div className="empty">
+      <b>{title}</b>
+      {children}
+    </div>
+  );
+}
+
+export function Loading({ rows = 6 }) {
+  return (
+    <div role="status" aria-label="טוען">
+      {Array.from({ length: rows }, (_, i) => (
+        <div key={i} className="skel" style={{ width: `${92 - i * 9}%`, margin: '14px 0' }} />
+      ))}
+    </div>
+  );
+}
+
+/** Shown instead of a screen the user's capabilities do not include. */
+export function Denied({ children = 'אין לך גישה למסך זה.' }) {
+  return (
+    <div className="card">
+      <EmptyState title="אין גישה למסך זה">{children}</EmptyState>
+    </div>
+  );
+}
