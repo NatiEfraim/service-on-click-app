@@ -21,6 +21,10 @@
   border: 1px solid var(--line); background: var(--surface); cursor: pointer; font-weight: 600; white-space: nowrap; color: var(--ink);
   transition: transform 160ms var(--ease-out), background-color 150ms ease, opacity 200ms var(--ease-out);
 }
+/* a group that enters one item after the other (each child sets --i to its index); decorative, never blocks a click */
+/* `backwards`: hidden during its delay, then the animation lets go, so the item's own hover/press transitions keep working */
+.stagger > * { animation: rise 260ms var(--ease-out) backwards; animation-delay: calc(var(--i, 0) * 45ms); }
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } }
 /* content that replaces a loading skeleton fades in instead of popping */
 .fade-in { animation: fade 260ms var(--ease-out); }
 /* text that comes and goes without moving the layout: it keeps its room and only fades */

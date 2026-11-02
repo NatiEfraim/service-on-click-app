@@ -11,7 +11,7 @@
 /* sized by its content, not stretched, so its height can be measured and animated */
 .st-card-body { align-self: start; }
 /* the route replaces the skeleton without a jump */
-.st-domains .steps, .st-domains .st-card-msg, .st-domains .card-head .hint, .st-domains .card-head .tools { animation: fade 320ms var(--ease-out); }
+.st-domains .steps, .st-domains .st-card-msg, .st-domains .card-head .hint, .st-domains .card-head .tools { animation: fade 260ms var(--ease-out); }
 @keyframes st-rise { from { opacity: 0; transform: translateY(8px) scale(0.98); } }
 @media (max-width: 1100px) { .st-domains { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 720px) { .st-domains { grid-template-columns: minmax(0, 1fr); grid-auto-rows: auto; } }
@@ -48,7 +48,7 @@
 .st-form { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); align-items: start; }
 .st-form-list { min-width: 0; border-inline-end: 1px solid var(--line-2); }
 .st-form-list .toolbar { gap: 8px; }
-.st-form-preview { padding: 16px 18px 22px; min-width: 0; position: sticky; top: 92px; max-height: calc(100vh - 110px); overflow: auto; }
+.st-form-preview { padding: 16px 18px 22px; min-width: 0; position: sticky; top: 92px; max-height: calc(100dvh - 110px); overflow: auto; }
 .st-form-preview h3 { margin: 0 0 10px; font-size: 14px; color: var(--ink-2); font-weight: 600; }
 .st-item { background: var(--surface); }
 .st-item.dragging { position: relative; z-index: 3; box-shadow: var(--shadow-lg); background: var(--surface-2); opacity: .96; }

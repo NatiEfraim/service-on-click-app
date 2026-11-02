@@ -15,11 +15,23 @@ export const DIALOG_EXIT_MS = 150;
 /** A dropdown menu fading out (`usePresence`; matches `.menu[data-closing]` in layout.css). */
 export const MENU_EXIT_MS = 150;
 
-/** A decided list row: stamp, slide out, collapse (`Ticket`); the list reloads after `ROW_LEAVE_MS`. */
-export const ROW_STAMP_MS = 450;
-export const ROW_SLIDE_MS = 330;
-export const ROW_COLLAPSE_MS = 260;
+/*
+ * A decided list row (`Ticket`), in order - change a number to make that step faster (smaller) or slower (bigger):
+ *   1. ROW_STAMP_MS    the row turns green ✓ / red ✗ and stays visible for this long
+ *   2. ROW_SLIDE_MS    it slides out to the right / left
+ *   3. ROW_COLLAPSE_MS its room closes and the rows below glide up
+ * The list reloads after all three (ROW_LEAVE_MS, computed - do not set it by hand).
+ */
+export const ROW_STAMP_MS = 300;
+export const ROW_SLIDE_MS = 220;
+export const ROW_COLLAPSE_MS = 180;
 export const ROW_LEAVE_MS = ROW_STAMP_MS + ROW_SLIDE_MS + ROW_COLLAPSE_MS;
+
+/**
+ * A row that arrives in a list (the next booking moving up into the dashboard's "oldest"):
+ * its room opens over ROW_COLLAPSE_MS (above), then it fades in over ROW_ARRIVE_MS.
+ */
+export const ROW_ARRIVE_MS = 180;
 
 /** True when the viewer asked the system for less motion. */
 export const prefersReducedMotion = () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;

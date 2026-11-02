@@ -128,15 +128,15 @@ export function HomeScreen() {
       />
       <div className="home" ref={fitRef}>
       <div className="home-top">
-        <section className="tiles" aria-label="תחומי שירות" style={{ '--per-row': Math.ceil(tiles.length / Math.ceil(tiles.length / 3)), '--rows': Math.ceil(tiles.length / 3) }}>
-          {tiles.map((tile) =>
+        <section className="tiles stagger" aria-label="תחומי שירות" style={{ '--per-row': Math.ceil(tiles.length / Math.ceil(tiles.length / 3)), '--rows': Math.ceil(tiles.length / 3) }}>
+          {tiles.map((tile, index) =>
             tile.members.length === 1 ? (
-              <Link key={tile.key} href={`/dashboard?types=${tile.members[0].booking_type_id}`} className="dtile" style={{ '--dc': domainColor(tile.members[0].booking_type_id) }}>
+              <Link key={tile.key} href={`/dashboard?types=${tile.members[0].booking_type_id}`} className="dtile" style={{ '--dc': domainColor(tile.members[0].booking_type_id), '--i': index }}>
                 <TileBody iconType={tile.members[0].booking_type_id} name={tile.name} open={tile.open} overdue={tile.overdue} />
               </Link>
             ) : (
               // Hover (or focus) opens the group into its domains; each one links to its own dashboard.
-              <div key={tile.key} className="dtile dgroup" tabIndex={0} aria-label={`${tile.name}: ${tile.members.map((m) => m.name).join(', ')}`} style={{ '--dc': domainColor(tile.members[0].booking_type_id) }}>
+              <div key={tile.key} className="dtile dgroup" tabIndex={0} aria-label={`${tile.name}: ${tile.members.map((m) => m.name).join(', ')}`} style={{ '--dc': domainColor(tile.members[0].booking_type_id), '--i': index }}>
                 <TileBody iconType={tile.iconType} iconSrc={tile.iconSrc} name={tile.name} open={tile.open} overdue={tile.overdue} />
                 <span className="dgroup-menu">
                   {tile.members.map((domain) => (

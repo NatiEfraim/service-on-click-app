@@ -42,6 +42,15 @@ h1, h2, h3, p { overflow-wrap: anywhere; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .ltr { direction: ltr; unicode-bidi: isolate; }
 
+/* Reduced motion = fewer and gentler, not none: nothing moves, slides, grows or lifts, but fades that explain
+   a change (a dialog, a menu, loaded content, a decided row) stay. Script-driven motion checks prefersReducedMotion(). */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation: none !important; transition: none !important; }
+  /* transitions keep only colour and opacity, never position or size */
+  *, *::before, *::after { transition-property: opacity, color, background-color, border-color, box-shadow, outline-color !important; }
+  /* entrances that slide, scale or rise become plain fades */
+  .modal, .drawer, .menu, .dcard, .chart-fade, .ticket-stamp .ico, .toast-rise-in, .stagger > * { animation-name: fade !important; }
+  .menu[data-closing] { animation-name: toast-fade-out !important; }
+  /* pressing, lifting and the loading shimmer stand still */
+  .btn:active, .dtile:hover, .dtile:active { transform: none !important; }
+  .skel { animation: none !important; }
 }

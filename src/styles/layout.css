@@ -25,7 +25,11 @@
   content: ""; position: absolute; inset-inline: 14px; bottom: 6px; height: 2px; border-radius: 2px; background: var(--nav-pill);
   transform: scaleX(0); transition: transform .18s ease;
 }
-.tabs-nav > a:hover::before, .tabs-nav > .dd > button:hover::before, .tabs-nav > .dd > button[aria-expanded="true"]::before { transform: scaleX(1); }
+/* the hover underline is for a mouse only; an open menu shows it on any device */
+@media (hover: hover) and (pointer: fine) {
+  .tabs-nav > a:hover::before, .tabs-nav > .dd > button:hover::before { transform: scaleX(1); }
+}
+.tabs-nav > .dd > button[aria-expanded="true"]::before { transform: scaleX(1); }
 .tabs-nav > a[aria-current="page"], .tabs-nav > .dd.current > button { background: var(--nav-pill); color: var(--nav-pill-ink); font-weight: 700; }
 .tabs-nav > a[aria-current="page"]::before, .tabs-nav > .dd.current > button::before { display: none; }
 .count { font-size: 12px; font-weight: 700; min-width: 20px; padding: 0 6px; line-height: 19px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-ink); text-align: center; }

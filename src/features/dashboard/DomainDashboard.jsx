@@ -22,6 +22,8 @@ import { keys } from '@/lib/api/keys';
 import { fmtHours, fmtLongHours } from '@/lib/format';
 import { STAGE_ORDER, STAGE_SHORT, statusTone, WAIT_LABEL } from '@/lib/labels';
 import { homeKind } from '@/lib/nav';
+import { useArrivals } from '@/lib/useArrivals';
+import { useHeldHeight } from '@/lib/useHeldHeight';
 import { useSetSearchParams } from '@/lib/useSetSearchParams';
 import { useSession } from '@/providers/SessionProvider';
 import { BottlenecksPanel } from './BottlenecksPanel';
@@ -52,6 +54,10 @@ export function DomainDashboard() {
   const params = { types, days };
   const query = useQuery({ queryKey: keys.domainDashboard(params), queryFn: ({ signal }) => insightsApi.domainDashboard(params, signal), placeholderData: (previous) => previous });
   const overview = useQuery({ queryKey: keys.overview, queryFn: ({ signal }) => insightsApi.overview(signal), staleTime: 60_000 });
+  // a booking that moves up into "the oldest" after a decision opens its room and fades in
+  const arrivals = useArrivals((query.data?.oldest ?? []).map((row) => row.serial_number));
+  // the card keeps its size: when a row leaves, the ones below move up and the next fills the bottom
+  const holdOldest = useHeldHeight();
 
   if (query.isPending) return <Loading rows={10} />;
   if (query.isError) return <ErrorNotice error={query.error} onRetry={() => void query.refetch()} />;
@@ -112,10 +118,11 @@ export function DomainDashboard() {
       </div>
 
       {/* 1. headline numbers */}
-      <div className="card stats">
-        <Stat icon="list" color={STAT_COLOR.open} label="קריאות פתוחות" value={data.totals.open} foot={`מתוך ${data.totals.total} בתחומים שלך`} onClick={() => router.push(`/requests?view=open${typesParam}`)} />
-        <Stat icon="inbox" color={STAT_COLOR.awaiting} label="ממתינות להחלטת מאשרים" value={awaitingApproval} foot="בשלבי האישור" onClick={() => router.push(`/requests?view=open${typesParam}`)} />
+      <div className="card stats stagger">
+        <Stat index={0} icon="list" color={STAT_COLOR.open} label="קריאות פתוחות" value={data.totals.open} foot={`מתוך ${data.totals.total} בתחומים שלך`} onClick={() => router.push(`/requests?view=open${typesParam}`)} />
+        <Stat index={1} icon="inbox" color={STAT_COLOR.awaiting} label="ממתינות להחלטת מאשרים" value={awaitingApproval} foot="בשלבי האישור" onClick={() => router.push(`/requests?view=open${typesParam}`)} />
         <Stat
+          index={2}
           icon="alert"
           color={STAT_COLOR.overdue}
           bad={data.totals.overdue > 0}
@@ -124,7 +131,7 @@ export function DomainDashboard() {
           foot={data.target ? `מעל ${fmtLongHours(data.target.target_hours)} מפתיחה` : 'לא הוגדר יעד'}
           onClick={() => router.push(`/requests?view=overdue${typesParam}`)}
         />
-        <Stat icon="pulse" color={STAT_COLOR.stale} label="ללא התקדמות" value={data.totals.stale} foot="יותר משבוע באותו שלב" />
+        <Stat index={3} icon="pulse" color={STAT_COLOR.stale} label="ללא התקדמות" value={data.totals.stale} foot="יותר משבוע באותו שלב" />
       </div>
 
       {/* 2. where the bookings are */}
@@ -168,9 +175,9 @@ export function DomainDashboard() {
         {/* 3. oldest */}
         <Card title="הקריאות הוותיקות בתחומים שלך" hint="הוותיקות קודם">
           {data.oldest.length ? (
-            <div className="tickets">
+            <div className="tickets" ref={holdOldest}>
               {data.oldest.map((row) => (
-                <Ticket key={row.serial_number} booking={row} onAction={action.start} outcome={action.outcomes[row.serial_number]} />
+                <Ticket key={row.serial_number} booking={row} onAction={action.start} outcome={action.outcomes[row.serial_number]} entering={arrivals.has(row.serial_number)} />
               ))}
             </div>
           ) : (

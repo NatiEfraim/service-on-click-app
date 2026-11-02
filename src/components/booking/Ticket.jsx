@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Chip, NeedsDecision, StatusChip } from '@/components/ui/Chips';
 import { Icon } from '@/components/ui/Icon';
 import { useBookingDrawer } from '@/features/bookings/useBookingDrawer';
 
 import { actionTone, domainColor, STAGE_SHORT } from '@/lib/labels';
-import { EASE_OUT, prefersReducedMotion, ROW_COLLAPSE_MS, ROW_SLIDE_MS, ROW_STAMP_MS } from '@/lib/motion';
+import { EASE_OUT, prefersReducedMotion, ROW_ARRIVE_MS, ROW_COLLAPSE_MS, ROW_SLIDE_MS, ROW_STAMP_MS } from '@/lib/motion';
 import { useSession } from '@/providers/SessionProvider';
 import { DomainBadge } from './DomainBadge';
 import { AgeBar, MiniRoute } from './RouteViz';
@@ -46,21 +46,56 @@ function useLeave(ref, outcome) {
       );
     }, ROW_STAMP_MS);
     return () => {
-      // a row that is still in the list after the reload (e.g. approved but open) comes back as a normal row
       cancelled = true;
       window.clearTimeout(timer);
+      const left = running.length > 0;
       for (const animation of running) animation.cancel();
       el.style.overflow = '';
+      // still in the list after the reload (e.g. approved but still open): it comes back the way a new row arrives
+      if (left && el.isConnected) playArrive(el);
     };
   }, [ref, outcome]);
 }
 
-/** One booking in a list, with the decisions available right now. */
-export function Ticket({ booking, showActions = true, onAction, outcome }) {
+/** The arrive sequence, the leave one in reverse: the row opens its room (the rows below glide down), then fades in. */
+function playArrive(el) {
+  if (prefersReducedMotion()) {
+    const fade = el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: ROW_ARRIVE_MS, easing: EASE_OUT });
+    return () => fade.cancel();
+  }
+  const style = getComputedStyle(el);
+  const open = el.animate(
+    [
+      { height: '0px', paddingTop: '0px', paddingBottom: '0px', borderBottomWidth: '0px', opacity: 0, overflow: 'hidden' },
+      { height: `${el.offsetHeight}px`, paddingTop: style.paddingTop, paddingBottom: style.paddingBottom, borderBottomWidth: style.borderBottomWidth, opacity: 0, overflow: 'hidden' },
+    ],
+    { duration: ROW_COLLAPSE_MS, easing: EASE_OUT },
+  );
+  const fade = el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: ROW_ARRIVE_MS, delay: ROW_COLLAPSE_MS, easing: EASE_OUT, fill: 'backwards' });
+  return () => {
+    open.cancel();
+    fade.cancel();
+  };
+}
+
+/** Plays the arrive sequence once, when the row mounts as an arrival. */
+function useArrive(ref, entering) {
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || !entering) return;
+    return playArrive(el);
+    // only when the row mounts as an arrival
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+}
+
+/** One booking in a list, with the decisions available right now; `entering` marks a row that just arrived in the list. */
+export function Ticket({ booking, showActions = true, onAction, outcome, entering = false }) {
   const { catalog, me, unitName } = useSession();
   const drawer = useBookingDrawer();
   const ref = useRef(null);
   useLeave(ref, outcome);
+  useArrive(ref, entering);
   const owner = booking.owner_name || booking.owner_personal_id || '—';
   const open = () => drawer.open(booking.serial_number);
 
@@ -70,7 +105,7 @@ export function Ticket({ booking, showActions = true, onAction, outcome }) {
       ref={ref}
       className={`ticket${outcome ? ` leaving ${outcome}` : ''}`}
       aria-hidden={outcome ? true : undefined}
-      style={{ '--dc': domainColor(booking.booking_type_id) }}
+      style={{ '--dc': domainColor(booking.booking_type_id), '--stamp-ms': `${ROW_STAMP_MS}ms` }}
       onClick={(event) => {
         if ((event.target).closest('button, a')) return;
         open();
