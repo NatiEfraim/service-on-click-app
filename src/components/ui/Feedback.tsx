@@ -36,6 +36,16 @@ export function ErrorNotice({ error, onRetry, title = 'לא ניתן לטעון 
   );
 }
 
+/** The error line of a form or dialog (a server answer that is not tied to one field); renders nothing when empty. */
+export function FormError({ children }: { children?: ReactNode }) {
+  if (!children) return null;
+  return (
+    <div className="err" role="alert">
+      {children}
+    </div>
+  );
+}
+
 export function EmptyState({ title, children }: { title: string; children?: ReactNode }) {
   return (
     <div className="empty">

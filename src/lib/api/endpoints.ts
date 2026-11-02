@@ -129,7 +129,7 @@ export interface ReportParams extends Params {
 
 export const insightsApi = {
   overview: (signal?: AbortSignal) => getData<Overview>(`${APPROVER}/overview`, undefined, signal),
-  home: (signal?: AbortSignal) => getData<Home>(`${ADMIN}/home`, undefined, signal),
+  home: (signal?: AbortSignal) => getData<Home>(`${APPROVER}/home`, undefined, signal),
   domainDashboard: (params: DashboardParams, signal?: AbortSignal) => getData<DomainDashboard>(`${APPROVER}/domain-dashboard`, params, signal),
   bottlenecks: (params: BottleneckParams, signal?: AbortSignal) => getData<Bottlenecks>(`${APPROVER}/bottlenecks`, params, signal),
   reports: (params: ReportParams, signal?: AbortSignal) => getData<Reports>(`${ADMIN}/reports`, params, signal),

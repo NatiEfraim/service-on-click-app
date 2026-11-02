@@ -3,6 +3,8 @@
 import { useMutation } from '@tanstack/react-query';
 import { useId, useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/Button';
+import { FormError } from '@/components/ui/Feedback';
+import { Field } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
 import { ApiError } from '@/lib/api/client';
 import { orgApi } from '@/lib/api/endpoints';
@@ -59,8 +61,7 @@ export function DepartmentDialog({ unit, department, onClose }: { unit: OrgUnit;
     >
       <form id={formId} onSubmit={submit} noValidate style={{ display: 'grid', gap: 14 }}>
         <div>
-          <label className="field">
-            <span>שם המחלקה</span>
+          <Field label="שם המחלקה">
             <input
               className="input"
               value={name}
@@ -70,7 +71,7 @@ export function DepartmentDialog({ unit, department, onClose }: { unit: OrgUnit;
               aria-describedby={`${formId}-error`}
               onChange={(event) => setName(event.target.value)}
             />
-          </label>
+          </Field>
           <div id={`${formId}-error`} className="err" aria-live="polite">
             {problem}
           </div>
@@ -78,11 +79,7 @@ export function DepartmentDialog({ unit, department, onClose }: { unit: OrgUnit;
         <p className="small muted" style={{ margin: 0 }}>
           שם המחלקה פנימי בלבד ולא מועבר לאפליקציה.
         </p>
-        {formError ? (
-          <div className="err" role="alert">
-            {formError}
-          </div>
-        ) : null}
+        <FormError>{formError}</FormError>
       </form>
     </Modal>
   );

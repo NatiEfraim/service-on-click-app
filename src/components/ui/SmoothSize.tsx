@@ -1,9 +1,7 @@
 'use client';
 
 import { useLayoutEffect, useRef, type CSSProperties, type ElementType, type HTMLAttributes, type ReactNode } from 'react';
-
-const EASE_OUT = 'cubic-bezier(0.23, 1, 0.32, 1)';
-const DURATION_MS = 260;
+import { EASE_OUT, RESIZE_MS } from '@/lib/motion';
 
 /**
  * Wrap anything whose height changes (loading → data, an error appearing, a tab switch, a section opening):
@@ -32,7 +30,7 @@ export function SmoothSize({ children, as: Tag = 'div', ...rest }: { children: R
       running = null;
       if (reduce.matches || Math.abs(from - next) < 1) return;
       // clipped only while gliding, so focus rings and popovers are never cut otherwise
-      running = box.animate([{ height: `${from}px`, overflow: 'clip' }, { height: `${next}px`, overflow: 'clip' }], { duration: DURATION_MS, easing: EASE_OUT });
+      running = box.animate([{ height: `${from}px`, overflow: 'clip' }, { height: `${next}px`, overflow: 'clip' }], { duration: RESIZE_MS, easing: EASE_OUT });
       running.onfinish = () => (running = null);
     });
     observer.observe(content);

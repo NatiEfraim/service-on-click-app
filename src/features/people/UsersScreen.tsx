@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Pager, Seg } from '@/components/ui/Controls';
 import { EmptyState, ErrorNotice, Loading } from '@/components/ui/Feedback';
-import { Icon } from '@/components/ui/Icon';
+import { SearchField } from '@/components/ui/SearchField';
 import { PageHead } from '@/components/ui/PageHead';
 import { useDebounced } from '@/lib/useDebounced';
 import { useSession } from '@/providers/SessionProvider';
@@ -72,16 +72,7 @@ export function UsersScreen() {
               { value: 'all', label: 'כל המשתמשים' },
             ]}
           />
-          <div className="search" style={{ width: 260 }}>
-            <Icon name="search" />
-            <input
-              value={text}
-              placeholder="שם או מספר אישי"
-              aria-label="חיפוש לפי שם או מספר אישי"
-              autoComplete="off"
-              onChange={(event) => setText(event.target.value)}
-            />
-          </div>
+          <SearchField width={260} value={text} placeholder="שם או מספר אישי" aria-label="חיפוש לפי שם או מספר אישי" autoComplete="off" onChange={setText} />
           <span className="grow" />
           <span className="ppl-count" aria-live="polite">
             {count}

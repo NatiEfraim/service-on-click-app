@@ -3,9 +3,10 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Ticket } from '@/components/booking/Ticket';
+import { Seg } from '@/components/ui/Controls';
 import { EmptyState, ErrorNotice, Loading } from '@/components/ui/Feedback';
-import { Icon } from '@/components/ui/Icon';
 import { PageHead } from '@/components/ui/PageHead';
+import { SearchField } from '@/components/ui/SearchField';
 import { SmoothSize } from '@/components/ui/SmoothSize';
 import { useStatusAction } from '@/features/bookings/useStatusAction';
 import { bookingsApi } from '@/lib/api/endpoints';
@@ -14,12 +15,7 @@ import type { BookingRow, StageId } from '@/lib/api/types';
 import { STAGE_ORDER, STAGE_SHORT } from '@/lib/labels';
 import { useDebounced } from '@/lib/useDebounced';
 import { useSession } from '@/providers/SessionProvider';
-
-const PAGE_SIZE = 25;
-/** Wait this long after the last keystroke before searching. */
-const SEARCH_DELAY_MS = 400;
-/** The card's bottom border under the list (the page's own bottom padding is read from the layout). */
-const CARD_EDGE = 2;
+import { CARD_EDGE, LOAD_AHEAD_PX, MIN_LIST_HEIGHT, PAGE_SIZE, SEARCH_DELAY_MS } from './constants';
 
 /** Bookings waiting for this user (`mine=1`), longest-waiting first; searched and filtered by stage on the server, 25 at a time. */
 export function QueueScreen() {
@@ -67,7 +63,7 @@ export function QueueScreen() {
     const fit = () => {
       const top = el.getBoundingClientRect().top + window.scrollY;
       const below = (page ? parseFloat(getComputedStyle(page).paddingBottom) : 0) + CARD_EDGE;
-      el.style.maxHeight = `${Math.max(240, window.innerHeight - top - below)}px`;
+      el.style.maxHeight = `${Math.max(MIN_LIST_HEIGHT, window.innerHeight - top - below)}px`;
     };
     fit();
     window.addEventListener('resize', fit);
@@ -79,7 +75,7 @@ export function QueueScreen() {
     if (!el || !hasNextPage) return;
     const observer = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting && !isFetchingNextPage) void fetchNextPage();
-    }, { root: scroller.current, rootMargin: '0px 0px 300px 0px' });
+    }, { root: scroller.current, rootMargin: `0px 0px ${LOAD_AHEAD_PX}px 0px` });
     observer.observe(el);
     return () => observer.disconnect();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
@@ -97,21 +93,9 @@ export function QueueScreen() {
       />
       <SmoothSize as="section" className="card">
         <div className="toolbar">
-          <label className="search" style={{ width: 220 }}>
-            <Icon name="search" />
-            <input type="search" value={text} placeholder="חיפוש קריאה" title="מספר קריאה, מספר אישי, ת.ז. או שם" aria-label="חיפוש בקריאות שלי לפי מספר קריאה, מספר אישי, ת.ז. או שם" onChange={(event) => setText(event.target.value)} />
-          </label>
+          <SearchField width={220} value={text} placeholder="חיפוש קריאה" title="מספר קריאה, מספר אישי, ת.ז. או שם" aria-label="חיפוש בקריאות שלי לפי מספר קריאה, מספר אישי, ת.ז. או שם" onChange={setText} />
           {stages.length > 1 || stage ? (
-            <div className="seg" role="group" aria-label="שלב">
-              <button type="button" aria-pressed={!stage} onClick={() => setStage('')}>
-                הכל
-              </button>
-              {stages.map((id) => (
-                <button key={id} type="button" aria-pressed={stage === id} onClick={() => setStage(id)}>
-                  {STAGE_SHORT[id]}
-                </button>
-              ))}
-            </div>
+            <Seg<StageId | ''> label="שלב" value={stage} onChange={setStage} options={[{ value: '', label: 'הכל' }, ...stages.map((id) => ({ value: id, label: STAGE_SHORT[id] }))]} />
           ) : null}
           <span className="grow" />
           {query.isSuccess ? <span className="small muted">{filtered ? `${total} תוצאות` : 'ממוין לפי זמן ההמתנה בשלב'}</span> : null}

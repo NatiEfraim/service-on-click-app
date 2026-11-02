@@ -5,11 +5,8 @@ import { Icon } from '@/components/ui/Icon';
 import type { StageAnalysis, StageId, TrendPoint } from '@/lib/api/types';
 import { fmtDate, fmtHours } from '@/lib/format';
 import { STAGE_COLOR, STAGE_SHORT } from '@/lib/labels';
+import { FOLDED_INTO, PIPELINE_STAGES } from './constants';
 
-/** The six cards of the pipeline, always shown. */
-const PIPELINE_STAGES: StageId[] = ['control_officer', 'vice_approver', 'approver', 'supplier_approval', 'supplier_number', 'realization'];
-/** Short side stages are counted inside the card next to them. */
-const FOLDED_INTO: Partial<Record<StageId, StageId>> = { supplier_files: 'supplier_approval', barber_done: 'realization' };
 
 /** Stage pipeline: open bookings per stage, coloured by severity against the handling target. */
 export function Pipeline({ byStage: raw, analysis, onStage }: { byStage: Partial<Record<StageId, number>>; analysis: Record<string, StageAnalysis>; onStage: (stage: StageId) => void }) {

@@ -13,6 +13,7 @@ import { APP_NAME } from '@/lib/config';
 import { useSession } from '@/providers/SessionProvider';
 import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
+import { usePresence } from '@/components/ui/usePresence';
 import { GlobalSearch } from './GlobalSearch';
 import { Logo } from './Logo';
 
@@ -40,6 +41,7 @@ function useDismiss(open: boolean, close: () => void) {
 function ManageMenu({ group, pathname, onNavigate }: { group: NavGroup; pathname: string; onNavigate: () => void }) {
   const [open, setOpen] = useState(false);
   const ref = useDismiss(open, () => setOpen(false));
+  const presence = usePresence(open);
   const current = group.items.some((item) => isActivePath(pathname, item.href, item.also));
 
   return (
@@ -48,8 +50,8 @@ function ManageMenu({ group, pathname, onNavigate }: { group: NavGroup; pathname
         {group.label}
         <Icon name="down" />
       </button>
-      {open ? (
-        <div className="menu">
+      {presence.mounted ? (
+        <div className="menu" data-closing={presence.closing || undefined}>
           {group.items.map((item) => (
             <Link
               key={item.id}
@@ -76,6 +78,7 @@ function UserMenu() {
   const { me, unitName, signOut } = useSession();
   const [open, setOpen] = useState(false);
   const ref = useDismiss(open, () => setOpen(false));
+  const presence = usePresence(open);
 
   const name = me.user.full_name ?? me.user.personal_number;
   const roles = me.is_super_admin
@@ -95,8 +98,8 @@ function UserMenu() {
         </span>
         <Icon name="down" />
       </button>
-      {open ? (
-        <div className="menu" style={{ insetInlineStart: 'auto', insetInlineEnd: 0, minWidth: 280 }}>
+      {presence.mounted ? (
+        <div className="menu end" data-closing={presence.closing || undefined} style={{ minWidth: 280 }}>
           <div style={{ padding: 10 }}>
             <b>{name}</b>
             <div className="small muted">

@@ -385,6 +385,8 @@ export interface DomainDashboard {
   };
   handling: { median_hours: number | null; p90_hours: number | null; avg_hours: number | null; sample: number };
   by_stage: Partial<Record<StageId, number>>;
+  /** status id -> open bookings in it */
+  open_by_status: Record<string, number>;
   stages: StageAnalysis[];
   rates: Rates;
   oldest: BookingRow[];

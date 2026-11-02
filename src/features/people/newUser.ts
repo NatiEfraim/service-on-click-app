@@ -1,12 +1,12 @@
 /** Mirrors the server's `StoreUserRequest` rules and Hebrew texts; the server also checks uniqueness. */
 import type { NewUserBody } from '@/lib/api/endpoints';
+import { PERSONAL_NUMBER_PATTERN } from '@/lib/patterns';
 
 export const FULL_NAME_MAX = 30;
 export const PERSONAL_NUMBER_MAX = 8;
 export const PHONE_LENGTH = 10;
 
 const NAME_CHARS = /^[א-ת'\-\s]+$/u;
-const PERSONAL_NUMBER = /^\d{7,8}$/;
 const PHONE = /^05\d{8}$/;
 
 export interface NewUserInput {
@@ -25,7 +25,7 @@ export function validateNewUser(input: NewUserInput): NewUserErrors {
   if (!name || name.length > FULL_NAME_MAX) errors.fullName = `שם מלא הוא שדה חובה ואינו יכול לעלות על ${FULL_NAME_MAX} תווים`;
   else if (!NAME_CHARS.test(name)) errors.fullName = 'שם מלא יכול להכיל אותיות בעברית בלבד';
 
-  if (!PERSONAL_NUMBER.test(input.personalNumber.trim())) errors.personalNumber = 'מספר אישי אינו תקין';
+  if (!PERSONAL_NUMBER_PATTERN.test(input.personalNumber.trim())) errors.personalNumber = 'מספר אישי אינו תקין';
 
   const phone = input.phone.trim();
   if (phone && !PHONE.test(phone)) errors.phone = 'מספר טלפון אינו תקין - יש להזין 10 ספרות המתחילות ב-05';

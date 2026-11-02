@@ -4,7 +4,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useId, useMemo, useState } from 'react';
 import { DomainIcon } from '@/components/booking/DomainBadge';
 import { Button } from '@/components/ui/Button';
-import { EmptyState, ErrorNotice, Loading, Notice } from '@/components/ui/Feedback';
+import { EmptyState, ErrorNotice, FormError, Loading, Notice } from '@/components/ui/Feedback';
+import { Field } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
 import { ApiError } from '@/lib/api/client';
 import { peopleApi, type ApproverAssignment } from '@/lib/api/endpoints';
@@ -26,18 +27,11 @@ import {
   type Matrix,
 } from './permissions';
 import { invalidatePeople, usePerson, type PersonRef } from './queries';
+import { SAVED_PART_LABEL, type SavedPart } from './constants';
 
 export interface PermissionsTarget extends PersonRef {
   name: string | null;
 }
-
-type SavedPart = 'department' | 'roles' | 'admin';
-
-const SAVED_PART_LABEL: Record<SavedPart, string> = {
-  department: 'שיוך המחלקה',
-  roles: 'ההרשאות לתחומים',
-  admin: 'תפקיד מפקד המחנה',
-};
 
 interface SavePlan {
   /** `undefined`: the department is left alone; `null` takes the person out of their department. */
@@ -246,8 +240,7 @@ export function PermissionsDialog({ target, onClose }: { target: PermissionsTarg
                 ) : null}
               </span>
             </div>
-            <label className="field">
-              <span>מחלקה</span>
+            <Field label="מחלקה">
               <select
                 className="input"
                 value={departmentEdit ?? (currentDepartment === null ? '' : String(currentDepartment))}
@@ -264,7 +257,7 @@ export function PermissionsDialog({ target, onClose }: { target: PermissionsTarg
                   </option>
                 ))}
               </select>
-            </label>
+            </Field>
           </div>
 
           {ownRowClosed ? <Notice tone="warn">לא ניתן לשנות את ההרשאות של עצמך.</Notice> : null}
@@ -338,8 +331,7 @@ export function PermissionsDialog({ target, onClose }: { target: PermissionsTarg
           </p>
 
           <div>
-            <label className="field">
-              <span>סיבת שינוי ההרשאות (חובה כשמשנים הרשאות)</span>
+            <Field label="סיבת שינוי ההרשאות (חובה כשמשנים הרשאות)">
               <input
                 className="input"
                 value={reason}
@@ -354,18 +346,14 @@ export function PermissionsDialog({ target, onClose }: { target: PermissionsTarg
                   if (reasonProblem) setReasonProblem('');
                 }}
               />
-            </label>
+            </Field>
             <div id={reasonErrorId} className="err" aria-live="polite">
               {reasonProblem}
             </div>
           </div>
 
           {alreadySaved ? <Notice tone="warn">{alreadySaved}</Notice> : null}
-          {formError ? (
-            <div className="err" role="alert">
-              {formError}
-            </div>
-          ) : null}
+          <FormError>{formError}</FormError>
         </>
       ) : null}
     </Modal>

@@ -1,15 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import type { CSSProperties } from 'react';
 import { DomainBadge } from '@/components/booking/DomainBadge';
 import { Button } from '@/components/ui/Button';
-import { SmoothSize } from '@/components/ui/SmoothSize';
 import { EmptyState, Loading } from '@/components/ui/Feedback';
 import { Icon } from '@/components/ui/Icon';
 import { PageHead } from '@/components/ui/PageHead';
+import { SmoothSize } from '@/components/ui/SmoothSize';
 import { domainColor } from '@/lib/labels';
+import { useSetSearchParams } from '@/lib/useSetSearchParams';
 import { useSession } from '@/providers/SessionProvider';
 import { campCommanders, stationsForType } from './stations';
 import { useSettingsQuery } from './useSettings';
@@ -43,30 +44,30 @@ function DomainCard({ unitId, bookingTypeId, index }: { unitId: number; bookingT
       </div>
 
       <SmoothSize className="st-card-body">
-      {query.isPending ? (
-        <div className="st-card-skel">
-          <Loading rows={4} />
-        </div>
-      ) : query.isError ? (
-        <div className="st-card-msg">
-          לא ניתן לטעון את התחום.
-          <Button size="sm" onClick={() => void query.refetch()}>
-            נסו שוב
-          </Button>
-        </div>
-      ) : (
-        <ol className="steps" aria-label={`שלבי האישור ב${name}`}>
-          {stations.map((station) => (
-            <li key={station.id} className={station.people.length ? '' : 'none'}>
-              <span className="pt" />
-              <div>
-                <b>{station.label}</b>
-                <span>{station.people.length ? station.people.join(', ') : 'לא שובץ בעל תפקיד'}</span>
-              </div>
-            </li>
-          ))}
-        </ol>
-      )}
+        {query.isPending ? (
+          <div className="st-card-skel">
+            <Loading rows={4} />
+          </div>
+        ) : query.isError ? (
+          <div className="st-card-msg">
+            לא ניתן לטעון את התחום.
+            <Button size="sm" onClick={() => void query.refetch()}>
+              נסו שוב
+            </Button>
+          </div>
+        ) : (
+          <ol className="steps" aria-label={`שלבי האישור ב${name}`}>
+            {stations.map((station) => (
+              <li key={station.id} className={station.people.length ? '' : 'none'}>
+                <span className="pt" />
+                <div>
+                  <b>{station.label}</b>
+                  <span>{station.people.length ? station.people.join(', ') : 'לא שובץ בעל תפקיד'}</span>
+                </div>
+              </li>
+            ))}
+          </ol>
+        )}
       </SmoothSize>
 
       <div className="card-foot">
@@ -81,20 +82,15 @@ function DomainCard({ unitId, bookingTypeId, index }: { unitId: number; bookingT
 
 /** Service domains of one unit (the system admin picks the unit, everyone else sees their own). */
 export function DomainsScreen() {
-  const router = useRouter();
-  const pathname = usePathname();
   const search = useSearchParams();
+  const setParams = useSetSearchParams();
   const { me, catalog, unitName } = useSession();
 
   const requested = Number(search.get('unit'));
   const unitId = me.is_super_admin && catalog.units.some((unit) => unit.id === requested) ? requested : (me.user.unit_id ?? catalog.units[0]?.id ?? 0);
   const typeIds = me.is_super_admin ? catalog.booking_types.map((type) => type.id) : me.managed_booking_types;
 
-  const setUnit = (id: number) => {
-    const next = new URLSearchParams(search.toString());
-    next.set('unit', String(id));
-    router.replace(`${pathname}?${next.toString()}`, { scroll: false });
-  };
+  const setUnit = (id: number) => setParams({ unit: String(id) });
 
   if (!unitId) return <EmptyState title="לא נמצאה יחידה" />;
 

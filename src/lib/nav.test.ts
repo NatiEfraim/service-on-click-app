@@ -70,9 +70,11 @@ describe('canAct', () => {
 describe('homeKind', () => {
   it('sends each kind of user to their own main screen', () => {
     expect(homeKind(makeMe({ is_handler_only: true }))).toBe('queue');
-    expect(homeKind(makeMe({ is_admin: true, caps: ['dashboard.view'] }))).toBe('tiles');
-    expect(homeKind(makeMe({ is_super_admin: true, caps: ['dashboard.view'] }))).toBe('tiles');
+    expect(homeKind(makeMe({ is_admin: true, caps: ['dashboard.view'], dashboard_booking_types: [1, 2] }))).toBe('tiles');
+    expect(homeKind(makeMe({ is_super_admin: true, caps: ['dashboard.view'], dashboard_booking_types: [1, 2] }))).toBe('tiles');
     expect(homeKind(makeMe({ caps: ['dashboard.view'], permissions: ['approver_1'] }))).toBe('dashboard');
+    expect(homeKind(makeMe({ caps: ['dashboard.view'], permissions: ['approver_1', 'approver_2'], dashboard_booking_types: [1, 2] }))).toBe('tiles');
+    expect(homeKind(makeMe({ is_admin: true, caps: ['dashboard.view'], dashboard_booking_types: [3] }))).toBe('dashboard');
     expect(homeKind(makeMe({ permissions: ['vice_approver_1'] }))).toBe('queue');
     expect(homeKind(makeMe())).toBe('requests');
   });

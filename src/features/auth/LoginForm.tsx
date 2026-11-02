@@ -4,13 +4,14 @@ import { useSearchParams } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Notice } from '@/components/ui/Feedback';
+import { Field } from '@/components/ui/Field';
 import { Logo } from '@/components/layout/Logo';
 import { ApiError } from '@/lib/api/client';
 import { authApi } from '@/lib/api/endpoints';
 import { APP_NAME, DEV_LOGIN, LOGIN_URL } from '@/lib/config';
+import { PERSONAL_NUMBER_PATTERN } from '@/lib/patterns';
 import { safeNext } from '@/lib/safe-next';
 
-const PERSONAL_NUMBER = /^\d{7,8}$/;
 
 /** Dev login by personal number (the API sets the HttpOnly cookie); production uses ADFS via NEXT_PUBLIC_LOGIN_URL. */
 export function LoginForm() {
@@ -22,7 +23,7 @@ export function LoginForm() {
   async function submit(event: FormEvent) {
     event.preventDefault();
     const value = personalNumber.trim();
-    if (!PERSONAL_NUMBER.test(value)) {
+    if (!PERSONAL_NUMBER_PATTERN.test(value)) {
       setError('מספר אישי הוא 7 או 8 ספרות.');
       return;
     }
@@ -56,8 +57,7 @@ export function LoginForm() {
         {DEV_LOGIN ? (
           <form onSubmit={submit} style={{ display: 'grid', gap: 14 }} noValidate>
             <h1>התחברות</h1>
-            <label className="field">
-              <span>מספר אישי</span>
+            <Field label="מספר אישי">
               <input
                 className="input ltr"
                 name="personal_number"
@@ -70,7 +70,7 @@ export function LoginForm() {
                 aria-describedby={error ? 'login-error' : undefined}
                 autoFocus
               />
-            </label>
+            </Field>
             <div id="login-error" className="err" role="alert" aria-live="polite">
               {error}
             </div>

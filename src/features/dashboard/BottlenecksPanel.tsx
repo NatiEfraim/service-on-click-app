@@ -1,12 +1,12 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import { Card, CardBody } from '@/components/ui/Card';
 import { EmptyState, ErrorNotice, Loading } from '@/components/ui/Feedback';
 import { insightsApi } from '@/lib/api/endpoints';
 import { keys } from '@/lib/api/keys';
 import { fmtHours } from '@/lib/format';
-
-const TOP = 8;
+import { BOTTLENECK_ROWS } from './constants';
 
 /** Load per role holder and handler performance, from `GET /bottlenecks`. */
 export function BottlenecksPanel({ types, days }: { types: number[]; days: number }) {
@@ -15,37 +15,30 @@ export function BottlenecksPanel({ types, days }: { types: number[]; days: numbe
 
   if (query.isPending) {
     return (
-      <section className="card mt">
-        <div className="card-head">
-          <h2>עומס על בעלי תפקידים</h2>
-        </div>
-        <div className="card-body">
+      <Card spaced title="עומס על בעלי תפקידים">
+        <CardBody>
           <Loading rows={3} />
-        </div>
-      </section>
+        </CardBody>
+      </Card>
     );
   }
   if (query.isError) {
     return (
-      <section className="card mt">
-        <div className="card-body">
+      <Card spaced>
+        <CardBody>
           <ErrorNotice error={query.error} title="לא ניתן לטעון את העומס על בעלי התפקידים." onRetry={() => void query.refetch()} />
-        </div>
-      </section>
+        </CardBody>
+      </Card>
     );
   }
 
-  const pools = [...query.data.pools].sort((a, b) => b.per_holder - a.per_holder).slice(0, TOP);
-  const handlers = [...query.data.handlers].sort((a, b) => b.transitions - a.transitions).slice(0, TOP);
+  const pools = [...query.data.pools].sort((a, b) => b.per_holder - a.per_holder).slice(0, BOTTLENECK_ROWS);
+  const handlers = [...query.data.handlers].sort((a, b) => b.transitions - a.transitions).slice(0, BOTTLENECK_ROWS);
   const widest = Math.max(1, ...pools.map((pool) => pool.per_holder));
 
   return (
     <div className="grid g-2 mt">
-      <section className="card">
-        <div className="card-head">
-          <h2>עומס על בעלי תפקידים</h2>
-          <span className="hint">קריאות פתוחות לכל בעל תפקיד בשלב</span>
-        </div>
+      <Card title="עומס על בעלי תפקידים" hint="קריאות פתוחות לכל בעל תפקיד בשלב">
         {pools.length ? (
           <div className="tbl-wrap">
             <table className="t">
@@ -84,13 +77,9 @@ export function BottlenecksPanel({ types, days }: { types: number[]; days: numbe
         ) : (
           <EmptyState title="אין קריאות פתוחות" />
         )}
-      </section>
+      </Card>
 
-      <section className="card">
-        <div className="card-head">
-          <h2>מי טיפל בקריאות</h2>
-          <span className="hint">{query.data.window_days} הימים האחרונים</span>
-        </div>
+      <Card title="מי טיפל בקריאות" hint={`${query.data.window_days} הימים האחרונים`}>
         {handlers.length ? (
           <div className="tbl-wrap">
             <table className="t">
@@ -118,7 +107,7 @@ export function BottlenecksPanel({ types, days }: { types: number[]; days: numbe
           <EmptyState title="אין נתוני טיפול בחלון הזמן" />
         )}
         <div className="card-foot">{query.data.definitions}</div>
-      </section>
+      </Card>
     </div>
   );
 }

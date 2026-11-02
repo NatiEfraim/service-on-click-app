@@ -3,6 +3,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
+import { FormError } from '@/components/ui/Feedback';
+import { Field } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
 import { ApiError } from '@/lib/api/client';
 import { syncApi } from '@/lib/api/endpoints';
@@ -72,15 +74,10 @@ export function ResolveConflictDialog({ booking, resolution, onClose }: { bookin
           ? `הקריאה תישאר "${booking.status_label}", וההחלטה תישלח גם לאפליקציה.`
           : `הקריאה תעבור ל"${booking.sync.ext_status_label ?? 'המצב באפליקציה'}", וההחלטה שהתקבלה כאן תבוטל.`}
       </p>
-      <label className="field">
-        <span>נימוק (חובה)</span>
+      <Field label="נימוק (חובה)">
         <input className="input" value={reason} maxLength={500} onChange={(event) => setReason(event.target.value)} />
-      </label>
-      {error ? (
-        <div className="err" role="alert">
-          {error}
-        </div>
-      ) : null}
+      </Field>
+      <FormError>{error}</FormError>
     </Modal>
   );
 }

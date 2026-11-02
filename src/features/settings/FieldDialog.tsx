@@ -4,6 +4,8 @@ import { useMutation } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useId, useState } from 'react';
 import { Button } from '@/components/ui/Button';
+import { FormError } from '@/components/ui/Feedback';
+import { Field } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
 import { settingsApi, type NewFieldBody, type UpdateFieldBody } from '@/lib/api/endpoints';
 import type { FormField, Settings } from '@/lib/api/types';
@@ -109,8 +111,7 @@ export function FieldDialog({ unitId, bookingTypeId, settings, field, onClose }:
         </>
       }
     >
-      <label className="field">
-        <span>שם השדה כפי שיוצג למבקש</span>
+      <Field label="שם השדה כפי שיוצג למבקש">
         <input
           className="input"
           maxLength={50}
@@ -122,7 +123,7 @@ export function FieldDialog({ unitId, bookingTypeId, settings, field, onClose }:
             if (nameError) setNameError('');
           }}
         />
-      </label>
+      </Field>
       <div id={`${ids}-name-err`} className="err" aria-live="polite">
         {nameError}
       </div>
@@ -158,8 +159,7 @@ export function FieldDialog({ unitId, bookingTypeId, settings, field, onClose }:
 
       {hasOptions ? (
         <>
-          <label className="field">
-            <span>אפשרויות (שורה לכל אפשרות, לפחות אחת)</span>
+          <Field label="אפשרויות (שורה לכל אפשרות, לפחות אחת)">
             <textarea
               className="input"
               rows={4}
@@ -171,7 +171,7 @@ export function FieldDialog({ unitId, bookingTypeId, settings, field, onClose }:
                 if (optionsError) setOptionsError('');
               }}
             />
-          </label>
+          </Field>
           <div id={`${ids}-opt-err`} className="err" aria-live="polite">
             {optionsError}
           </div>
@@ -206,11 +206,7 @@ export function FieldDialog({ unitId, bookingTypeId, settings, field, onClose }:
       <p className="small muted" style={{ margin: 0 }}>
         {isNew ? 'השדה יתווסף בסוף הטופס ויופיע גם בטופס באפליקציה. קריאות קיימות לא יושפעו.' : 'השינוי יחול גם בטופס באפליקציה, על קריאות חדשות בלבד.'}
       </p>
-      {error ? (
-        <div className="err" role="alert">
-          {error}
-        </div>
-      ) : null}
+      <FormError>{error}</FormError>
     </Modal>
   );
 }

@@ -7,6 +7,7 @@ import { Icon } from '@/components/ui/Icon';
 import { useBookingDrawer } from '@/features/bookings/useBookingDrawer';
 import type { BookingAction, BookingRow } from '@/lib/api/types';
 import { actionTone, domainColor, STAGE_SHORT } from '@/lib/labels';
+import { EASE_OUT, prefersReducedMotion, ROW_COLLAPSE_MS, ROW_SLIDE_MS, ROW_STAMP_MS } from '@/lib/motion';
 import { useSession } from '@/providers/SessionProvider';
 import { DomainBadge } from './DomainBadge';
 import { AgeBar, MiniRoute } from './RouteViz';
@@ -19,21 +20,19 @@ interface TicketProps {
   outcome?: 'ok' | 'bad';
 }
 
-const EASE_OUT = 'cubic-bezier(0.23, 1, 0.32, 1)';
-
-/** The leave sequence (450 stamp + 330 slide + 260 collapse ≈ LEAVE_MS in useStatusAction). */
+/** The leave sequence: stamp, slide out, collapse (timings in lib/motion). */
 function useLeave(ref: RefObject<HTMLDivElement | null>, outcome: TicketProps['outcome']) {
   useEffect(() => {
     const el = ref.current;
     if (!el || !outcome) return;
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const reduce = prefersReducedMotion();
     let cancelled = false;
     // approved leaves to the right, rejected / cancelled to the left
     const away = outcome === 'ok' ? '100%' : '-100%';
     const timer = window.setTimeout(async () => {
       const slide = el.animate(
         reduce ? [{ opacity: 1 }, { opacity: 0 }] : [{ opacity: 1, transform: 'translateX(0)' }, { opacity: 0, transform: `translateX(${away})` }],
-        { duration: 330, easing: EASE_OUT, fill: 'forwards' },
+        { duration: ROW_SLIDE_MS, easing: EASE_OUT, fill: 'forwards' },
       );
       await slide.finished;
       if (cancelled) return;
@@ -45,9 +44,9 @@ function useLeave(ref: RefObject<HTMLDivElement | null>, outcome: TicketProps['o
           { height: `${el.offsetHeight}px`, paddingTop: style.paddingTop, paddingBottom: style.paddingBottom, borderBottomWidth: style.borderBottomWidth },
           { height: '0px', paddingTop: '0px', paddingBottom: '0px', borderBottomWidth: '0px' },
         ],
-        { duration: reduce ? 0 : 260, easing: EASE_OUT, fill: 'forwards' },
+        { duration: reduce ? 0 : ROW_COLLAPSE_MS, easing: EASE_OUT, fill: 'forwards' },
       );
-    }, 450);
+    }, ROW_STAMP_MS);
     return () => {
       cancelled = true;
       window.clearTimeout(timer);

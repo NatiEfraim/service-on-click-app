@@ -35,7 +35,14 @@
 .menu {
   position: absolute; top: calc(100% + 10px); inset-inline-start: 0; min-width: 230px; background: var(--surface); border: 1px solid var(--line);
   border-radius: var(--r); box-shadow: var(--shadow-lg); padding: 6px; z-index: 50; color: var(--ink);
+  /* grows out of its button: the top corner on the button's side */
+  transform-origin: top right; animation: menu-in 180ms var(--ease-out);
 }
+.menu.end { inset-inline-start: auto; inset-inline-end: 0; transform-origin: top left; }
+/* closing: fades back toward the button (usePresence keeps it mounted for MENU_EXIT_MS) */
+.menu[data-closing] { animation: menu-out 150ms var(--ease-out) forwards; pointer-events: none; }
+@keyframes menu-in { from { opacity: 0; transform: translateY(-4px) scale(0.97); } }
+@keyframes menu-out { to { opacity: 0; transform: translateY(-4px) scale(0.97); } }
 .menu a, .menu button.mi {
   display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; border-radius: var(--r-sm); color: var(--ink); font-weight: 600;
   background: none; border: 0; cursor: pointer; text-align: start;

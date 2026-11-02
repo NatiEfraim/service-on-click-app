@@ -4,39 +4,30 @@ import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState, type CSSProperties } from 'react';
-import { DomainBadge, DomainIcon } from '@/components/booking/DomainBadge';
+import { DomainBadge } from '@/components/booking/DomainBadge';
 import { Ticket } from '@/components/booking/Ticket';
 import { Button } from '@/components/ui/Button';
+import { Card, CardBody } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chips';
+import { Seg } from '@/components/ui/Controls';
 import { EmptyState, ErrorNotice, Loading } from '@/components/ui/Feedback';
 import { Icon } from '@/components/ui/Icon';
 import { SmoothSize } from '@/components/ui/SmoothSize';
+import { Stat } from '@/components/ui/Stat';
 import { useStatusAction } from '@/features/bookings/useStatusAction';
 import { TargetDialog } from '@/features/targets/TargetDialog';
 import { insightsApi } from '@/lib/api/endpoints';
 import { keys } from '@/lib/api/keys';
-import type { DomainDashboard as DashboardData, Severity, StageAnalysis, StageId } from '@/lib/api/types';
+import type { DomainDashboard as DashboardData, StageAnalysis, StageId } from '@/lib/api/types';
 import { fmtHours, fmtLongHours } from '@/lib/format';
-import { STAGE_COLOR, STAGE_ORDER, STAGE_SHORT, WAIT_LABEL } from '@/lib/labels';
+import { STAGE_ORDER, STAGE_SHORT, statusTone, WAIT_LABEL, type ChipTone } from '@/lib/labels';
+import { homeKind } from '@/lib/nav';
+import { useSetSearchParams } from '@/lib/useSetSearchParams';
 import { useSession } from '@/providers/SessionProvider';
 import { BottlenecksPanel } from './BottlenecksPanel';
 import { indexStages, Pipeline, TrendChart, worstStage } from './charts';
-
-const SEVERITY: Record<Severity, { label: string; tone: 'bad' | 'warn' | 'ok' | '' }> = {
-  critical: { label: 'חריגה', tone: 'bad' },
-  warning: { label: 'קרוב ליעד', tone: 'warn' },
-  ok: { label: 'תקין', tone: 'ok' },
-  no_target: { label: 'ללא יעד', tone: '' },
-};
-
-const WINDOWS = [
-  { value: '7', label: 'שבוע' },
-  { value: '30', label: '30 ימים' },
-  { value: '90', label: 'רבעון' },
-];
-
-/** Stages where a booking waits for an approver's decision. */
-const APPROVAL_STAGES: StageId[] = ['control_officer', 'vice_approver', 'approver'];
+import { APPROVAL_STAGES, DEFAULT_WINDOW_DAYS, SEVERITY, STAT_COLOR, WINDOWS, type WindowId } from './constants';
+import { StageBars } from './StageBars';
 
 function parseTypes(raw: string | null): number[] {
   return (raw ?? '')
@@ -49,13 +40,14 @@ function parseTypes(raw: string | null): number[] {
 export function DomainDashboard() {
   const router = useRouter();
   const search = useSearchParams();
+  const setParams = useSetSearchParams();
   const { me, typeName } = useSession();
   const action = useStatusAction();
   const [targetOpen, setTargetOpen] = useState(false);
   const [full, setFull] = useState(false);
 
   const types = useMemo(() => parseTypes(search.get('types')), [search]);
-  const days = ['7', '30', '90'].includes(search.get('days') ?? '') ? Number(search.get('days')) : 30;
+  const days = WINDOWS.some((w) => w.value === search.get('days')) ? Number(search.get('days')) : DEFAULT_WINDOW_DAYS;
 
   const params = { types, days };
   const query = useQuery({ queryKey: keys.domainDashboard(params), queryFn: ({ signal }) => insightsApi.domainDashboard(params, signal), placeholderData: (previous) => previous });
@@ -74,15 +66,10 @@ export function DomainDashboard() {
   const pct = (hours: number | null) => `${Math.min(100, ((hours ?? 0) / scale) * 100)}%`;
   const awaitingApproval = APPROVAL_STAGES.reduce((sum, id) => sum + (data.by_stage[id] ?? 0), 0);
 
-  const canGoBack = me.is_super_admin || me.is_admin;
+  const canGoBack = homeKind(me) === 'tiles';
   const canSetTarget = single !== null && me.capabilities['targets.manage'] && (me.is_super_admin || me.permissions.includes(`admin_${single}`));
   const targetText = data.target ? `יעד טיפול: ${fmtLongHours(data.target.target_hours)} מפתיחה ועד סגירה` : 'לא הוגדר יעד טיפול לתחום';
 
-  const setWindow = (value: string) => {
-    const next = new URLSearchParams(search.toString());
-    next.set('days', value);
-    router.replace(`/dashboard?${next.toString()}`, { scroll: false });
-  };
   const goStage = (stage: StageId) => router.push(`/requests?view=open&stage=${stage}${typesParam}`);
   const goIds = (ids: number[]) => ids.length && router.push(`/requests?view=all&ids=${ids.join(',')}`);
 
@@ -94,13 +81,6 @@ export function DomainDashboard() {
     { count: data.totals.overdue, title: 'קריאות חורגות מיעד הטיפול', text: 'הזמן מפתיחה ארוך מהיעד שהוגדר לתחום.', tone: 'var(--bad)', href: `/requests?view=overdue${typesParam}` },
     { count: data.totals.stale, title: 'קריאות לא התקדמו מעל שבוע', text: 'לא נרשם בהן שינוי סטטוס 7 ימים ומעלה.', tone: 'var(--warn)', href: `/requests?view=open${typesParam}` },
   ].filter((row) => row.count > 0);
-
-  const domainRows = Object.entries(overview.data?.by_type_stage ?? {})
-    .map(([type, stages]) => ({ type: Number(type), stages, total: Object.values(stages).reduce((sum, n) => sum + (n ?? 0), 0) }))
-    .filter((row) => data.booking_type_ids.includes(row.type) && row.total > 0)
-    .sort((a, b) => b.total - a.total);
-  const widest = Math.max(1, ...domainRows.map((row) => row.total));
-  const usedStages = STAGE_ORDER.filter((id) => domainRows.some((row) => row.stages[id]));
 
   return (
     <>
@@ -122,13 +102,7 @@ export function DomainDashboard() {
           </p>
         </div>
         <div className="actions">
-          <div className="seg" role="group" aria-label="חלון זמן">
-            {WINDOWS.map((w) => (
-              <button key={w.value} type="button" aria-pressed={String(data.window_days) === w.value} onClick={() => setWindow(w.value)}>
-                {w.label}
-              </button>
-            ))}
-          </div>
+          <Seg label="חלון זמן" options={WINDOWS} value={String(data.window_days) as WindowId} onChange={(value) => setParams({ days: value })} />
           {canSetTarget ? (
             <Button icon="sliders" onClick={() => setTargetOpen(true)}>
               יעד טיפול
@@ -139,31 +113,31 @@ export function DomainDashboard() {
 
       {/* 1. headline numbers */}
       <div className="card stats">
-        <Stat icon="list" color="#457AEE" label="קריאות פתוחות" value={data.totals.open} foot={`מתוך ${data.totals.total} בתחומים שלך`} onClick={() => router.push(`/requests?view=open${typesParam}`)} />
-        <Stat icon="inbox" color="#0EA5E9" label="ממתינות להחלטת מאשרים" value={awaitingApproval} foot="בשלבי האישור" onClick={() => router.push(`/requests?view=open${typesParam}`)} />
+        <Stat icon="list" color={STAT_COLOR.open} label="קריאות פתוחות" value={data.totals.open} foot={`מתוך ${data.totals.total} בתחומים שלך`} onClick={() => router.push(`/requests?view=open${typesParam}`)} />
+        <Stat icon="inbox" color={STAT_COLOR.awaiting} label="ממתינות להחלטת מאשרים" value={awaitingApproval} foot="בשלבי האישור" onClick={() => router.push(`/requests?view=open${typesParam}`)} />
         <Stat
           icon="alert"
-          color="#E53F63"
+          color={STAT_COLOR.overdue}
           bad={data.totals.overdue > 0}
           label="חורגות מיעד"
           value={data.totals.overdue}
           foot={data.target ? `מעל ${fmtLongHours(data.target.target_hours)} מפתיחה` : 'לא הוגדר יעד'}
           onClick={() => router.push(`/requests?view=overdue${typesParam}`)}
         />
-        <Stat icon="pulse" color="#F6AC2F" label="ללא התקדמות" value={data.totals.stale} foot="יותר משבוע באותו שלב" />
+        <Stat icon="pulse" color={STAT_COLOR.stale} label="ללא התקדמות" value={data.totals.stale} foot="יותר משבוע באותו שלב" />
       </div>
 
       {/* 2. where the bookings are */}
-      <section className="card mt">
-        <div className="card-head">
-          <h2>מצב הטיפול לפי שלב</h2>
-          <span className="hint">לחיצה על שלב מציגה את הקריאות שבו</span>
-          <span className="tools">
-            <Button size="sm" variant="ghost" aria-expanded={full} onClick={() => setFull(!full)}>
-              {full ? 'הסתרת הניתוח' : 'לניתוח המלא'}
-            </Button>
-          </span>
-        </div>
+      <Card
+        spaced
+        title="מצב הטיפול לפי שלב"
+        hint="לחיצה על שלב מציגה את הקריאות שבו"
+        tools={
+          <Button size="sm" variant="ghost" aria-expanded={full} onClick={() => setFull(!full)}>
+            {full ? 'הסתרת הניתוח' : 'לניתוח המלא'}
+          </Button>
+        }
+      >
         <Pipeline byStage={data.by_stage} analysis={info} onStage={goStage} />
         {worst ? (
           <div className="insight">
@@ -181,17 +155,18 @@ export function DomainDashboard() {
             <span>אין כרגע שלב שבו מצטברות קריאות חורגות.</span>
           </div>
         )}
-      </section>
+      </Card>
+
+      {/* open bookings by status */}
+      <Card spaced title="קריאות פתוחות לפי סטטוס" hint="לחיצה על סטטוס מציגה את הקריאות בו">
+        <StatusBars counts={data.open_by_status ?? {}} onStatus={(id) => router.push(`/requests?view=open&statuses=${id}${typesParam}`)} />
+      </Card>
 
       <SmoothSize>{full ? <FullAnalysis data={data} ordered={ordered} pct={pct} goIds={goIds} /> : null}</SmoothSize>
 
       <div className="grid g-7-5 mt">
         {/* 3. oldest */}
-        <section className="card">
-          <div className="card-head">
-            <h2>הקריאות הוותיקות בתחומים שלך</h2>
-            <span className="hint">הוותיקות קודם</span>
-          </div>
+        <Card title="הקריאות הוותיקות בתחומים שלך" hint="הוותיקות קודם">
           {data.oldest.length ? (
             <div className="tickets">
               {data.oldest.map((row) => (
@@ -201,13 +176,10 @@ export function DomainDashboard() {
           ) : (
             <EmptyState title="אין קריאות פתוחות" />
           )}
-        </section>
+        </Card>
 
         {/* 4. needs attention */}
-        <section className="card">
-          <div className="card-head">
-            <h2>דורש תשומת לב</h2>
-          </div>
+        <Card title="דורש תשומת לב">
           {attention.length ? (
             <ul className="attn">
               {attention.map((row) => (
@@ -228,71 +200,25 @@ export function DomainDashboard() {
           ) : (
             <EmptyState title="אין כרגע דבר שדורש טיפול" />
           )}
-        </section>
+        </Card>
       </div>
 
       <div className="grid g-7-5 mt">
         {/* 5. open bookings by domain and stage */}
-        <section className="card">
-          <div className="card-head">
-            <h2>קריאות פתוחות לפי תחום</h2>
-            <span className="hint">ולפי השלב שבו הן נמצאות</span>
-          </div>
-          <SmoothSize style={{ padding: '8px 0' }}>
-            {overview.isPending ? (
-              <Loading rows={4} />
-            ) : domainRows.length === 0 ? (
-              <EmptyState title="אין קריאות פתוחות" />
-            ) : (
-              domainRows.map((row) => (
-                <div className="hbar" key={row.type}>
-                  <span className="lab">
-                    <DomainIcon bookingTypeId={row.type} />
-                    {typeName(row.type)}
-                  </span>
-                  <span className="track" style={{ width: `${Math.max(8, (row.total / widest) * 100)}%` }}>
-                    {STAGE_ORDER.filter((id) => row.stages[id]).map((id) => (
-                      <button
-                        key={id}
-                        type="button"
-                        style={{ flex: row.stages[id], background: STAGE_COLOR[id] }}
-                        title={`${STAGE_SHORT[id]}: ${row.stages[id]}`}
-                        aria-label={`${typeName(row.type)} - ${STAGE_SHORT[id]}: ${row.stages[id]}`}
-                        onClick={() => router.push(`/requests?view=open&types=${row.type}&stage=${id}`)}
-                      />
-                    ))}
-                  </span>
-                  <b className="num">{row.total}</b>
-                </div>
-              ))
-            )}
-          </SmoothSize>
-          {usedStages.length ? (
-            <div className="legend">
-              {usedStages.map((id) => (
-                <span key={id}>
-                  <i style={{ background: STAGE_COLOR[id] }} />
-                  {STAGE_SHORT[id]}
-                </span>
-              ))}
-            </div>
-          ) : null}
-        </section>
+        <Card title="קריאות פתוחות לפי תחום" hint="ולפי השלב שבו הן נמצאות">
+          <SmoothSize>{overview.isPending ? <CardBody><Loading rows={4} /></CardBody> : <StageBars byTypeStage={overview.data?.by_type_stage ?? {}} onlyTypes={data.booking_type_ids} />}</SmoothSize>
+        </Card>
 
         {/* 6. opened vs closed */}
-        <section className="card">
-          <div className="card-head">
-            <h2>נפתחו מול נסגרו</h2>
-            <span className="hint">{data.window_days} ימים אחרונים</span>
-          </div>
-          <div className="card-body">
+        <Card title="נפתחו מול נסגרו" hint={`${data.window_days} ימים אחרונים`}>
+          <CardBody>
             <p style={{ margin: '0 0 10px' }}>
               נפתחו <b>{opened}</b> ונסגרו <b>{closed}</b> קריאות.{' '}
               {opened === closed ? 'מספר הקריאות הפתוחות לא השתנה.' : `מספר הקריאות הפתוחות ${opened > closed ? 'גדל' : 'קטן'} ב-${Math.abs(opened - closed)}.`}
             </p>
             <TrendChart points={data.trend} />
-          </div>
-        </section>
+          </CardBody>
+        </Card>
       </div>
 
       {action.dialog}
@@ -301,16 +227,45 @@ export function DomainDashboard() {
   );
 }
 
+const TONE_COLOR: Record<ChipTone, string> = { ok: 'var(--ok)', bad: 'var(--bad)', hold: 'var(--hold)', acc: 'var(--accent)', warn: 'var(--warn)', info: 'var(--info)', '': 'var(--mute)' };
+
+/** A bar per status with open bookings, most first, coloured like the status chip; a bar opens those bookings. */
+function StatusBars({ counts, onStatus }: { counts: Record<string, number>; onStatus: (statusId: number) => void }) {
+  const { catalog } = useSession();
+  const rows = Object.entries(counts)
+    .map(([id, count]) => ({ id: Number(id), count }))
+    .filter((row) => row.count > 0)
+    .sort((a, b) => b.count - a.count);
+  const widest = Math.max(1, ...rows.map((row) => row.count));
+
+  if (rows.length === 0) return <EmptyState title="אין קריאות פתוחות" />;
+
+  return (
+    <div style={{ padding: '8px 0' }}>
+      {rows.map((row) => {
+        const name = catalog.statuses.find((status) => status.id === row.id)?.display_name ?? `סטטוס ${row.id}`;
+        return (
+          <div className="hbar" key={row.id}>
+            <button type="button" className="lab" onClick={() => onStatus(row.id)}>
+              {name}
+            </button>
+            <span className="track" style={{ width: `${Math.max(4, (row.count / widest) * 100)}%` }}>
+              <button type="button" style={{ flex: 1, background: TONE_COLOR[statusTone(row.id)] }} aria-label={`${name}: ${row.count}`} onClick={() => onStatus(row.id)} />
+            </span>
+            <b className="num">{row.count}</b>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /** Handling times, outcomes and the per-stage bottleneck table; opened from "לניתוח המלא". */
 function FullAnalysis({ data, ordered, pct, goIds }: { data: DashboardData; ordered: StageAnalysis[]; pct: (hours: number | null) => string; goIds: (ids: number[]) => unknown }) {
   return (
     <>
-      <section className="card mt">
-        <div className="card-head">
-          <h2>זמני טיפול ותוצאות</h2>
-          <span className="hint">{data.rates.closed} נסגרו בחלון</span>
-        </div>
-        <div className="card-body">
+      <Card spaced title="זמני טיפול ותוצאות" hint={`${data.rates.closed} נסגרו בחלון`}>
+        <CardBody>
           <dl className="kv" style={{ marginBottom: 14 }}>
             <dt>חציון</dt>
             <dd>
@@ -343,14 +298,10 @@ function FullAnalysis({ data, ordered, pct, goIds }: { data: DashboardData; orde
           ) : (
             <div className="muted">אין קריאות שנסגרו בחלון</div>
           )}
-        </div>
-      </section>
+        </CardBody>
+      </Card>
 
-      <section className="card mt">
-        <div className="card-head">
-          <h2>צווארי בקבוק: זמן בכל שלב</h2>
-          <span className="hint">הפס מציג את החציון; &quot;חורגות&quot; = קריאות שממתינות בשלב ועברו את יעד הטיפול</span>
-        </div>
+      <Card spaced title="צווארי בקבוק: זמן בכל שלב" hint={'הפס מציג את החציון; "חורגות" = קריאות שממתינות בשלב ועברו את יעד הטיפול'}>
         <div className="tbl-wrap">
           <table className="t">
             <thead>
@@ -404,32 +355,9 @@ function FullAnalysis({ data, ordered, pct, goIds }: { data: DashboardData; orde
           </table>
         </div>
         <div className="card-foot">{data.definitions}</div>
-      </section>
+      </Card>
 
       <BottlenecksPanel types={data.booking_type_ids} days={data.window_days} />
     </>
-  );
-}
-
-function Stat({ icon, color, label, value, foot, bad, onClick }: { icon: string; color: string; label: string; value: number | string; foot: string; bad?: boolean; onClick?: () => void }) {
-  const body = (
-    <>
-      <span className="si">
-        <Icon name={icon} />
-      </span>
-      <span className="l">{label}</span>
-      <span className="v">{value}</span>
-      <span className="f">{foot}</span>
-    </>
-  );
-  const style = { '--sc': color } as CSSProperties;
-  return onClick ? (
-    <button type="button" className={`stat${bad ? ' bad' : ''}`} style={style} onClick={onClick}>
-      {body}
-    </button>
-  ) : (
-    <div className="stat static" style={style}>
-      {body}
-    </div>
   );
 }

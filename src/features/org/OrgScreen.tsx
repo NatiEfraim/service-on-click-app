@@ -3,6 +3,7 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
+import { Card, CardBody } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chips';
 import { EmptyState, ErrorNotice, Loading, Notice } from '@/components/ui/Feedback';
 import { PageHead } from '@/components/ui/PageHead';
@@ -67,19 +68,15 @@ export function OrgScreen() {
         }
       />
 
-      <section className="card">
-        <div className="card-head">
-          <h2>יחידות</h2>
-          <span className="hint">לחיצה על יחידה מציגה את המחלקות שלה</span>
-        </div>
+      <Card title="יחידות" hint="לחיצה על יחידה מציגה את המחלקות שלה">
         {org.isPending ? (
-          <div className="card-body">
+          <CardBody>
             <Loading rows={4} />
-          </div>
+          </CardBody>
         ) : org.isError ? (
-          <div className="card-body">
+          <CardBody>
             <ErrorNotice error={org.error} onRetry={() => void org.refetch()} />
-          </div>
+          </CardBody>
         ) : units.length ? (
           <div className="tbl-wrap">
             <table className="t">
@@ -139,23 +136,24 @@ export function OrgScreen() {
         ) : (
           <EmptyState title="אין יחידות">אפשר להוסיף יחידה חדשה.</EmptyState>
         )}
-      </section>
+      </Card>
 
       {selected ? (
-        <section className="card mt" aria-label={`מחלקות ביחידה ${selected.name}`}>
-          <div className="card-head">
-            <h2>מחלקות ביחידה {selected.name}</h2>
-            <span className="hint">פנימי בלבד, לא מועבר לאפליקציה</span>
-            <span className="tools">
-              <Button size="sm" variant="primary" icon="plus" onClick={() => setDepartmentDialog({ department: null })}>
-                מחלקה חדשה
-              </Button>
-            </span>
-          </div>
+        <Card
+          spaced
+          aria-label={`מחלקות ביחידה ${selected.name}`}
+          title={`מחלקות ביחידה ${selected.name}`}
+          hint="פנימי בלבד, לא מועבר לאפליקציה"
+          tools={
+            <Button size="sm" variant="primary" icon="plus" onClick={() => setDepartmentDialog({ department: null })}>
+              מחלקה חדשה
+            </Button>
+          }
+        >
           {actionError ? (
-            <div className="card-body">
+            <CardBody>
               <Notice tone="bad">{actionError}</Notice>
-            </div>
+            </CardBody>
           ) : null}
           {selected.departments.length ? (
             <div className="tbl-wrap">
@@ -206,7 +204,7 @@ export function OrgScreen() {
           ) : (
             <EmptyState title="אין מחלקות ביחידה זו">אפשר להוסיף מחלקה חדשה.</EmptyState>
           )}
-        </section>
+        </Card>
       ) : null}
 
       {unitDialog ? <UnitDialog unit={unitDialog.unit} units={units} onClose={() => setUnitDialog(null)} onSaved={pick} /> : null}

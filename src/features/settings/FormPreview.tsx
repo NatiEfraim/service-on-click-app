@@ -1,9 +1,8 @@
 import { Icon } from '@/components/ui/Icon';
 import type { OptionRow } from '@/lib/api/types';
 import { OPTION_FIELD_TYPES } from '@/lib/labels';
+import { PREVIEW_MAX_CHIPS } from './constants';
 import type { FieldNode } from './fieldTree';
-
-const MAX_CHIPS = 8;
 
 function Control({ node, options }: { node: FieldNode; options: readonly OptionRow[] }) {
   const type = node.field.field_type_id;
@@ -17,7 +16,7 @@ function Control({ node, options }: { node: FieldNode; options: readonly OptionR
         </select>
       );
     }
-    const shown = own.slice(0, MAX_CHIPS);
+    const shown = own.slice(0, PREVIEW_MAX_CHIPS);
     return (
       <div className="opts">
         {shown.map((option) => (
@@ -26,7 +25,7 @@ function Control({ node, options }: { node: FieldNode; options: readonly OptionR
             {option.name}
           </span>
         ))}
-        {own.length > MAX_CHIPS ? <span className="st-pv-more">ועוד {own.length - MAX_CHIPS}</span> : null}
+        {own.length > PREVIEW_MAX_CHIPS ? <span className="st-pv-more">ועוד {own.length - PREVIEW_MAX_CHIPS}</span> : null}
       </div>
     );
   }

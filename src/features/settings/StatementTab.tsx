@@ -3,6 +3,8 @@
 import { useMutation } from '@tanstack/react-query';
 import { useId, useState } from 'react';
 import { Button } from '@/components/ui/Button';
+import { FormError } from '@/components/ui/Feedback';
+import { Field } from '@/components/ui/Field';
 import { Seg } from '@/components/ui/Controls';
 import { settingsApi } from '@/lib/api/endpoints';
 import type { Settings } from '@/lib/api/types';
@@ -64,8 +66,7 @@ export function StatementTab({ unitId, bookingTypeId, settings }: { unitId: numb
   return (
     <div className="st-panel-body st-statement">
       {!canEdit ? <span className="small muted">עריכת הצהרות שמורה למנהל מערכת.</span> : null}
-      <label className="field">
-        <span>נוסח ההצהרה שמוצגת למבקש</span>
+      <Field label="נוסח ההצהרה שמוצגת למבקש">
         <textarea
           className="input"
           rows={5}
@@ -79,7 +80,7 @@ export function StatementTab({ unitId, bookingTypeId, settings }: { unitId: numb
             setProblem('');
           }}
         />
-      </label>
+      </Field>
       <div id={`${ids}-err`} className="err" aria-live="polite">
         {problem}
       </div>
@@ -110,11 +111,7 @@ export function StatementTab({ unitId, bookingTypeId, settings }: { unitId: numb
           </Button>
         ) : null}
       </div>
-      {error ? (
-        <div className="err" role="alert">
-          {error}
-        </div>
-      ) : null}
+      <FormError>{error}</FormError>
     </div>
   );
 }

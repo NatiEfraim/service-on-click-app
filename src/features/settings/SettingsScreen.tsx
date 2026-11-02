@@ -1,14 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { DomainBadge } from '@/components/booking/DomainBadge';
 import { Tabs } from '@/components/ui/Controls';
 import { Denied, ErrorNotice, Loading } from '@/components/ui/Feedback';
 import { Icon } from '@/components/ui/Icon';
 import { PageHead } from '@/components/ui/PageHead';
 import { SmoothSize } from '@/components/ui/SmoothSize';
+import { useSetSearchParams } from '@/lib/useSetSearchParams';
 import { useSession } from '@/providers/SessionProvider';
+import { TABS, type TabId } from './constants';
 import { DatesTab } from './DatesTab';
 import { FormTab } from './FormTab';
 import { OperationsTab } from './OperationsTab';
@@ -18,16 +20,6 @@ import { TargetTab } from './TargetTab';
 import { useSettingsQuery } from './useSettings';
 import './settings.css';
 
-const TABS = [
-  { id: 'form', label: 'מבנה הטופס' },
-  { id: 'target', label: 'יעד טיפול' },
-  { id: 'refs', label: 'הגדרות תפעול' },
-  { id: 'dates', label: 'תאריכים חסומים' },
-  { id: 'options', label: 'אפשרויות בחירה' },
-  { id: 'statement', label: 'הצהרה' },
-] as const;
-type TabId = (typeof TABS)[number]['id'];
-
 const toId = (raw: string | undefined): number => {
   const value = Number(raw);
   return Number.isInteger(value) && value > 0 ? value : 0;
@@ -36,9 +28,8 @@ const toId = (raw: string | undefined): number => {
 /** Settings of one domain in one unit; the tab lives in the URL (`?tab=`). Read-only where the server forbids edits. */
 export function SettingsScreen() {
   const params = useParams<{ unitId: string; bookingTypeId: string }>();
-  const router = useRouter();
-  const pathname = usePathname();
   const search = useSearchParams();
+  const setParams = useSetSearchParams();
   const { me, typeName, unitName } = useSession();
 
   const unitId = toId(params.unitId);
@@ -52,12 +43,7 @@ export function SettingsScreen() {
 
   if (!unitId || !bookingTypeId) return <Denied>הכתובת אינה תקינה.</Denied>;
 
-  const setTab = (id: TabId) => {
-    const next = new URLSearchParams(search.toString());
-    next.set('tab', id);
-    next.delete('field');
-    router.replace(`${pathname}?${next.toString()}`, { scroll: false });
-  };
+  const setTab = (id: TabId) => setParams({ tab: id, field: null });
 
   const name = typeName(bookingTypeId);
   const back = (

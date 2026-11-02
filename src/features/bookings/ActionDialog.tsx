@@ -3,6 +3,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/Button';
+import { FormError } from '@/components/ui/Feedback';
 import { Modal } from '@/components/ui/Modal';
 import { ApiError } from '@/lib/api/client';
 import { bookingsApi } from '@/lib/api/endpoints';
@@ -119,11 +120,7 @@ export function ActionDialog({ booking, action, onClose, onDone, onDecided }: Ac
       <div id="action-comment-error" className="err" aria-live="polite">
         {fieldError}
       </div>
-      {error ? (
-        <div className="err" role="alert">
-          {error}
-        </div>
-      ) : null}
+      <FormError>{error}</FormError>
     </Modal>
   );
 }

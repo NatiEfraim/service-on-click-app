@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation } from '@tanstack/react-query';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useMemo, useState, type CSSProperties } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chips';
@@ -9,9 +9,11 @@ import { EmptyState } from '@/components/ui/Feedback';
 import { settingsApi } from '@/lib/api/endpoints';
 import type { FieldType, OptionRow, Settings } from '@/lib/api/types';
 import { OPTION_FIELD_TYPES } from '@/lib/labels';
+import { useSetSearchParams } from '@/lib/useSetSearchParams';
 import { useConfirm, useToast } from '@/providers/UiProvider';
 import { fieldTypeName } from './fieldRules';
-import { FIELD_TYPE_TEXT, OptionDialog, type OptionTarget } from './OptionDialog';
+import { FIELD_TYPE_TEXT } from './constants';
+import { OptionDialog, type OptionTarget } from './OptionDialog';
 import { buildOptionTree, choiceFields, countOptions, fieldPath, type OptionNode } from './options';
 import { handleWriteError, useReloadSettings } from './useSettings';
 
@@ -74,9 +76,8 @@ export function OptionsTab({ unitId, bookingTypeId, settings }: { unitId: number
   const toast = useToast();
   const confirm = useConfirm();
   const reload = useReloadSettings(unitId, bookingTypeId);
-  const router = useRouter();
-  const pathname = usePathname();
   const search = useSearchParams();
+  const setParams = useSetSearchParams();
   const canEdit = settings.can_edit_global;
   const [target, setTarget] = useState<OptionTarget | null>(null);
 
@@ -100,11 +101,7 @@ export function OptionsTab({ unitId, bookingTypeId, settings }: { unitId: number
 
   if (!current) return <EmptyState title="אין שדות בחירה בטופס זה" />;
 
-  function select(id: number) {
-    const next = new URLSearchParams(search.toString());
-    next.set('field', String(id));
-    router.replace(`${pathname}?${next.toString()}`, { scroll: false });
-  }
+  const select = (id: number) => setParams({ field: String(id) });
 
   async function askRemove(node: OptionNode) {
     const ok = await confirm({

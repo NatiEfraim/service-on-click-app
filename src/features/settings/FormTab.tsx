@@ -10,7 +10,6 @@ import {
   type Announcements,
   type DragEndEvent,
   type Modifier,
-  type ScreenReaderInstructions,
 } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -27,15 +26,13 @@ import type { FormField, Settings } from '@/lib/api/types';
 import { OPTION_FIELD_TYPES } from '@/lib/labels';
 import { useSession } from '@/providers/SessionProvider';
 import { useConfirm, useToast } from '@/providers/UiProvider';
+import { DRAG_INSTRUCTIONS } from './constants';
 import { fieldTypeName } from './fieldRules';
 import { FieldDialog } from './FieldDialog';
 import { applyOrder, buildFieldTree, flattenNode, isCompleteOrder, moveItem, type FieldNode } from './fieldTree';
 import { FormPreview } from './FormPreview';
 import { handleWriteError, useReloadSettings } from './useSettings';
 
-const INSTRUCTIONS: ScreenReaderInstructions = {
-  draggable: 'כדי להזיז שדה: לחצו על רווח או Enter להרמה, השתמשו בחצים למעלה ולמטה להזזה, ולחצו שוב על רווח או Enter להצבה. Escape מבטל.',
-};
 
 /** The field is only dragged up and down. */
 const restrictToVertical: Modifier = ({ transform }) => ({ ...transform, x: 0 });
@@ -254,7 +251,7 @@ export function FormTab({ unitId, bookingTypeId, settings }: { unitId: number; b
             sensors={sensors}
             collisionDetection={closestCenter}
             modifiers={[restrictToVertical]}
-            accessibility={{ announcements, screenReaderInstructions: INSTRUCTIONS }}
+            accessibility={{ announcements, screenReaderInstructions: DRAG_INSTRUCTIONS }}
             onDragEnd={onDragEnd}
           >
             <SortableContext items={ids} strategy={verticalListSortingStrategy}>

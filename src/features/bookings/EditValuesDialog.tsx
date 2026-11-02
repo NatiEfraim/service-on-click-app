@@ -3,6 +3,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
+import { FormError } from '@/components/ui/Feedback';
+import { Field } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
 import { editableInitialValue } from '@/lib/booking-values';
 import { ApiError } from '@/lib/api/client';
@@ -88,15 +90,10 @@ export function EditValuesDialog({ booking, onClose }: { booking: BookingDetail;
           />
         </label>
       ))}
-      <label className="field">
-        <span>סיבת העדכון (רשות)</span>
+      <Field label="סיבת העדכון (רשות)">
         <input className="input" maxLength={200} value={reason} onChange={(event) => setReason(event.target.value)} />
-      </label>
-      {error ? (
-        <div className="err" role="alert">
-          {error}
-        </div>
-      ) : null}
+      </Field>
+      <FormError>{error}</FormError>
     </Modal>
   );
 }

@@ -1,14 +1,17 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Ticket } from '@/components/booking/Ticket';
 import { Button } from '@/components/ui/Button';
-import { Pager } from '@/components/ui/Controls';
+import { Seg } from '@/components/ui/Controls';
+import { LOAD_AHEAD_PX, MIN_LIST_HEIGHT, PAGE_SIZE } from '@/features/queue/constants';
+import type { BookingRow } from '@/lib/api/types';
 import { EmptyState, ErrorNotice, Loading } from '@/components/ui/Feedback';
-import { Icon } from '@/components/ui/Icon';
+import { Field } from '@/components/ui/Field';
 import { PageHead } from '@/components/ui/PageHead';
+import { SearchField } from '@/components/ui/SearchField';
 import { useStatusAction } from '@/features/bookings/useStatusAction';
 import { bookingsApi, peopleApi } from '@/lib/api/endpoints';
 import { keys } from '@/lib/api/keys';
@@ -49,8 +52,48 @@ export function RequestsScreen() {
     return () => window.clearTimeout(timer);
   }, [text, filters.q, update]);
 
-  const apiParams = useMemo(() => toApiParams(filters), [filters]);
-  const query = useQuery({ queryKey: keys.bookingList(apiParams), queryFn: ({ signal }) => bookingsApi.list(apiParams, signal), placeholderData: (previous) => previous });
+  // Pages load as the list scrolls, so the URL's page is ignored.
+  const apiParams = useMemo(() => toApiParams({ ...filters, page: 1 }, PAGE_SIZE), [filters]);
+  const query = useInfiniteQuery({
+    queryKey: [...keys.bookingList(apiParams), 'infinite'],
+    queryFn: ({ pageParam, signal }) => bookingsApi.list({ ...apiParams, page: pageParam }, signal),
+    initialPageParam: 1,
+    getNextPageParam: (last) => (last.meta.page < last.meta.last_page ? last.meta.page + 1 : undefined),
+    placeholderData: (previous) => previous,
+  });
+  const rows: BookingRow[] = query.data?.pages.flatMap((page) => page.data) ?? [];
+  const total = query.data?.pages[0]?.meta.total ?? 0;
+
+  // The card ends at the bottom of the window and the list takes what the toolbar and filters leave, so only the list
+  // scrolls. Capping the card (whose top never moves) rather than the list lets the list shrink and grow with the
+  // filter panel's fold frame by frame, instead of jumping when it is measured again.
+  const card = useRef<HTMLElement>(null);
+  const scroller = useRef<HTMLDivElement>(null);
+  const sentinel = useRef<HTMLDivElement>(null);
+  const hasRows = rows.length > 0;
+  useLayoutEffect(() => {
+    const el = card.current;
+    if (!el) return;
+    const page = el.closest<HTMLElement>('.page');
+    const fit = () => {
+      const top = el.getBoundingClientRect().top + window.scrollY;
+      const below = page ? parseFloat(getComputedStyle(page).paddingBottom) : 0;
+      el.style.maxHeight = `${Math.max(MIN_LIST_HEIGHT, window.innerHeight - top - below)}px`;
+    };
+    fit();
+    window.addEventListener('resize', fit);
+    return () => window.removeEventListener('resize', fit);
+  }, []);
+  const { hasNextPage, isFetchingNextPage, fetchNextPage } = query;
+  useEffect(() => {
+    const el = sentinel.current;
+    if (!el || !hasNextPage) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && !isFetchingNextPage) void fetchNextPage();
+    }, { root: scroller.current, rootMargin: `0px 0px ${LOAD_AHEAD_PX}px 0px` });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   // Handler filter options; only for users who manage users.
   const handlers = useQuery({ queryKey: keys.approvers(''), queryFn: ({ signal }) => peopleApi.approvers('', signal), enabled: can('users.manage'), staleTime: 5 * 60_000 });
@@ -65,31 +108,15 @@ export function RequestsScreen() {
 
   const managedTypes = catalog.booking_types.filter((type) => me.managed_booking_types.includes(type.id));
   const advanced = advancedCount(filters);
-  const result = query.data;
   const hasFilters = advanced > 0 || filters.ids || filters.q;
 
   return (
     <div className="narrow">
       <PageHead title="קריאות" sub="כל הקריאות בתחומים שבאחריותך. קריאות נפתחות באפליקציה בלבד." />
-      <section className="card">
+      <section ref={card} className="card fit-card">
         <div className="toolbar">
-          <div className="seg" role="group" aria-label="תצוגה">
-            {views.map((view) => (
-              <button key={view.id} type="button" aria-pressed={filters.view === view.id} onClick={() => update({ view: view.id })}>
-                {view.label}
-              </button>
-            ))}
-          </div>
-          <div className="search" style={{ width: 240 }}>
-            <Icon name="search" />
-            <input
-              id="requests-q"
-              value={text}
-              placeholder="מספר קריאה, מספר אישי או שם"
-              aria-label="חיפוש לפי מספר קריאה, מספר אישי או שם"
-              onChange={(event) => setText(event.target.value)}
-            />
-          </div>
+          <Seg label="תצוגה" value={filters.view} onChange={(view) => update({ view })} options={views.map((view) => ({ value: view.id, label: view.label }))} />
+          <SearchField id="requests-q" width={240} value={text} placeholder="מספר קריאה, מספר אישי או שם" aria-label="חיפוש לפי מספר קריאה, מספר אישי או שם" onChange={setText} />
           <Button size="sm" icon="sliders" aria-expanded={advancedOpen} onClick={() => setAdvancedOpen((v) => !v)}>
             סינון{advanced ? ` (${advanced})` : ''}
           </Button>
@@ -105,7 +132,7 @@ export function RequestsScreen() {
           <select
             id="requests-sort"
             className="input"
-            style={{ padding: '5px 8px' }}
+            style={{ paddingBlock: 5 }}
             value={`${filters.sort}|${filters.dir}`}
             onChange={(event) => {
               const chosen = SORTS.find((s) => s.value === event.target.value);
@@ -120,10 +147,10 @@ export function RequestsScreen() {
           </select>
         </div>
 
-        {advancedOpen ? (
+        {/* stays mounted so it can fade and fold both ways; inert while closed */}
+        <div className={`adv-wrap${advancedOpen ? ' open' : ''}`} inert={!advancedOpen}>
           <div className="adv">
-            <label className="field">
-              <span>תחום</span>
+            <Field label="תחום">
               <select className="input" value={filters.types} onChange={(event) => update({ types: event.target.value })}>
                 <option value="">הכל</option>
                 {managedTypes.map((type) => (
@@ -132,9 +159,8 @@ export function RequestsScreen() {
                   </option>
                 ))}
               </select>
-            </label>
-            <label className="field">
-              <span>שלב</span>
+            </Field>
+            <Field label="שלב">
               <select className="input" value={filters.stage} onChange={(event) => update({ stage: event.target.value })}>
                 <option value="">הכל</option>
                 {STAGE_ORDER.map((id) => (
@@ -144,9 +170,8 @@ export function RequestsScreen() {
                 ))}
                 <option value="closed">סגורה</option>
               </select>
-            </label>
-            <label className="field">
-              <span>סטטוס</span>
+            </Field>
+            <Field label="סטטוס">
               <select className="input" value={filters.statuses} onChange={(event) => update({ statuses: event.target.value })}>
                 <option value="">הכל</option>
                 {catalog.statuses.map((status) => (
@@ -155,10 +180,9 @@ export function RequestsScreen() {
                   </option>
                 ))}
               </select>
-            </label>
+            </Field>
             {handlers.data?.length ? (
-              <label className="field">
-                <span>גורם מטפל</span>
+              <Field label="גורם מטפל">
                 <select className="input" value={filters.handler} onChange={(event) => update({ handler: event.target.value })}>
                   <option value="">הכל</option>
                   {handlers.data.map((person) => (
@@ -167,11 +191,10 @@ export function RequestsScreen() {
                     </option>
                   ))}
                 </select>
-              </label>
+              </Field>
             ) : null}
             {me.is_super_admin ? (
-              <label className="field">
-                <span>יחידה</span>
+              <Field label="יחידה">
                 <select className="input" value={filters.units} onChange={(event) => update({ units: event.target.value })}>
                   <option value="">הכל</option>
                   {catalog.units.map((unit) => (
@@ -180,18 +203,16 @@ export function RequestsScreen() {
                     </option>
                   ))}
                 </select>
-              </label>
+              </Field>
             ) : null}
-            <label className="field">
-              <span>נפתחה מ-</span>
+            <Field label="נפתחה מ-">
               <input className="input" type="date" value={filters.from} onChange={(event) => update({ from: event.target.value })} />
-            </label>
-            <label className="field">
-              <span>עד</span>
+            </Field>
+            <Field label="עד">
               <input className="input" type="date" value={filters.to} onChange={(event) => update({ to: event.target.value })} />
-            </label>
+            </Field>
           </div>
-        ) : null}
+        </div>
 
         {filters.ids ? (
           <div className="toolbar" style={{ background: 'var(--info-w)' }}>
@@ -202,24 +223,34 @@ export function RequestsScreen() {
           </div>
         ) : null}
 
-        <div style={{ opacity: query.isFetching && result ? 0.55 : 1, transition: 'opacity .15s' }}>
+        <div className="fit-fill" style={{ opacity: query.isPlaceholderData ? 0.55 : 1, transition: 'opacity .15s' }}>
           {query.isPending ? (
             <div className="card-body">
               <Loading rows={8} />
             </div>
-          ) : query.isError ? (
+          ) : query.isError && !hasRows ? (
             <div className="card-body">
               <ErrorNotice error={query.error} onRetry={() => void query.refetch()} />
             </div>
-          ) : result && result.data.length > 0 ? (
-            <>
-              <div className="tickets">
-                {result.data.map((row) => (
+          ) : hasRows ? (
+            // the next page loads as the bottom of the list scrolls into view
+            <div ref={scroller} className="queue-scroll">
+              <div className="tickets" aria-busy={query.isFetching || undefined}>
+                {rows.map((row) => (
                   <Ticket key={row.serial_number} booking={row} onAction={action.start} />
                 ))}
               </div>
-              <Pager page={result.meta.page} lastPage={result.meta.last_page} total={result.meta.total} onPage={(page) => update({ page }, false)} />
-            </>
+              <div ref={sentinel} />
+              {isFetchingNextPage ? (
+                <div className="card-body">
+                  <Loading rows={2} />
+                </div>
+              ) : hasNextPage ? null : (
+                <div className="pager">
+                  <span>הוצגו כל {total} הקריאות.</span>
+                </div>
+              )}
+            </div>
           ) : (
             <EmptyState title="אין קריאות שמתאימות">אפשר לבחור תצוגה אחרת או לנקות את הסינון.</EmptyState>
           )}

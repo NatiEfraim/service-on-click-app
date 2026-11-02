@@ -3,6 +3,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
+import { FormError } from '@/components/ui/Feedback';
+import { Field } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
 import { ApiError } from '@/lib/api/client';
 import { insightsApi } from '@/lib/api/endpoints';
@@ -10,8 +12,8 @@ import { invalidateWork, keys } from '@/lib/api/keys';
 import type { SlaTarget } from '@/lib/api/types';
 import { useSession } from '@/providers/SessionProvider';
 import { useToast } from '@/providers/UiProvider';
+import { WARN_RATIOS } from './constants';
 
-const WARN_RATIOS = [0.5, 0.7, 0.8, 0.9];
 
 /** Handling target of a booking type (opening to closing); empty removes it. Server range: 1 hour to 180 days. */
 export function TargetDialog({ bookingTypeId, current, onClose }: { bookingTypeId: number; current: SlaTarget | null; onClose: () => void }) {
@@ -72,19 +74,16 @@ export function TargetDialog({ bookingTypeId, current, onClose }: { bookingTypeI
         הזמן שבו קריאה בתחום צריכה להיסגר, מרגע פתיחתה. קריאה שעוברת אותו מסומנת כחורגת, בכל שלב שבו היא נמצאת.
       </p>
       <div style={{ display: 'flex', gap: 10, alignItems: 'end', flexWrap: 'wrap' }}>
-        <label className="field">
-          <span>יעד</span>
+        <Field label="יעד">
           <input className="input" type="number" min={1} style={{ width: 110 }} value={value} onChange={(event) => setValue(event.target.value)} />
-        </label>
-        <label className="field">
-          <span>יחידה</span>
+        </Field>
+        <Field label="יחידה">
           <select className="input" value={unit} onChange={(event) => setUnit(event.target.value as 'd' | 'h')}>
             <option value="d">ימים</option>
             <option value="h">שעות</option>
           </select>
-        </label>
-        <label className="field">
-          <span>התראה מוקדמת</span>
+        </Field>
+        <Field label="התראה מוקדמת">
           <select className="input" value={warn} onChange={(event) => setWarn(Number(event.target.value))}>
             {WARN_RATIOS.map((ratio) => (
               <option key={ratio} value={ratio}>
@@ -92,16 +91,12 @@ export function TargetDialog({ bookingTypeId, current, onClose }: { bookingTypeI
               </option>
             ))}
           </select>
-        </label>
+        </Field>
       </div>
       <p className="small muted" style={{ margin: 0 }}>
         השארת השדה ריק מסירה את היעד.
       </p>
-      {error ? (
-        <div className="err" role="alert">
-          {error}
-        </div>
-      ) : null}
+      <FormError>{error}</FormError>
     </Modal>
   );
 }

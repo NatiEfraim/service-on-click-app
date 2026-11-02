@@ -3,19 +3,18 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useId, useState } from 'react';
 import { Button } from '@/components/ui/Button';
+import { FormError } from '@/components/ui/Feedback';
+import { Field } from '@/components/ui/Field';
 import { Seg } from '@/components/ui/Controls';
 import { Modal } from '@/components/ui/Modal';
 import { settingsApi } from '@/lib/api/endpoints';
 import type { FormField, OptionRow, Settings } from '@/lib/api/types';
 import { OPTION_FIELD_TYPES } from '@/lib/labels';
 import { useToast } from '@/providers/UiProvider';
+import { FIELD_TYPE_NUMBER, FIELD_TYPE_TEXT, INPUT_TYPES } from './constants';
 import { optionNameError } from './fieldRules';
 import { handleWriteError, useReloadSettings } from './useSettings';
 
-/** As in the mobile app: "הזנת ערך" is a number or closed text; a choice may be any type but a number. */
-const FIELD_TYPE_NUMBER = 1;
-export const FIELD_TYPE_TEXT = 2;
-const INPUT_TYPES = [FIELD_TYPE_NUMBER, FIELD_TYPE_TEXT];
 
 type Kind = 'choice' | 'input';
 
@@ -130,8 +129,7 @@ export function OptionDialog({ unitId, bookingTypeId, settings, field, target, s
       }
     >
       <p className="small muted" style={{ margin: 0 }}>{where}</p>
-      <label className="field">
-        <span>שם האפשרות</span>
+      <Field label="שם האפשרות">
         <input
           className="input"
           maxLength={50}
@@ -147,7 +145,7 @@ export function OptionDialog({ unitId, bookingTypeId, settings, field, target, s
             if (event.key === 'Enter') submit();
           }}
         />
-      </label>
+      </Field>
 
       <div className="field">
         <span>סוג האפשרות</span>
@@ -162,8 +160,7 @@ export function OptionDialog({ unitId, bookingTypeId, settings, field, target, s
         />
       </div>
 
-      <label className="field">
-        <span>סוג שדה</span>
+      <Field label="סוג שדה">
         <select className="input" value={chosen ?? ''} onChange={(event) => setTypeId(Number(event.target.value))}>
           {types.map((type) => (
             <option key={type.id} value={type.id}>
@@ -171,7 +168,7 @@ export function OptionDialog({ unitId, bookingTypeId, settings, field, target, s
             </option>
           ))}
         </select>
-      </label>
+      </Field>
       <p className="small muted" style={{ margin: 0 }}>
         {kind === 'input' ? 'המבקש יקליד ערך במקום לבחור.' : isList ? 'אפשרות מסוג רשימה מכילה תתי-אפשרויות משלה.' : 'אפשרות רגילה לבחירה.'}
       </p>
@@ -208,11 +205,7 @@ export function OptionDialog({ unitId, bookingTypeId, settings, field, target, s
       <p className="small muted" style={{ margin: 0 }}>
         השינוי נשמר מיד, נרשם בהיסטוריית השינויים ונשלח גם לאפליקציה.
       </p>
-      {error ? (
-        <div className="err" role="alert">
-          {error}
-        </div>
-      ) : null}
+      <FormError>{error}</FormError>
     </Modal>
   );
 }

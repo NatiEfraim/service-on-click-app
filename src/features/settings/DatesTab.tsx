@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chips';
-import { EmptyState, Notice } from '@/components/ui/Feedback';
+import { EmptyState, FormError, Notice } from '@/components/ui/Feedback';
+import { Field } from '@/components/ui/Field';
 import { Icon } from '@/components/ui/Icon';
 import { settingsApi } from '@/lib/api/endpoints';
 import { invalidateWork } from '@/lib/api/keys';
@@ -145,8 +146,7 @@ export function DatesTab({ unitId, bookingTypeId, settings, ownUnit, ownUnitId, 
       </div>
       {ownUnit ? (
         <div className="st-add-row">
-          <label className="field">
-            <span>הוספת תאריך</span>
+          <Field label="הוספת תאריך">
             <input
               className="input"
               type="date"
@@ -162,7 +162,7 @@ export function DatesTab({ unitId, bookingTypeId, settings, ownUnit, ownUnitId, 
                 }
               }}
             />
-          </label>
+          </Field>
           <Button onClick={add}>הוספה</Button>
           <span style={{ flex: 1 }} />
           <Button onClick={() => setDraft(saved)} disabled={!dirty || save.isPending}>
@@ -181,11 +181,7 @@ export function DatesTab({ unitId, bookingTypeId, settings, ownUnit, ownUnitId, 
           </Button>
         </div>
       ) : null}
-      {error ? (
-        <div className="err" role="alert">
-          {error}
-        </div>
-      ) : null}
+      <FormError>{error}</FormError>
       {ownUnit && dirty ? <p className="small muted" style={{ margin: 0 }}>לפני השמירה תוצג ההשפעה על קריאות קיימות.</p> : null}
     </div>
   );

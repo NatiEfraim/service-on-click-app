@@ -3,6 +3,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useId, useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/Button';
+import { FormError } from '@/components/ui/Feedback';
+import { Field } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
 import { ApiError } from '@/lib/api/client';
 import { peopleApi, type NewUserBody } from '@/lib/api/endpoints';
@@ -96,8 +98,7 @@ export function NewUserDialog({ onClose, onCreated }: { onClose: () => void; onC
     >
       <form id={formId} onSubmit={submit} noValidate style={{ display: 'grid', gap: 14 }}>
         <div>
-          <label className="field">
-            <span>שם מלא</span>
+          <Field label="שם מלא">
             <input
               className="input"
               value={fullName}
@@ -108,14 +109,13 @@ export function NewUserDialog({ onClose, onCreated }: { onClose: () => void; onC
               onChange={(event) => setFullName(event.target.value)}
               {...a11y('fullName')}
             />
-          </label>
+          </Field>
           {fieldError('fullName')}
         </div>
 
         <div className="cols2">
           <div>
-            <label className="field">
-              <span>מספר אישי</span>
+            <Field label="מספר אישי">
               <input
                 className="input"
                 value={personalNumber}
@@ -127,12 +127,11 @@ export function NewUserDialog({ onClose, onCreated }: { onClose: () => void; onC
                 onChange={(event) => setPersonalNumber(digitsOnly(event.target.value, PERSONAL_NUMBER_MAX))}
                 {...a11y('personalNumber')}
               />
-            </label>
+            </Field>
             {fieldError('personalNumber')}
           </div>
           <div>
-            <label className="field">
-              <span>טלפון נייד (רשות)</span>
+            <Field label="טלפון נייד (רשות)">
               <input
                 className="input"
                 type="tel"
@@ -144,15 +143,14 @@ export function NewUserDialog({ onClose, onCreated }: { onClose: () => void; onC
                 onChange={(event) => setPhone(digitsOnly(event.target.value, PHONE_LENGTH))}
                 {...a11y('phone')}
               />
-            </label>
+            </Field>
             {fieldError('phone')}
           </div>
         </div>
 
         <div className="cols2">
           {me.is_super_admin ? (
-            <label className="field">
-              <span>יחידה</span>
+            <Field label="יחידה">
               <select
                 className="input"
                 value={chosenUnit}
@@ -167,10 +165,9 @@ export function NewUserDialog({ onClose, onCreated }: { onClose: () => void; onC
                   </option>
                 ))}
               </select>
-            </label>
+            </Field>
           ) : null}
-          <label className="field">
-            <span>מחלקה (רשות)</span>
+          <Field label="מחלקה (רשות)">
             <select className="input" value={departmentId} onChange={(event) => setDepartmentId(event.target.value)}>
               <option value="">ללא מחלקה</option>
               {departments.map((department) => (
@@ -179,14 +176,10 @@ export function NewUserDialog({ onClose, onCreated }: { onClose: () => void; onC
                 </option>
               ))}
             </select>
-          </label>
+          </Field>
         </div>
 
-        {formError ? (
-          <div className="err" role="alert">
-            {formError}
-          </div>
-        ) : null}
+        <FormError>{formError}</FormError>
       </form>
     </Modal>
   );

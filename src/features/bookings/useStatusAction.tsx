@@ -4,13 +4,12 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useState, type ReactNode } from 'react';
 import { invalidateWork } from '@/lib/api/keys';
 import type { BookingAction, BookingRow } from '@/lib/api/types';
+import { ROW_LEAVE_MS } from '@/lib/motion';
 import { ActionDialog } from './ActionDialog';
 
 /** How a decided row leaves the list: approved (✓) or rejected / cancelled (✗). */
 export type Outcome = 'ok' | 'bad';
 
-/** Stamp + slide out + collapse, in ms (see `Ticket`); the list refreshes after it. */
-export const LEAVE_MS = 1050;
 
 /**
  * Starts a decision from a list: `start(booking, action)` opens the dialog; render `dialog` on the screen.
@@ -32,7 +31,7 @@ export function useStatusAction({ animateOut = false }: { animateOut?: boolean }
       window.setTimeout(async () => {
         await invalidateWork(client);
         setOutcomes(({ [serial]: _gone, ...rest }) => rest);
-      }, LEAVE_MS);
+      }, ROW_LEAVE_MS);
     },
     [client],
   );

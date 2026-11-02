@@ -3,6 +3,8 @@
 import { useMutation } from '@tanstack/react-query';
 import { useId, useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/Button';
+import { FormError } from '@/components/ui/Feedback';
+import { Field } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
 import { ApiError } from '@/lib/api/client';
 import { orgApi } from '@/lib/api/endpoints';
@@ -63,8 +65,7 @@ export function UnitDialog({ unit, units, onClose, onSaved }: { unit: OrgUnit | 
       <form id={formId} onSubmit={submit} noValidate style={{ display: 'grid', gap: 14 }}>
         <div className="cols2">
           <div>
-            <label className="field">
-              <span>אות (מוצגת באפליקציה)</span>
+            <Field label="אות (מוצגת באפליקציה)">
               <input
                 className="input org-code"
                 dir="ltr"
@@ -77,14 +78,13 @@ export function UnitDialog({ unit, units, onClose, onSaved }: { unit: OrgUnit | 
                 aria-describedby={`${formId}-code-error`}
                 onChange={(event) => setCode(cleanCode(event.target.value))}
               />
-            </label>
+            </Field>
             <div id={`${formId}-code-error`} className="err" aria-live="polite">
               {errors.code}
             </div>
           </div>
           <div>
-            <label className="field">
-              <span>שם היחידה (פנימי)</span>
+            <Field label="שם היחידה (פנימי)">
               <input
                 className="input"
                 value={name}
@@ -95,7 +95,7 @@ export function UnitDialog({ unit, units, onClose, onSaved }: { unit: OrgUnit | 
                 aria-describedby={`${formId}-name-error`}
                 onChange={(event) => setName(event.target.value)}
               />
-            </label>
+            </Field>
             <div id={`${formId}-name-error`} className="err" aria-live="polite">
               {errors.name}
             </div>
@@ -104,11 +104,7 @@ export function UnitDialog({ unit, units, onClose, onSaved }: { unit: OrgUnit | 
         <p className="small muted" style={{ margin: 0 }}>
           {unit ? 'שינוי השם נשאר במערכת הפנימית. האות אינה ניתנת לשינוי, כי האפליקציה מזהה את היחידה לפיה.' : 'לאפליקציה תישלח רק האות. השם נשאר כאן, והאות לא ניתנת לשינוי אחרי היצירה.'}
         </p>
-        {formError ? (
-          <div className="err" role="alert">
-            {formError}
-          </div>
-        ) : null}
+        <FormError>{formError}</FormError>
       </form>
     </Modal>
   );

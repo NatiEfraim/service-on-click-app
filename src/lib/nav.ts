@@ -69,11 +69,11 @@ export function buildNav(me: Me): NavEntry[] {
   return entries;
 }
 
-/** Which screen `/` shows. */
+/** Which screen `/` shows: with a dashboard over several domains the tiles to pick one, over a single domain that domain's dashboard. */
 export function homeKind(me: Me): 'tiles' | 'dashboard' | 'queue' | 'requests' {
   if (me.is_handler_only) return 'queue';
-  if (me.is_super_admin || me.is_admin) return can(me, 'dashboard.view') ? 'tiles' : 'requests';
-  if (can(me, 'dashboard.view')) return 'dashboard';
+  if (can(me, 'dashboard.view')) return me.dashboard_booking_types.length > 1 ? 'tiles' : 'dashboard';
+  if (me.is_super_admin || me.is_admin) return 'requests';
   return canAct(me) ? 'queue' : 'requests';
 }
 

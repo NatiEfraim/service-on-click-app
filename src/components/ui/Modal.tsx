@@ -2,6 +2,7 @@
 
 import { useId, useLayoutEffect, useRef, type ReactNode, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
+import { DIALOG_EXIT_MS, EASE_OUT, prefersReducedMotion } from '@/lib/motion';
 import { useOverlay } from './overlay';
 import { SmoothSize } from './SmoothSize';
 import { useIsClient } from './useIsClient';
@@ -17,8 +18,6 @@ export interface ModalProps {
   initialFocus?: RefObject<HTMLElement | null>;
 }
 
-const EXIT_MS = 150;
-
 /**
  * Parents unmount a dialog the moment it closes, so there is nothing left to animate.
  * On unmount a lifeless copy of the scrim and the dialog is left in place and faded out, whatever closed it.
@@ -29,8 +28,7 @@ function useExitFade(scrimRef: RefObject<HTMLDivElement | null>, dialogRef: RefO
     const dialog = dialogRef.current;
     return () => {
       if (!scrim || !dialog || typeof window === 'undefined') return;
-      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      const easing = 'cubic-bezier(0.23, 1, 0.32, 1)';
+      const reduce = prefersReducedMotion();
       const ghosts = ([
         [scrim, [{ opacity: 1 }, { opacity: 0 }]],
         [dialog, reduce ? [{ opacity: 1 }, { opacity: 0 }] : [{ opacity: 1, transform: 'translate(-50%, -50%) scale(1)' }, { opacity: 0, transform: 'translate(-50%, -50%) scale(0.97)' }]],
@@ -45,7 +43,7 @@ function useExitFade(scrimRef: RefObject<HTMLDivElement | null>, dialogRef: RefO
           ghost.style.pointerEvents = 'none';
           ghost.style.animation = 'none';
           document.body.appendChild(ghost);
-          ghost.animate(frames as Keyframe[], { duration: EXIT_MS, easing, fill: 'forwards' }).finished.finally(() => ghost.remove());
+          ghost.animate(frames as Keyframe[], { duration: DIALOG_EXIT_MS, easing: EASE_OUT, fill: 'forwards' }).finished.finally(() => ghost.remove());
         }
       });
     };
