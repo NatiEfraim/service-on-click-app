@@ -36,6 +36,21 @@
 .insight .btn { margin-inline-start: auto; }
 
 /* ---------- tickets: the call card list, the list unit used everywhere */
+/* the queue list scrolls inside its card, below the toolbar */
+/* ltr on the scroller puts its bar on the right; the rows inside stay rtl */
+.queue-scroll { /* max-height set by QueueScreen to end at the window's bottom */ overflow-y: auto; overscroll-behavior: contain; direction: ltr; }
+.queue-scroll > * { direction: rtl; }
+/* Firefox only: in Chromium, scrollbar-color would switch off the styled thumb below */
+@supports (-moz-appearance: none) {
+  .queue-scroll { scrollbar-width: thin; scrollbar-color: var(--accent-soft) transparent; }
+  .queue-scroll:hover { scrollbar-color: var(--accent-mid) transparent; }
+}
+/* WebKit / Chromium: a slim rounded thumb in the accent family that darkens under the pointer */
+.queue-scroll::-webkit-scrollbar { width: 10px; }
+.queue-scroll::-webkit-scrollbar-track { background: transparent; margin: 6px 0; }
+.queue-scroll::-webkit-scrollbar-thumb { background: var(--accent-soft); border-radius: 999px; border: 3px solid var(--surface); }
+.queue-scroll:hover::-webkit-scrollbar-thumb { background: var(--accent-mid); }
+.queue-scroll::-webkit-scrollbar-thumb:active { background: var(--accent); }
 /* clip: a decided row slides fully out without widening the page */
 .tickets { display: grid; overflow-x: clip; }
 .ticket {

@@ -1,9 +1,10 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useInfiniteQuery } from '@tanstack/react-query';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Ticket } from '@/components/booking/Ticket';
 import { EmptyState, ErrorNotice, Loading } from '@/components/ui/Feedback';
+import { Icon } from '@/components/ui/Icon';
 import { PageHead } from '@/components/ui/PageHead';
 import { SmoothSize } from '@/components/ui/SmoothSize';
 import { useStatusAction } from '@/features/bookings/useStatusAction';
@@ -11,79 +12,147 @@ import { bookingsApi } from '@/lib/api/endpoints';
 import { keys } from '@/lib/api/keys';
 import type { BookingRow, StageId } from '@/lib/api/types';
 import { STAGE_ORDER, STAGE_SHORT } from '@/lib/labels';
+import { useDebounced } from '@/lib/useDebounced';
 import { useSession } from '@/providers/SessionProvider';
 
-const PARAMS = { mine: true, open_only: true, per_page: 100, sort: 'stage_age_hours', dir: 'desc' } as const;
+const PAGE_SIZE = 25;
+/** Wait this long after the last keystroke before searching. */
+const SEARCH_DELAY_MS = 400;
+/** The card's bottom border under the list (the page's own bottom padding is read from the layout). */
+const CARD_EDGE = 2;
 
-/** Bookings waiting for this user (`mine=1`), longest-waiting first, grouped by stage. */
+/** Bookings waiting for this user (`mine=1`), longest-waiting first; searched and filtered by stage on the server, 25 at a time. */
 export function QueueScreen() {
   const { me, canAct } = useSession();
   const [stage, setStage] = useState<StageId | ''>('');
+  const [text, setText] = useState('');
+  const q = useDebounced(text.trim(), SEARCH_DELAY_MS);
   const action = useStatusAction({ animateOut: true });
-  const query = useQuery({ queryKey: keys.bookingList(PARAMS), queryFn: ({ signal }) => bookingsApi.list(PARAMS, signal) });
 
+  const params = { mine: true, open_only: true, per_page: PAGE_SIZE, sort: 'stage_age_hours', dir: 'desc', q, stage } as const;
+  const query = useInfiniteQuery({
+    queryKey: [...keys.bookingList(params), 'infinite'],
+    queryFn: ({ pageParam, signal }) => bookingsApi.list({ ...params, page: pageParam }, signal),
+    initialPageParam: 1,
+    getNextPageParam: (last) => (last.meta.page < last.meta.last_page ? last.meta.page + 1 : undefined),
+    placeholderData: (previous) => previous,
+  });
+
+  const rows: BookingRow[] = query.data?.pages.flatMap((page) => page.data) ?? [];
+  const total = query.data?.pages[0]?.meta.total ?? 0;
+  const filtered = Boolean(q || stage);
   const title = me.is_handler_only ? 'הקריאות שלי לטיפול' : 'ממתין לטיפולי';
-  const rows: BookingRow[] = query.data?.data ?? [];
-  const overdue = rows.filter((row) => row.overdue).length;
 
-  const byStage = new Map<StageId, BookingRow[]>();
-  for (const row of rows) byStage.set(row.stage, [...(byStage.get(row.stage) ?? []), row]);
-  const stages = STAGE_ORDER.filter((id) => byStage.has(id));
-  const active = stage && byStage.has(stage) ? stage : '';
-  const shown = active ? (byStage.get(active) ?? []) : rows;
+  // the unfiltered count, remembered while a filter is on
+  const [summary, setSummary] = useState('');
+  const current = query.isSuccess && !filtered && !query.isPlaceholderData ? (total ? `${total} קריאות נמצאות עכשיו בשלב שלך.` : 'אין כרגע קריאות שממתינות לטיפול שלך.') : '';
+  if (current && current !== summary) setSummary(current);
+
+  // stage buttons: every stage seen so far, kept while a filter narrows the list
+  const [seenStages, setSeenStages] = useState<StageId[]>([]);
+  const fresh = rows.map((row) => row.stage).filter((id) => !seenStages.includes(id));
+  if (fresh.length) setSeenStages([...seenStages, ...new Set(fresh)]);
+  const stages = STAGE_ORDER.filter((id) => seenStages.includes(id) || id === stage);
+
+  // the next 25 load as the bottom of the list scrolls into view
+  const scroller = useRef<HTMLDivElement>(null);
+  const sentinel = useRef<HTMLDivElement>(null);
+  const hasRows = rows.length > 0;
+
+  // the list ends at the bottom of the window, so only the list scrolls and the page never does
+  useLayoutEffect(() => {
+    const el = scroller.current;
+    if (!el) return;
+    const page = el.closest<HTMLElement>('.page');
+    const fit = () => {
+      const top = el.getBoundingClientRect().top + window.scrollY;
+      const below = (page ? parseFloat(getComputedStyle(page).paddingBottom) : 0) + CARD_EDGE;
+      el.style.maxHeight = `${Math.max(240, window.innerHeight - top - below)}px`;
+    };
+    fit();
+    window.addEventListener('resize', fit);
+    return () => window.removeEventListener('resize', fit);
+  }, [hasRows]);
+  const { hasNextPage, isFetchingNextPage, fetchNextPage } = query;
+  useEffect(() => {
+    const el = sentinel.current;
+    if (!el || !hasNextPage) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && !isFetchingNextPage) void fetchNextPage();
+    }, { root: scroller.current, rootMargin: '0px 0px 300px 0px' });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   return (
     <div className="narrow">
       <PageHead
         title={title}
         sub={
-          query.isSuccess
-            ? rows.length
-              ? `${query.data.meta.total} קריאות נמצאות עכשיו בשלב שלך${overdue ? `. ${overdue} מהן חורגות מיעד הטיפול של התחום` : ''}.`
-              : 'אין כרגע קריאות שממתינות לטיפול שלך.'
-            : undefined
+          // the line keeps its place and only fades, so switching a filter never moves the page
+          <span className={`fade-swap${summary && !filtered ? '' : ' hidden'}`} aria-hidden={filtered || undefined}>
+            {summary || ' '}
+          </span>
         }
       />
       <SmoothSize as="section" className="card">
+        <div className="toolbar">
+          <label className="search" style={{ width: 220 }}>
+            <Icon name="search" />
+            <input type="search" value={text} placeholder="חיפוש קריאה" title="מספר קריאה, מספר אישי, ת.ז. או שם" aria-label="חיפוש בקריאות שלי לפי מספר קריאה, מספר אישי, ת.ז. או שם" onChange={(event) => setText(event.target.value)} />
+          </label>
+          {stages.length > 1 || stage ? (
+            <div className="seg" role="group" aria-label="שלב">
+              <button type="button" aria-pressed={!stage} onClick={() => setStage('')}>
+                הכל
+              </button>
+              {stages.map((id) => (
+                <button key={id} type="button" aria-pressed={stage === id} onClick={() => setStage(id)}>
+                  {STAGE_SHORT[id]}
+                </button>
+              ))}
+            </div>
+          ) : null}
+          <span className="grow" />
+          {query.isSuccess ? <span className="small muted">{filtered ? `${total} תוצאות` : 'ממוין לפי זמן ההמתנה בשלב'}</span> : null}
+        </div>
+
         {query.isPending ? (
           <div className="card-body">
             <Loading rows={6} />
           </div>
-        ) : query.isError ? (
+        ) : query.isError && !rows.length ? (
           <div className="card-body">
             <ErrorNotice error={query.error} onRetry={() => void query.refetch()} />
           </div>
         ) : rows.length === 0 ? (
-          <EmptyState title={canAct ? 'אין משימות פתוחות' : 'אין לך תפקיד מאשר'}>
-            {canAct ? 'קריאה חדשה שתגיע לשלב שבאחריותך תופיע כאן.' : 'בתפקידך את/ה צופה בקריאות. אישור ודחייה מתבצעים ע"י בעל התפקיד שהתור שלו במסלול.'}
-          </EmptyState>
+          filtered ? (
+            <EmptyState title="לא נמצאו קריאות">נסו מספר קריאה, מספר אישי או שם אחר, או בחרו שלב אחר.</EmptyState>
+          ) : (
+            <EmptyState title={canAct ? 'אין משימות פתוחות' : 'אין לך תפקיד מאשר'}>
+              {canAct ? 'קריאה חדשה שתגיע לשלב שבאחריותך תופיע כאן.' : 'בתפקידך את/ה צופה בקריאות. אישור ודחייה מתבצעים ע"י בעל התפקיד שהתור שלו במסלול.'}
+            </EmptyState>
+          )
         ) : (
           <>
-            <div className="toolbar">
-              <div className="seg" role="group" aria-label="שלב">
-                <button type="button" aria-pressed={!active} onClick={() => setStage('')}>
-                  הכל<span className="c">{rows.length}</span>
-                </button>
-                {stages.map((id) => (
-                  <button key={id} type="button" aria-pressed={active === id} onClick={() => setStage(id)}>
-                    {STAGE_SHORT[id]}
-                    <span className="c">{byStage.get(id)?.length}</span>
-                  </button>
+            {/* the list scrolls inside the card; the toolbar stays in view */}
+            <div ref={scroller} className="queue-scroll">
+              <div className="tickets" aria-busy={query.isFetching || undefined}>
+                {rows.map((row) => (
+                  <Ticket key={row.serial_number} booking={row} onAction={action.start} outcome={action.outcomes[row.serial_number]} />
                 ))}
               </div>
-              <span className="grow" />
-              <span className="small muted">ממוין לפי זמן ההמתנה בשלב</span>
+              <div ref={sentinel} />
+              {isFetchingNextPage ? (
+                <div className="card-body">
+                  <Loading rows={2} />
+                </div>
+              ) : hasNextPage ? null : rows.length > PAGE_SIZE ? (
+                <div className="pager">
+                  <span>הוצגו כל {total} הקריאות.</span>
+                </div>
+              ) : null}
             </div>
-            <div className="tickets">
-              {shown.map((row) => (
-                <Ticket key={row.serial_number} booking={row} onAction={action.start} outcome={action.outcomes[row.serial_number]} />
-              ))}
-            </div>
-            {query.data.meta.total > rows.length ? (
-              <div className="pager">
-                <span>מוצגות {rows.length} מתוך {query.data.meta.total} הקריאות. לרשימה המלאה יש לעבור למסך &quot;קריאות&quot;.</span>
-              </div>
-            ) : null}
           </>
         )}
       </SmoothSize>
