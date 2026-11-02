@@ -25,15 +25,15 @@ export const STAGE_SHORT: Record<StageId, string> = {
 };
 
 export const STAGE_COLOR: Record<StageId, string> = {
-  control_officer: '#684756',
-  vice_approver: '#9C7F8C',
-  approver: '#307473',
-  supplier_files: '#CFCBB3',
-  supplier_approval: '#B7B39C',
-  supplier_number: '#9E9A80',
-  realization: '#12664F',
-  barber_done: '#5C9C8D',
-  closed: '#9E9A80',
+  control_officer: '#6366F1',
+  vice_approver: '#3B82F6',
+  approver: '#0EA5E9',
+  supplier_files: '#A78BFA',
+  supplier_approval: '#8B5CF6',
+  supplier_number: '#7C3AED',
+  realization: '#1E40AF',
+  barber_done: '#0891B2',
+  closed: '#64748B',
 };
 
 export const WAIT_LABEL: Record<string, string> = {
@@ -66,15 +66,15 @@ export function sourceTag(source: ChangeSource | string | null | undefined) {
 
 /** One colour per service domain. */
 const DOMAIN_COLOR: Record<number, string> = {
-  1: '#3D314A',
-  2: '#5A4C66',
-  3: '#684756',
-  4: '#8A6A79',
-  5: '#7A5A68',
-  8: '#12664F',
-  10: '#307473',
-  11: '#3E8A88',
-  13: '#5B5446',
+  1: '#1E40AF',
+  2: '#3B82F6',
+  3: '#6366F1',
+  4: '#8B5CF6',
+  5: '#7C3AED',
+  8: '#0E7490',
+  10: '#0EA5E9',
+  11: '#457B9D',
+  13: '#52637A',
 };
 
 export const domainColor = (bookingTypeId: number): string => DOMAIN_COLOR[bookingTypeId] ?? '#64748b';

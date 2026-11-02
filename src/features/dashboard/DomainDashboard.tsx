@@ -115,12 +115,12 @@ export function DomainDashboard() {
       </div>
 
       <div className="card stats">
-        <Stat icon="list" color="#307473" label="קריאות פתוחות" value={data.totals.open} foot="כרגע בטיפול" onClick={() => router.push(`/requests?view=open${typesParam}`)} />
-        <Stat icon="check" color="#12664F" label="נסגרו" value={data.totals.closed_in_window} foot={`ב-${data.window_days} הימים האחרונים`} onClick={() => router.push(`/requests?view=all&stage=closed${typesParam}`)} />
-        <Stat icon="layers" color="#3D314A" label='סה"כ קריאות' value={data.totals.total} foot={`${data.totals.closed} נסגרו מאז ומעולם`} onClick={() => router.push(`/requests?view=all${typesParam}`)} />
+        <Stat icon="list" color="#457AEE" label="קריאות פתוחות" value={data.totals.open} foot="כרגע בטיפול" onClick={() => router.push(`/requests?view=open${typesParam}`)} />
+        <Stat icon="check" color="#15803D" label="נסגרו" value={data.totals.closed_in_window} foot={`ב-${data.window_days} הימים האחרונים`} onClick={() => router.push(`/requests?view=all&stage=closed${typesParam}`)} />
+        <Stat icon="layers" color="#1E40AF" label='סה"כ קריאות' value={data.totals.total} foot={`${data.totals.closed} נסגרו מאז ומעולם`} onClick={() => router.push(`/requests?view=all${typesParam}`)} />
         <Stat
           icon="alert"
-          color="#A23B32"
+          color="#E53F63"
           bad={data.totals.overdue > 0}
           label="חורגות מיעד"
           value={data.totals.overdue}
@@ -129,7 +129,7 @@ export function DomainDashboard() {
         />
         <Stat
           icon="pulse"
-          color="#684756"
+          color="#F6AC2F"
           label="זמן טיפול חציוני"
           value={fmtLongHours(data.handling.median_hours)}
           foot={data.handling.sample ? `90% נסגרות תוך ${fmtLongHours(data.handling.p90_hours)}` : 'אין קריאות סגורות בחלון'}

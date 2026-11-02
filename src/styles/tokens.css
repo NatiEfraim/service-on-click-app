@@ -1,18 +1,18 @@
 /* Service On Click - management console. Design system v3 (light only, floating top navigation), ported from the finished example UI.
-   Accent = the teal of the call card. Font: Assistant (OFL), self-hosted through @fontsource - nothing is loaded from the network. */
+   Accent = a deeper shade of the navigation blue. Font: Assistant (OFL), self-hosted through @fontsource - nothing is loaded from the network. */
 [hidden] { display: none !important; }
 
 :root {
-  /* client palette: Pine 307473, Vintage Grape 3D314A, Mauve Shadow 684756, Bone DDDBCB, Emerald Depths 12664F.
+  /* steel blue navigation on a cool grey-blue ground, navy text, bright stage and status accents.
      Every text/background pair used was checked at >= 4.5:1. */
-  --bg: #F4F3EE; --surface: #fff; --surface-2: #FAF9F5; --hover: #F3F2EC; --line: #E2E0D3; --line-2: #EEEDE5;
-  --ink: #2B2433; --ink-2: #4A4254; --mute: #5F566A;
-  --accent: #307473; --accent-hover: #245A59; --accent-ink: #245A59; --accent-wash: #E3EFEE; --accent-soft: #DDDBCB; --accent-mid: #307473; --accent-teal: #12664F;
-  /* grape navigation bar, bone pill for the active screen, light bone ground, white cards */
-  --nav: #3D314A; --nav-edge: #2E2538; --nav-ink: #FFFFFF; --nav-pill: #DDDBCB; --nav-pill-ink: #3D314A;
-  --th-bg: #F6F5F0; --sel-bg: #E3EFEE; --insight-bg: #FAF9F5; --chart-a: #684756; --chart-b: #12664F;
-  --s1: #EEEDE5; --s2: #DDDBCB; --s3: #5C9C8D; --s4: #307473; --s5: #12664F;
-  --ok: #12664F; --ok-w: #E4F1EC; --warn: #8A5A12; --warn-w: #FBF4E6; --bad: #A23B32; --bad-w: #FBEFEC; --hold: #684756; --hold-w: #F3ECEF; --info: #307473; --info-w: #E3EFEE;
+  --bg: #D8E1E9; --surface: #fff; --surface-2: #F2F5F9; --hover: #EAF0F6; --line: #D5DEE8; --line-2: #E3EAF2;
+  --ink: #14284B; --ink-2: #33445F; --mute: #52637A;
+  --accent: #2F6690; --accent-hover: #25557A; --accent-ink: #1E4E73; --accent-wash: #E3EDF5; --accent-soft: #C9DAE8; --accent-mid: #457B9D; --accent-teal: #0E7490;
+  /* steel blue navigation bar, white pill for the active screen, white cards */
+  --nav: #457B9D; --nav-edge: #3A6885; --nav-ink: #FFFFFF; --nav-pill: #FFFFFF; --nav-pill-ink: #14284B;
+  --th-bg: #F2F5F9; --sel-bg: #E3EDF5; --insight-bg: #F2F5F9; --chart-a: #6366F1; --chart-b: #0EA5E9;
+  --s1: #E3EAF2; --s2: #C9DAE8; --s3: #3B82F6; --s4: #1E40AF; --s5: #14284B;
+  --ok: #127A38; --ok-w: #E7F6EC; --warn: #8A5A00; --warn-w: #FFFAF0; --bad: #C0392B; --bad-w: #FFF6F5; --hold: #6D3FD1; --hold-w: #F1ECFD; --info: #1D6FA5; --info-w: #E3F1FA;
   --r-sm: 8px; --r: 12px;
   --shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 1px 3px rgba(16, 24, 40, .06);
   --shadow-lg: 0 12px 32px -8px rgba(16, 24, 40, .18);

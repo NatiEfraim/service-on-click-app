@@ -25,6 +25,7 @@ import { settingsApi } from '@/lib/api/endpoints';
 import { keys } from '@/lib/api/keys';
 import type { FormField, Settings } from '@/lib/api/types';
 import { OPTION_FIELD_TYPES } from '@/lib/labels';
+import { useSession } from '@/providers/SessionProvider';
 import { useConfirm, useToast } from '@/providers/UiProvider';
 import { fieldTypeName } from './fieldRules';
 import { FieldDialog } from './FieldDialog';
@@ -145,7 +146,8 @@ export function FormTab({ unitId, bookingTypeId, settings }: { unitId: number; b
   const toast = useToast();
   const confirm = useConfirm();
   const reload = useReloadSettings(unitId, bookingTypeId);
-  const canEdit = settings.can_edit_global;
+  const { me } = useSession();
+  const canEdit = me.is_super_admin && settings.can_edit_global;
   const [editing, setEditing] = useState<FormField | 'new' | null>(null);
 
   const { roots, orphans } = useMemo(() => buildFieldTree(settings.form_fields), [settings.form_fields]);

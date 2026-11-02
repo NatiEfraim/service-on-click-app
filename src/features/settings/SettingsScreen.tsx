@@ -44,8 +44,10 @@ export function SettingsScreen() {
   const bookingTypeId = toId(params.bookingTypeId);
   const query = useSettingsQuery(unitId, bookingTypeId, unitId > 0 && bookingTypeId > 0);
 
+  // the form structure tab is for the system admin only
+  const tabs = me.is_super_admin ? [...TABS] : TABS.filter((candidate) => candidate.id !== 'form');
   const requested = search.get('tab');
-  const tab: TabId = TABS.find((candidate) => candidate.id === requested)?.id ?? 'form';
+  const tab: TabId = tabs.find((candidate) => candidate.id === requested)?.id ?? tabs[0].id;
 
   if (!unitId || !bookingTypeId) return <Denied>הכתובת אינה תקינה.</Denied>;
 
@@ -102,9 +104,9 @@ export function SettingsScreen() {
         }
       />
       <section className="card st-tabs-card" aria-label={`הגדרות ${name}`}>
-        <Tabs tabs={[...TABS]} value={tab} onChange={setTab} label="הגדרות התחום" />
-        <div className="st-panel" role="tabpanel" aria-label={TABS.find((candidate) => candidate.id === tab)?.label}>
-          {tab === 'form' ? <FormTab unitId={unitId} bookingTypeId={bookingTypeId} settings={settings} /> : null}
+        <Tabs tabs={tabs} value={tab} onChange={setTab} label="הגדרות התחום" />
+        <div className="st-panel" role="tabpanel" aria-label={tabs.find((candidate) => candidate.id === tab)?.label}>
+          {tab === 'form' && me.is_super_admin ?<FormTab unitId={unitId} bookingTypeId={bookingTypeId} settings={settings} /> : null}
           {tab === 'target' ? <TargetTab bookingTypeId={bookingTypeId} /> : null}
           {tab === 'refs' ? <OperationsTab unitId={unitId} bookingTypeId={bookingTypeId} settings={settings} ownUnit={ownUnit} /> : null}
           {tab === 'dates' ? <DatesTab unitId={unitId} bookingTypeId={bookingTypeId} settings={settings} ownUnit={ownUnit} ownUnitId={me.user.unit_id} typeName={name} /> : null}

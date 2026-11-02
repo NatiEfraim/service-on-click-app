@@ -25,7 +25,7 @@
 /* ----- the switch */
 .st-switch-wrap { display: grid; gap: 3px; }
 .st-switch { position: relative; display: inline-flex; align-items: center; gap: 10px; cursor: pointer; font-size: 14.5px; width: fit-content; }
-.st-switch .track { position: relative; flex: none; width: 40px; height: 22px; border-radius: 999px; background: #8A8394; transition: background-color .15s ease; }
+.st-switch .track { position: relative; flex: none; width: 40px; height: 22px; border-radius: 999px; background: #7A8799; transition: background-color .15s ease; }
 .st-switch .track::after {
   content: ""; position: absolute; top: 3px; inset-inline-start: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff;
   box-shadow: 0 1px 2px rgba(16, 24, 40, .3); transition: inset-inline-start .15s ease;
@@ -79,7 +79,7 @@
 .st-days { display: flex; flex-wrap: wrap; gap: 8px; min-height: 34px; align-items: center; }
 .st-day { display: inline-flex; align-items: center; gap: 4px; padding-inline-end: 4px; }
 .st-day button { all: unset; cursor: pointer; display: grid; place-items: center; padding: 2px; border-radius: 50%; color: var(--accent-ink); }
-.st-day button:hover { background: rgba(48, 116, 115, .18); }
+.st-day button:hover { background: rgba(69, 123, 157, .18); }
 .st-day button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .st-add-row { display: flex; gap: 8px; align-items: end; flex-wrap: wrap; }
 .st-serials { display: flex; flex-wrap: wrap; gap: 4px 10px; max-height: 120px; overflow: auto; padding: 8px 10px; background: var(--surface-2); border: 1px solid var(--line-2); border-radius: var(--r-sm); }
