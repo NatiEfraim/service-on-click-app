@@ -1,0 +1,28 @@
+# Docker / VCS
+Dockerfile*
+.dockerignore
+compose.yml
+.git
+.gitignore
+.gitIgnore
+
+# Dependencies and build output are produced inside the image
+node_modules
+.next
+npm-debug.log*
+
+# Not part of the app
+project-files
+docs
+AGENTS.md
+README.md
+*.md
+.claude
+.vscode
+.idea
+.editorconfig
+
+# Local environment files and archives
+.env*
+*.pem
+*.tar

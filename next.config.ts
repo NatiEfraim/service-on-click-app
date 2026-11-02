@@ -8,6 +8,7 @@ import type { NextConfig } from 'next';
 const API_ORIGIN = (process.env.API_ORIGIN ?? 'http://localhost:8000').replace(/\/+$/, '');
 
 const nextConfig: NextConfig = {
+  output: 'standalone',
   reactStrictMode: true,
   poweredByHeader: false,
 
