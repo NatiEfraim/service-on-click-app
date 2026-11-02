@@ -12,10 +12,12 @@ import { EmptyState, ErrorNotice, Loading } from '@/components/ui/Feedback';
 import { Field } from '@/components/ui/Field';
 import { PageHead } from '@/components/ui/PageHead';
 import { SearchField } from '@/components/ui/SearchField';
+import { useSmoothHeight } from '@/components/ui/SmoothSize';
 import { useStatusAction } from '@/features/bookings/useStatusAction';
 import { bookingsApi, peopleApi } from '@/lib/api/endpoints';
 import { keys } from '@/lib/api/keys';
 import { STAGE_ORDER, STAGE_SHORT } from '@/lib/labels';
+import { CONTENT_FADE_MS, EASE_OUT, prefersReducedMotion } from '@/lib/motion';
 import { useSession } from '@/providers/SessionProvider';
 import { advancedCount, DEFAULT_FILTERS, parseFilters, SORTS, toApiParams, toSearchParams } from './filters';
 
@@ -25,7 +27,7 @@ export function RequestsScreen() {
   const router = useRouter();
   const pathname = usePathname();
   const search = useSearchParams();
-  const action = useStatusAction();
+  const action = useStatusAction({ animateOut: true });
 
   const filters = useMemo(() => parseFilters(new URLSearchParams(search.toString())), [search]);
   const [advancedOpen, setAdvancedOpen] = useState(() => advancedCount(filters) > 0);
@@ -84,6 +86,15 @@ export function RequestsScreen() {
     window.addEventListener('resize', fit);
     return () => window.removeEventListener('resize', fit);
   }, []);
+  // the card glides from the skeleton's height to the list's (or the empty state's) instead of jumping
+  useSmoothHeight(card, query.isPending ? 'loading' : hasRows ? 'rows' : 'empty');
+  // the list fades in where the loading skeleton was (started from script so nothing in the cascade can skip it)
+  useLayoutEffect(() => {
+    const el = scroller.current;
+    if (!hasRows || !el || prefersReducedMotion()) return;
+    const fade = el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: CONTENT_FADE_MS, easing: EASE_OUT });
+    return () => fade.cancel();
+  }, [hasRows]);
   const { hasNextPage, isFetchingNextPage, fetchNextPage } = query;
   useEffect(() => {
     const el = sentinel.current;
@@ -111,7 +122,7 @@ export function RequestsScreen() {
   const hasFilters = advanced > 0 || filters.ids || filters.q;
 
   return (
-    <div className="narrow">
+    <div>
       <PageHead title="קריאות" sub="כל הקריאות בתחומים שבאחריותך. קריאות נפתחות באפליקציה בלבד." />
       <section ref={card} className="card fit-card">
         <div className="toolbar">
@@ -229,7 +240,7 @@ export function RequestsScreen() {
               <Loading rows={8} />
             </div>
           ) : query.isError && !hasRows ? (
-            <div className="card-body">
+            <div className="card-body fade-in">
               <ErrorNotice error={query.error} onRetry={() => void query.refetch()} />
             </div>
           ) : hasRows ? (
@@ -237,7 +248,7 @@ export function RequestsScreen() {
             <div ref={scroller} className="queue-scroll">
               <div className="tickets" aria-busy={query.isFetching || undefined}>
                 {rows.map((row) => (
-                  <Ticket key={row.serial_number} booking={row} onAction={action.start} />
+                  <Ticket key={row.serial_number} booking={row} onAction={action.start} outcome={action.outcomes[row.serial_number]} />
                 ))}
               </div>
               <div ref={sentinel} />
@@ -252,7 +263,9 @@ export function RequestsScreen() {
               )}
             </div>
           ) : (
-            <EmptyState title="אין קריאות שמתאימות">אפשר לבחור תצוגה אחרת או לנקות את הסינון.</EmptyState>
+            <div className="fade-in">
+              <EmptyState title="אין קריאות שמתאימות">אפשר לבחור תצוגה אחרת או לנקות את הסינון.</EmptyState>
+            </div>
           )}
         </div>
       </section>

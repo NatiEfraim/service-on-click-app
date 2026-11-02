@@ -21,6 +21,8 @@
   border: 1px solid var(--line); background: var(--surface); cursor: pointer; font-weight: 600; white-space: nowrap; color: var(--ink);
   transition: transform 160ms var(--ease-out), background-color 150ms ease, opacity 200ms var(--ease-out);
 }
+/* content that replaces a loading skeleton fades in instead of popping */
+.fade-in { animation: fade 260ms var(--ease-out); }
 /* text that comes and goes without moving the layout: it keeps its room and only fades */
 .fade-swap { display: inline-block; transition: opacity 220ms var(--ease-out); }
 .fade-swap.hidden { opacity: 0; }

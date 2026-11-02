@@ -42,7 +42,7 @@ export function DomainDashboard() {
   const search = useSearchParams();
   const setParams = useSetSearchParams();
   const { me, typeName } = useSession();
-  const action = useStatusAction();
+  const action = useStatusAction({ animateOut: true });
   const [targetOpen, setTargetOpen] = useState(false);
   const [full, setFull] = useState(false);
 
@@ -170,7 +170,7 @@ export function DomainDashboard() {
           {data.oldest.length ? (
             <div className="tickets">
               {data.oldest.map((row) => (
-                <Ticket key={row.serial_number} booking={row} onAction={action.start} />
+                <Ticket key={row.serial_number} booking={row} onAction={action.start} outcome={action.outcomes[row.serial_number]} />
               ))}
             </div>
           ) : (

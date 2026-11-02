@@ -4,7 +4,8 @@
 
 /** Holds an approver, vice approver or control officer role on at least one type. */
 export function canAct(me) {
-  return me.permissions.some((permission) => /^(approver|vice_approver|transportation_control_officer)_\d+$/.test(permission));
+  // the camp commander (admin) decides in the domain commander's turns too
+  return me.permissions.some((permission) => /^(admin|approver|vice_approver|transportation_control_officer)_\d+$/.test(permission));
 }
 
 export function can(me, capability) {

@@ -59,11 +59,12 @@ describe('buildNav', () => {
 });
 
 describe('canAct', () => {
-  it('is true for approvers, vice approvers and control officers, false for admins and plain users', () => {
+  it('is true for admins, approvers, vice approvers and control officers, false for plain users', () => {
     expect(canAct(makeMe({ permissions: ['vice_approver_8'] }))).toBe(true);
     expect(canAct(makeMe({ permissions: ['transportation_control_officer_8'] }))).toBe(true);
     expect(canAct(makeMe({ permissions: ['approver_1'] }))).toBe(true);
-    expect(canAct(makeMe({ permissions: ['admin_1', 'user_1'] }))).toBe(false);
+    expect(canAct(makeMe({ permissions: ['admin_1', 'user_1'] }))).toBe(true);
+    expect(canAct(makeMe({ permissions: ['user_1'] }))).toBe(false);
   });
 });
 

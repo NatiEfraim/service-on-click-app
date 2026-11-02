@@ -21,6 +21,7 @@ function useLeave(ref, outcome) {
     if (!el || !outcome) return;
     const reduce = prefersReducedMotion();
     let cancelled = false;
+    const running = [];
     // approved leaves to the right, rejected / cancelled to the left
     const away = outcome === 'ok' ? '100%' : '-100%';
     const timer = window.setTimeout(async () => {
@@ -28,22 +29,28 @@ function useLeave(ref, outcome) {
         reduce ? [{ opacity: 1 }, { opacity: 0 }] : [{ opacity: 1, transform: 'translateX(0)' }, { opacity: 0, transform: `translateX(${away})` }],
         { duration: ROW_SLIDE_MS, easing: EASE_OUT, fill: 'forwards' },
       );
-      await slide.finished;
+      running.push(slide);
+      await slide.finished.catch(() => {});
       if (cancelled) return;
       // the rows below glide up into the freed space
       const style = getComputedStyle(el);
       el.style.overflow = 'hidden';
-      el.animate(
-        [
-          { height: `${el.offsetHeight}px`, paddingTop: style.paddingTop, paddingBottom: style.paddingBottom, borderBottomWidth: style.borderBottomWidth },
-          { height: '0px', paddingTop: '0px', paddingBottom: '0px', borderBottomWidth: '0px' },
-        ],
-        { duration: reduce ? 0 : ROW_COLLAPSE_MS, easing: EASE_OUT, fill: 'forwards' },
+      running.push(
+        el.animate(
+          [
+            { height: `${el.offsetHeight}px`, paddingTop: style.paddingTop, paddingBottom: style.paddingBottom, borderBottomWidth: style.borderBottomWidth },
+            { height: '0px', paddingTop: '0px', paddingBottom: '0px', borderBottomWidth: '0px' },
+          ],
+          { duration: reduce ? 0 : ROW_COLLAPSE_MS, easing: EASE_OUT, fill: 'forwards' },
+        ),
       );
     }, ROW_STAMP_MS);
     return () => {
+      // a row that is still in the list after the reload (e.g. approved but open) comes back as a normal row
       cancelled = true;
       window.clearTimeout(timer);
+      for (const animation of running) animation.cancel();
+      el.style.overflow = '';
     };
   }, [ref, outcome]);
 }

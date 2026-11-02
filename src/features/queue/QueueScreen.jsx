@@ -81,7 +81,7 @@ export function QueueScreen() {
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   return (
-    <div className="narrow">
+    <div>
       <PageHead
         title={title}
         sub={
@@ -106,21 +106,23 @@ export function QueueScreen() {
             <Loading rows={6} />
           </div>
         ) : query.isError && !rows.length ? (
-          <div className="card-body">
+          <div className="card-body fade-in">
             <ErrorNotice error={query.error} onRetry={() => void query.refetch()} />
           </div>
         ) : rows.length === 0 ? (
-          filtered ? (
-            <EmptyState title="לא נמצאו קריאות">נסו מספר קריאה, מספר אישי או שם אחר, או בחרו שלב אחר.</EmptyState>
-          ) : (
-            <EmptyState title={canAct ? 'אין משימות פתוחות' : 'אין לך תפקיד מאשר'}>
-              {canAct ? 'קריאה חדשה שתגיע לשלב שבאחריותך תופיע כאן.' : 'בתפקידך את/ה צופה בקריאות. אישור ודחייה מתבצעים ע"י בעל התפקיד שהתור שלו במסלול.'}
-            </EmptyState>
-          )
+          <div className="fade-in">
+            {filtered ? (
+              <EmptyState title="לא נמצאו קריאות">נסו מספר קריאה, מספר אישי או שם אחר, או בחרו שלב אחר.</EmptyState>
+            ) : (
+              <EmptyState title={canAct ? 'אין משימות פתוחות' : 'אין לך תפקיד מאשר'}>
+                {canAct ? 'קריאה חדשה שתגיע לשלב שבאחריותך תופיע כאן.' : 'בתפקידך את/ה צופה בקריאות. אישור ודחייה מתבצעים ע"י בעל התפקיד שהתור שלו במסלול.'}
+              </EmptyState>
+            )}
+          </div>
         ) : (
           <>
             {/* the list scrolls inside the card; the toolbar stays in view */}
-            <div ref={scroller} className="queue-scroll">
+            <div ref={scroller} className="queue-scroll fade-in">
               <div className="tickets" aria-busy={query.isFetching || undefined}>
                 {rows.map((row) => (
                   <Ticket key={row.serial_number} booking={row} onAction={action.start} outcome={action.outcomes[row.serial_number]} />

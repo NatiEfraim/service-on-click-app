@@ -36,8 +36,9 @@ export function SettingsScreen() {
   const bookingTypeId = toId(params.bookingTypeId);
   const query = useSettingsQuery(unitId, bookingTypeId, unitId > 0 && bookingTypeId > 0);
 
-  // the form structure tab is for the system admin only
-  const tabs = me.is_super_admin ? [...TABS] : TABS.filter((candidate) => candidate.id !== 'form');
+  // the form structure is for the system admin only; a domain commander (approver) does not see the statement either
+  const hidden = new Set([...(me.is_super_admin ? [] : ['form']), ...(me.is_super_admin || me.is_admin ? [] : ['statement'])]);
+  const tabs = TABS.filter((candidate) => !hidden.has(candidate.id));
   const requested = search.get('tab');
   const tab = tabs.find((candidate) => candidate.id === requested)?.id ?? tabs[0].id;
 

@@ -3,6 +3,9 @@
 /** Strong ease-out: anything entering, leaving or answering a press. */
 export const EASE_OUT = 'cubic-bezier(0.23, 1, 0.32, 1)';
 
+/** Loaded content fading in where its loading skeleton was. */
+export const CONTENT_FADE_MS = 260;
+
 /** A height glide (`SmoothSize`). */
 export const RESIZE_MS = 260;
 

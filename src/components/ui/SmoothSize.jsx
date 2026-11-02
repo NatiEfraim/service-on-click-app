@@ -1,7 +1,7 @@
 'use client';
 
 import { useLayoutEffect, useRef } from 'react';
-import { EASE_OUT, RESIZE_MS } from '@/lib/motion';
+import { EASE_OUT, prefersReducedMotion, RESIZE_MS } from '@/lib/motion';
 
 /**
  * Wrap anything whose height changes (loading → data, an error appearing, a tab switch, a section opening):
@@ -47,4 +47,23 @@ export function SmoothSize({ children, as: Tag = 'div', ...rest }) {
       </div>
     </Tag>
   );
+}
+
+/**
+ * The same glide for an element that cannot take a wrapper (a flex column whose list scrolls inside it):
+ * when `key` changes (e.g. the skeleton gives way to the rows), the element glides from the height it had to its new one.
+ */
+export function useSmoothHeight(ref, key) {
+  const last = useRef(null);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const next = el.getBoundingClientRect().height;
+    const from = last.current;
+    last.current = next;
+    if (from === null || Math.abs(from - next) < 1 || prefersReducedMotion()) return;
+    const glide = el.animate([{ height: `${from}px`, overflow: 'clip' }, { height: `${next}px`, overflow: 'clip' }], { duration: RESIZE_MS, easing: EASE_OUT });
+    return () => glide.cancel();
+  }, [ref, key]);
 }
