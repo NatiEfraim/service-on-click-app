@@ -12,6 +12,10 @@ export const RESIZE_MS = 260;
 /** A dialog fading out after it closed (`Modal`). */
 export const DIALOG_EXIT_MS = 150;
 
+/** The side panel (booking): iOS-like drawer curve; it slides in from its edge (CSS, 300ms) and back out over this. */
+export const EASE_DRAWER = 'cubic-bezier(0.32, 0.72, 0, 1)';
+export const DRAWER_EXIT_MS = 240;
+
 /** A dropdown menu fading out (`usePresence`; matches `.menu[data-closing]` in layout.css). */
 export const MENU_EXIT_MS = 150;
 

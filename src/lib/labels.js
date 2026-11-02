@@ -24,17 +24,17 @@ export const STAGE_SHORT = {
   closed: 'סגורה',
 };
 
-/** One distinct hue per stage, in stage order (a colour-blind-checked categorical set: neighbours never share a hue family). */
+/** One colour per stage, in the muted grape / sage / teal palette of the app (stage order). */
 export const STAGE_COLOR = {
-  control_officer: '#2A78D6',
-  vice_approver: '#EB6834',
-  approver: '#1BAF7A',
-  supplier_files: '#EDA100',
-  supplier_approval: '#E87BA4',
-  supplier_number: '#008300',
-  realization: '#6250D6',
-  barber_done: '#E34948',
-  closed: '#64748B',
+  control_officer: '#6B4552',
+  vice_approver: '#A07D8C',
+  approver: '#2E7470',
+  supplier_files: '#C9BFA6',
+  supplier_approval: '#B5AE93',
+  supplier_number: '#948E72',
+  realization: '#145E4A',
+  barber_done: '#5E8C7E',
+  closed: '#8A8296',
 };
 
 export const WAIT_LABEL = {
@@ -65,20 +65,20 @@ export function sourceTag(source) {
   return source ? SOURCE_LABEL[source] : undefined;
 }
 
-/** One colour per service domain. */
+/** One colour per service domain (the stripe beside a booking, a tile's hover border), from the app's muted palette. */
 const DOMAIN_COLOR = {
-  1: '#1E40AF',
-  2: '#3B82F6',
-  3: '#6366F1',
-  4: '#8B5CF6',
-  5: '#7C3AED',
-  8: '#0E7490',
-  10: '#0EA5E9',
-  11: '#457B9D',
-  13: '#52637A',
+  1: '#3D314A',
+  2: '#6B4552',
+  3: '#2E7470',
+  4: '#A07D8C',
+  5: '#6E5F7D',
+  8: '#145E4A',
+  10: '#948E72',
+  11: '#5E8C7E',
+  13: '#8A8296',
 };
 
-export const domainColor = (bookingTypeId) => DOMAIN_COLOR[bookingTypeId] ?? '#64748b';
+export const domainColor = (bookingTypeId) => DOMAIN_COLOR[bookingTypeId] ?? '#8A8296';
 
 /** Domains with an illustration in /public/icons/domains. */
 const DOMAIN_ICONS = new Set([1, 2, 3, 4, 5, 8, 10, 11, 13]);

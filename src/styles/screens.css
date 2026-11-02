@@ -36,26 +36,13 @@
 .insight .btn { margin-inline-start: auto; }
 
 /* ---------- tickets: the call card list, the list unit used everywhere */
-/* the queue list scrolls inside its card, below the toolbar */
-/* ltr on the scroller puts its bar on the right; the rows inside stay rtl */
-.queue-scroll { /* max-height set by QueueScreen to end at the window's bottom */ overflow-y: auto; overscroll-behavior: contain; direction: ltr; }
-.queue-scroll > * { direction: rtl; }
+/* the queue list scrolls inside its card, below the toolbar (bar side and look: the scroll bars section in tokens.css) */
+.queue-scroll { /* max-height set by QueueScreen to end at the window's bottom */ overflow-y: auto; overscroll-behavior: contain; }
 /* a card capped at the window's bottom (max-height set by RequestsScreen): its list fills what is left and scrolls */
 .fit-card { display: flex; flex-direction: column; overflow: hidden; }
 .fit-card > * { flex: none; }
 .fit-card > .fit-fill { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
 .fit-fill > .queue-scroll { flex: 1 1 auto; min-height: 0; }
-/* Firefox only: in Chromium, scrollbar-color would switch off the styled thumb below */
-@supports (-moz-appearance: none) {
-  .queue-scroll { scrollbar-width: thin; scrollbar-color: var(--accent-soft) transparent; }
-  .queue-scroll:hover { scrollbar-color: var(--accent-mid) transparent; }
-}
-/* WebKit / Chromium: a slim rounded thumb in the accent family that darkens under the pointer */
-.queue-scroll::-webkit-scrollbar { width: 10px; }
-.queue-scroll::-webkit-scrollbar-track { background: transparent; margin: 6px 0; }
-.queue-scroll::-webkit-scrollbar-thumb { background: var(--accent-soft); border-radius: 999px; border: 3px solid var(--surface); }
-.queue-scroll:hover::-webkit-scrollbar-thumb { background: var(--accent-mid); }
-.queue-scroll::-webkit-scrollbar-thumb:active { background: var(--accent); }
 /* clip: a decided row slides fully out without widening the page */
 .tickets { display: grid; overflow-x: clip; }
 .ticket {
@@ -209,17 +196,17 @@ span.chart-fade { flex-direction: row; align-items: center; gap: 8px; white-spac
 .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; }
 .dtile {
   all: unset; box-sizing: border-box; cursor: pointer; display: grid; justify-items: center; gap: 8px; padding: 20px 12px 16px; border-radius: 16px;
-  background: var(--surface); border: 1px solid var(--line); box-shadow: 0 1px 2px rgba(20, 40, 75, .04); text-align: center;
+  background: var(--surface); border: 1px solid var(--line); box-shadow: 0 1px 2px rgba(43, 36, 51, .04); text-align: center;
   transition: border-color .15s ease, box-shadow .15s ease, transform 160ms var(--ease-out);
 }
 /* the lift is for a mouse only: on a phone a tap would leave the tile lifted */
 @media (hover: hover) and (pointer: fine) {
-  .dtile:hover { border-color: var(--dc, var(--accent)); box-shadow: 0 10px 24px -14px rgba(20, 40, 75, .35); transform: translateY(-2px); }
+  .dtile:hover { border-color: var(--dc, var(--accent)); box-shadow: 0 10px 24px -14px rgba(43, 36, 51, .35); transform: translateY(-2px); }
 }
 /* pressing gives way a little, on every device */
 .dtile:active { transform: scale(0.98); }
 .dtile:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.dtile-ic { width: 64px; height: 64px; border-radius: 16px; display: grid; place-items: center; background: #fff; border: 1px solid var(--line); box-shadow: 0 1px 3px rgba(20, 40, 75, .06); color: var(--dc); }
+.dtile-ic { width: 64px; height: 64px; border-radius: 16px; display: grid; place-items: center; background: #fff; border: 1px solid var(--line); box-shadow: 0 1px 3px rgba(43, 36, 51, .06); color: var(--dc); }
 .dtile-ic .ico { width: 30px; height: 30px; stroke-width: 1.6; }
 .dtile-ic img { width: 38px; height: 38px; object-fit: contain; }
 .dtile-name { font-weight: 700; font-size: 16px; line-height: 1.25; color: var(--ink); }

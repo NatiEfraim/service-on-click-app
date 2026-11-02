@@ -1,52 +1,26 @@
 'use client';
 
-import { useId, useLayoutEffect, useRef } from 'react';
+import { useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { DIALOG_EXIT_MS, EASE_OUT, prefersReducedMotion } from '@/lib/motion';
+import { DIALOG_EXIT_MS } from '@/lib/motion';
 import { useOverlay } from './overlay';
 import { SmoothSize } from './SmoothSize';
+import { useExitGhost } from './useExitGhost';
 import { useIsClient } from './useIsClient';
 
 
 
-/**
- * Parents unmount a dialog the moment it closes, so there is nothing left to animate.
- * On unmount a lifeless copy of the scrim and the dialog is left in place and faded out, whatever closed it.
- */
-function useExitFade(scrimRef, dialogRef) {
-  useLayoutEffect(() => {
-    const scrim = scrimRef.current;
-    const dialog = dialogRef.current;
-    return () => {
-      if (!scrim || !dialog || typeof window === 'undefined') return;
-      const reduce = prefersReducedMotion();
-      const ghosts = ([
-        [scrim, [{ opacity: 1 }, { opacity: 0 }]],
-        [dialog, reduce ? [{ opacity: 1 }, { opacity: 0 }] : [{ opacity: 1, transform: 'translate(-50%, -50%) scale(1)' }, { opacity: 0, transform: 'translate(-50%, -50%) scale(0.97)' }]],
-      ]).map(([source, frames]) => ({ source, frames, ghost: source.cloneNode(true) }));
-      // Strict Mode (dev) runs this cleanup on a dialog that stays open; only a dialog that really left the page fades out
-      queueMicrotask(() => {
-        for (const { source, frames, ghost } of ghosts) {
-          if (source.isConnected) continue;
-          ghost.setAttribute('aria-hidden', 'true');
-          ghost.removeAttribute('role');
-          ghost.inert = true;
-          ghost.style.pointerEvents = 'none';
-          ghost.style.animation = 'none';
-          document.body.appendChild(ghost);
-          ghost.animate(frames, { duration: DIALOG_EXIT_MS, easing: EASE_OUT, fill: 'forwards' }).finished.finally(() => ghost.remove());
-        }
-      });
-    };
-  }, [scrimRef, dialogRef]);
-}
+const FADE_OUT = [{ opacity: 1 }, { opacity: 0 }];
+/** The dialog shrinks back a little as it fades (its transform also keeps it centred). */
+const DIALOG_OUT = [{ opacity: 1, transform: 'translate(-50%, -50%) scale(1)' }, { opacity: 0, transform: 'translate(-50%, -50%) scale(0.97)' }];
 
 function ModalInner({ title, onClose, children, footer, wide, busy, initialFocus }) {
   const ref = useRef(null);
   const scrimRef = useRef(null);
   const titleId = useId();
   useOverlay(ref, { onEscape: busy ? undefined : onClose, initialFocus });
-  useExitFade(scrimRef, ref);
+  const [exitParts] = useState(() => [{ ref: scrimRef, frames: FADE_OUT }, { ref, frames: DIALOG_OUT }]);
+  useExitGhost(exitParts, { duration: DIALOG_EXIT_MS });
 
   return (
     <>

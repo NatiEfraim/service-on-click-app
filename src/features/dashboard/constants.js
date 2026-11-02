@@ -28,4 +28,4 @@ export const FOLDED_INTO = { supplier_files: 'supplier_approval', barber_done: '
 export const BOTTLENECK_ROWS = 8;
 
 /** Headline tile colours. */
-export const STAT_COLOR = { open: '#457AEE', awaiting: '#0EA5E9', overdue: '#E53F63', stale: '#F6AC2F' };
+export const STAT_COLOR = { open: '#3D314A', awaiting: '#2E7470', overdue: '#B4423A', stale: '#B08A3E' };
