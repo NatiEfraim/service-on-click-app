@@ -99,10 +99,15 @@ details.card > summary::-webkit-details-marker { display: none; }
 }
 .seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(43, 36, 51, .12); }
 .seg button .c { color: var(--mute); font-weight: 400; margin-inline-start: 4px; }
-.utabs { display: flex; flex-wrap: wrap; gap: 4px 6px; border-bottom: 1px solid var(--line); padding: 0 12px; }
-.utabs button { border: 0; background: none; padding: 12px 10px; cursor: pointer; color: var(--ink-2); font-weight: 600; position: relative; white-space: nowrap; }
+.utabs { display: flex; flex-wrap: wrap; gap: 4px 6px; border-bottom: 1px solid var(--line); padding: 0 12px; position: relative; }
+.utabs button { border: 0; background: none; padding: 12px 10px; cursor: pointer; color: var(--ink-2); font-weight: 600; position: relative; white-space: nowrap; transition: color 200ms var(--ease-out); }
 .utabs button[aria-selected="true"] { color: var(--accent-ink); }
-.utabs button[aria-selected="true"]::after { content: ""; position: absolute; inset-inline: 6px; bottom: -1px; height: 3px; border-radius: 3px 3px 0 0; background: var(--accent-mid); }
+/* the selected tab's underline: one element that glides and resizes to the tab (Tabs places it) */
+.utabs-line {
+  position: absolute; top: 0; left: 0; height: 3px; border-radius: 3px 3px 0 0; background: var(--accent-mid);
+  pointer-events: none; opacity: 0;
+}
+.utabs-line.ready { transition: transform 280ms var(--ease-out), width 280ms var(--ease-out), opacity 200ms var(--ease-out); }
 .toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 12px 18px; border-bottom: 1px solid var(--line-2); }
 .toolbar .grow, .pager .grow { flex: 1; }
 /* filter panel: folds open and fades in, folds closed and fades out (RequestsScreen re-fits the list after ADV_FOLD_MS) */

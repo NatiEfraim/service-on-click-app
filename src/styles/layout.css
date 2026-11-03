@@ -15,7 +15,15 @@
 .brand b { display: block; font-size: 16.5px; font-weight: 700; line-height: 1.15; color: var(--nav-ink); }
 .brand span { font-size: 12.5px; font-weight: 400; color: var(--nav-ink); }
 
-.tabs-nav { display: flex; align-items: center; height: 100%; gap: 4px; }
+.tabs-nav { display: flex; align-items: center; height: 100%; gap: 4px; position: relative; }
+/* the active-screen pill: one element that glides (and resizes) to the current item (TopBar places it) */
+.nav-indicator {
+  position: absolute; top: 50%; left: 0; height: 40px; margin-top: -20px; border-radius: 12px; background: var(--nav-active);
+  pointer-events: none; opacity: 0;
+}
+.nav-indicator.ready { transition: transform 280ms var(--ease-out), width 280ms var(--ease-out), opacity 200ms var(--ease-out); }
+.tabs-nav > a, .tabs-nav > .dd { position: relative; z-index: 1; }
+.tabs-nav.open .nav-indicator { display: none; }
 .tabs-nav > a, .tabs-nav > .dd > button {
   position: relative; display: flex; align-items: center; gap: 7px; height: 40px; padding: 0 14px; border-radius: 12px;
   color: var(--nav-ink); font-weight: 600; font-size: 15px; border: 0; background: transparent; cursor: pointer; white-space: nowrap;
@@ -30,7 +38,9 @@
   .tabs-nav > a:hover::before, .tabs-nav > .dd > button:hover::before { transform: scaleX(1); }
 }
 .tabs-nav > .dd > button[aria-expanded="true"]::before { transform: scaleX(1); }
-.tabs-nav > a[aria-current="page"], .tabs-nav > .dd.current > button { background: var(--nav-active); color: var(--nav-active-ink); font-weight: 700; }
+/* the pill behind it is .nav-indicator; the item only takes the active text colour */
+.tabs-nav > a[aria-current="page"], .tabs-nav > .dd.current > button { color: var(--nav-active-ink); }
+.tabs-nav.open > a[aria-current="page"] { background: var(--nav-active); }
 .tabs-nav > a[aria-current="page"]::before, .tabs-nav > .dd.current > button::before { display: none; }
 .count { font-size: 12px; font-weight: 700; min-width: 20px; padding: 0 6px; line-height: 19px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-ink); text-align: center; }
 .topbar .count { background: var(--ink); color: #fff; }

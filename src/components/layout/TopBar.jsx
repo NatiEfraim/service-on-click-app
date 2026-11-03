@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { insightsApi } from '@/lib/api/endpoints';
 import { keys } from '@/lib/api/keys';
 import { buildNav, isActivePath } from '@/lib/nav';
@@ -130,6 +130,32 @@ export function TopBar() {
   const overview = useQuery({ queryKey: keys.overview, queryFn: ({ signal }) => insightsApi.overview(signal), enabled: hasQueue, staleTime: 60_000 });
   const waiting = overview.data?.awaiting_me.count ?? 0;
 
+  // the active-screen pill is one element that glides to the current item instead of each item painting its own
+  const navRef = useRef(null);
+  const indicatorRef = useRef(null);
+  useLayoutEffect(() => {
+    const navEl = navRef.current;
+    const pill = indicatorRef.current;
+    if (!navEl || !pill) return;
+    const place = () => {
+      const active = navEl.querySelector(':scope > a[aria-current="page"], :scope > .dd.current > button');
+      if (!active) {
+        pill.style.opacity = '0';
+        return;
+      }
+      const box = active.getBoundingClientRect();
+      const origin = navEl.getBoundingClientRect();
+      pill.style.opacity = '1';
+      pill.style.width = `${box.width}px`;
+      pill.style.transform = `translateX(${box.left - origin.left}px)`;
+    };
+    place();
+    // the first placement is instant; moves after that glide
+    requestAnimationFrame(() => pill.classList.add('ready'));
+    window.addEventListener('resize', place);
+    return () => window.removeEventListener('resize', place);
+  }, [pathname, waiting, nav.length]);
+
   return (
     <header className="topbar">
       <div className="topbar-in">
@@ -143,7 +169,8 @@ export function TopBar() {
             <span>ניהול ובקרה</span>
           </div>
         </Link>
-        <nav className={`tabs-nav${menuOpen ? ' open' : ''}`} aria-label="ניווט ראשי">
+        <nav ref={navRef} className={`tabs-nav${menuOpen ? ' open' : ''}`} aria-label="ניווט ראשי">
+          <span ref={indicatorRef} className="nav-indicator" aria-hidden="true" />
           {nav.map((entry) =>
             entry.kind === 'group' ? (
               <ManageMenu key={entry.id} group={entry} pathname={pathname} onNavigate={() => setMenuOpen(false)} />

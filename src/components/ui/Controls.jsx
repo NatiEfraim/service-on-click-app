@@ -1,7 +1,10 @@
 'use client';
 
-import { useRef } from 'react';
+import { useLayoutEffect, useRef } from 'react';
 import { Button } from './Button';
+
+/** The tab underline stops this far short of each side of the tab. */
+const TAB_LINE_INSET = 6;
 
 
 
@@ -37,8 +40,34 @@ export function Tabs({ tabs, value, onChange, label }) {
     refs.current.get(tabs[next].id)?.focus();
   };
 
+  // the underline is one element that glides to the selected tab
+  const listRef = useRef(null);
+  const lineRef = useRef(null);
+  const tabIds = tabs.map((tab) => tab.id).join('|');
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    const line = lineRef.current;
+    const selected = refs.current.get(value);
+    if (!list || !line) return;
+    const place = () => {
+      if (!selected) {
+        line.style.opacity = '0';
+        return;
+      }
+      line.style.opacity = '1';
+      line.style.width = `${selected.offsetWidth - 2 * TAB_LINE_INSET}px`;
+      line.style.transform = `translate(${selected.offsetLeft + TAB_LINE_INSET}px, ${selected.offsetTop + selected.offsetHeight - line.offsetHeight + 1}px)`;
+    };
+    place();
+    // the first placement is instant; moves after that glide
+    requestAnimationFrame(() => line.classList.add('ready'));
+    window.addEventListener('resize', place);
+    return () => window.removeEventListener('resize', place);
+  }, [value, tabIds]);
+
   return (
-    <div className="utabs" role="tablist" aria-label={label} onKeyDown={onKeyDown}>
+    <div ref={listRef} className="utabs" role="tablist" aria-label={label} onKeyDown={onKeyDown}>
+      <span ref={lineRef} className="utabs-line" aria-hidden="true" />
       {tabs.map((tab) => (
         <button
           key={tab.id}
