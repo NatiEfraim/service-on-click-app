@@ -43,6 +43,9 @@
 .fit-card > * { flex: none; }
 .fit-card > .fit-fill { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
 .fit-fill > .queue-scroll { flex: 1 1 auto; min-height: 0; }
+/* a fill inside a fill (e.g. a list plus its pager) passes the room on */
+.fit-fill > .fit-fill { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.fit-fill > .pager { flex: none; }
 /* clip: a decided row slides fully out without widening the page */
 .tickets { display: grid; overflow-x: clip; }
 .ticket {

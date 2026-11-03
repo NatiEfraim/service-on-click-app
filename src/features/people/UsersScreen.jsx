@@ -1,18 +1,22 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/Button';
-import { Pager, Seg } from '@/components/ui/Controls';
+import { Seg } from '@/components/ui/Controls';
+import { FadeIn } from '@/components/ui/FadeIn';
 import { EmptyState, ErrorNotice, Loading } from '@/components/ui/Feedback';
-import { SearchField } from '@/components/ui/SearchField';
 import { PageHead } from '@/components/ui/PageHead';
+import { SearchField } from '@/components/ui/SearchField';
+import { useSmoothHeight } from '@/components/ui/SmoothSize';
 import { useDebounced } from '@/lib/useDebounced';
+import { useFitToWindow } from '@/lib/useFitToWindow';
 import { useSession } from '@/providers/SessionProvider';
 import { NewUserDialog } from './NewUserDialog';
 import { PeopleTable } from './PeopleTable';
 import { PermissionsDialog } from './PermissionsDialog';
 import { PAGE_SIZE } from './people';
-import { usePeoplePage, useRoleHolders } from './queries';
+import { usePeopleInfinite, useRoleHolders } from './queries';
+import { LOAD_AHEAD_PX } from '@/features/queue/constants';
 import { matchesSearch, parseSearch } from './search';
 import './people.css';
 
@@ -31,15 +35,31 @@ export function UsersScreen() {
   const settledText = useDebounced(text, 300);
   const settled = useMemo(() => parseSearch(settledText), [settledText]);
 
-  // page is tied to one search; a new search restarts at 1 (derived, no reset effect)
-  const [paging, setPaging] = useState({ key: '', page: 1 });
-  const page = paging.key === settled.identifier ? paging.page : 1;
-
   const holders = useRoleHolders(tab === 'holders');
-  const everyone = usePeoplePage(settled.identifier, page, tab === 'all' && settled.kind !== 'invalid');
+  const everyone = usePeopleInfinite(settled.identifier, tab === 'all' && settled.kind !== 'invalid');
 
   const holderRows = useMemo(() => (holders.data ?? []).filter((person) => matchesSearch(person, typed)), [holders.data, typed]);
   const allRows = everyone.data ?? [];
+
+  // the card ends at the window's bottom (only the table scrolls) and glides to its new height on a tab switch or load
+  const card = useRef(null);
+  useFitToWindow(card);
+  const bodyState = tab === 'holders' ? (holders.isPending ? 'loading' : `holders:${holderRows.length}`) : everyone.isPending ? 'loading' : `all:${allRows.length ? 'rows' : 'empty'}`;
+  useSmoothHeight(card, `${tab}|${bodyState}`);
+
+  // all users: the next 20 load as the bottom of the table scrolls into view
+  const scroller = useRef(null);
+  const sentinel = useRef(null);
+  const { hasNextPage, isFetchingNextPage, fetchNextPage } = everyone;
+  useEffect(() => {
+    const el = sentinel.current;
+    if (tab !== 'all' || !el || !hasNextPage) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && !isFetchingNextPage) void fetchNextPage();
+    }, { root: scroller.current, rootMargin: `0px 0px ${LOAD_AHEAD_PX}px 0px` });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [tab, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const openPermissions = (row) => setPermissionsFor({ uuid: row.uuid, name: row.name, personalNumber: row.personalNumber, personalId: row.personalId });
 
@@ -47,7 +67,7 @@ export function UsersScreen() {
     ? 'שיבוץ תפקידים לפי תחום בכל היחידות, כולל מפקד מחנה. כל שינוי מחייב סיבה ונרשם בהיסטוריית השינויים.'
     : 'שיבוץ מפקד תחום וגורם מטפל בתחומים שאתה מפקד המחנה שלהם, למשתמשי היחידה שלך. כל שינוי מחייב סיבה ונרשם בהיסטוריית השינויים.';
 
-  const count = tab === 'holders' ? (holders.isSuccess ? `${holderRows.length} ${holderRows.length === 1 ? 'בעל תפקיד' : 'בעלי תפקידים'}` : '') : everyone.isSuccess ? `${allRows.length} משתמשים בעמוד` : '';
+  const count = tab === 'holders' ? (holders.isSuccess ? `${holderRows.length} ${holderRows.length === 1 ? 'בעל תפקיד' : 'בעלי תפקידים'}` : '') : everyone.isSuccess ? `${allRows.length}${hasNextPage ? '+' : ''} משתמשים` : '';
 
   return (
     <div className="narrow">
@@ -61,7 +81,7 @@ export function UsersScreen() {
         }
       />
 
-      <section className="card">
+      <section ref={card} className="card fit-card">
         <div className="toolbar">
           <Seg
             label="תצוגה"
@@ -79,6 +99,8 @@ export function UsersScreen() {
           </span>
         </div>
 
+        {/* the body fades in afresh on every tab switch (key) while the card glides to its new height */}
+        <FadeIn key={tab} className="fit-fill">
         {tab === 'holders' ? (
           holders.isPending ? (
             <div className="card-body">
@@ -89,7 +111,9 @@ export function UsersScreen() {
               <ErrorNotice error={holders.error} onRetry={() => void holders.refetch()} />
             </div>
           ) : holderRows.length ? (
-            <PeopleTable rows={holderRows} onOpen={openPermissions} />
+            <div className="queue-scroll">
+              <PeopleTable rows={holderRows} onOpen={openPermissions} />
+            </div>
           ) : text.trim() ? (
             <EmptyState title="לא נמצאו בעלי תפקידים">
               {typed.message ?? 'אפשר לחפש גם בכל המשתמשים.'}
@@ -115,13 +139,28 @@ export function UsersScreen() {
             <ErrorNotice error={everyone.error} onRetry={() => void everyone.refetch()} />
           </div>
         ) : (
-          <div style={{ opacity: everyone.isFetching ? 0.55 : 1, transition: 'opacity .15s' }}>
-            {allRows.length ? <PeopleTable rows={allRows} onOpen={openPermissions} /> : <EmptyState title="לא נמצאו משתמשים">{page > 1 ? 'זה סוף הרשימה.' : 'אפשר לנסות שם אחר או מספר אישי אחר.'}</EmptyState>}
-            {page > 1 || allRows.length >= PAGE_SIZE ? (
-              <Pager page={page} hasNext={allRows.length >= PAGE_SIZE} noun="משתמשים" onPage={(next) => setPaging({ key: settled.identifier, page: next })} />
-            ) : null}
+          // dimmed only while a new search replaces the list, not while the next 20 load at the bottom
+          <div className="fit-fill" style={{ opacity: everyone.isPlaceholderData ? 0.55 : 1, transition: 'opacity .15s' }}>
+            {allRows.length ? (
+              <div ref={scroller} className="queue-scroll">
+                <PeopleTable rows={allRows} onOpen={openPermissions} />
+                <div ref={sentinel} />
+                {isFetchingNextPage ? (
+                  <div className="card-body">
+                    <Loading rows={2} />
+                  </div>
+                ) : hasNextPage ? null : allRows.length > PAGE_SIZE ? (
+                  <div className="pager">
+                    <span>הוצגו כל {allRows.length} המשתמשים.</span>
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <EmptyState title="לא נמצאו משתמשים">אפשר לנסות שם אחר או מספר אישי אחר.</EmptyState>
+            )}
           </div>
         )}
+        </FadeIn>
       </section>
 
       {creating ? (

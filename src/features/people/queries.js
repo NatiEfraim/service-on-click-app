@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { peopleApi } from '@/lib/api/endpoints';
 import { keys } from '@/lib/api/keys';
 
@@ -27,14 +27,19 @@ export function useRoleHolders(enabled) {
 
 const toRows = (users) => users.map(personFromUser);
 
-/** One page (20) of `GET /users`, optionally narrowed by prefix. No total: a full page means more may exist. */
-export function usePeoplePage(identifier, page, enabled) {
-  return useQuery({
-    queryKey: keys.users(identifier, page),
+/**
+ * `GET /users` (optionally narrowed by prefix) for infinite scrolling, 20 at a time.
+ * No total from the server: a full page means more may exist, a short one is the end.
+ */
+export function usePeopleInfinite(identifier, enabled) {
+  return useInfiniteQuery({
+    queryKey: keys.users(identifier, 'infinite'),
     enabled,
-    queryFn: async ({ signal }) => (await peopleApi.users(identifier, page, signal)) ?? [],
+    queryFn: async ({ pageParam, signal }) => (await peopleApi.users(identifier, pageParam, signal)) ?? [],
+    initialPageParam: 1,
+    getNextPageParam: (last, pages) => (last.length >= PAGE_SIZE ? pages.length + 1 : undefined),
     placeholderData: (previous) => previous,
-    select: toRows,
+    select: (data) => toRows(data.pages.flat()),
   });
 }
 

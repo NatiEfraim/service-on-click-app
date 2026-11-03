@@ -18,6 +18,7 @@ import { bookingsApi, peopleApi } from '@/lib/api/endpoints';
 import { keys } from '@/lib/api/keys';
 import { STAGE_ORDER, STAGE_SHORT } from '@/lib/labels';
 import { CONTENT_FADE_MS, EASE_OUT, prefersReducedMotion } from '@/lib/motion';
+import { useFitToWindow } from '@/lib/useFitToWindow';
 import { useSession } from '@/providers/SessionProvider';
 import { advancedCount, DEFAULT_FILTERS, parseFilters, SORTS, toApiParams, toSearchParams } from './filters';
 
@@ -73,19 +74,7 @@ export function RequestsScreen() {
   const scroller = useRef(null);
   const sentinel = useRef(null);
   const hasRows = rows.length > 0;
-  useLayoutEffect(() => {
-    const el = card.current;
-    if (!el) return;
-    const page = el.closest('.page');
-    const fit = () => {
-      const top = el.getBoundingClientRect().top + window.scrollY;
-      const below = page ? parseFloat(getComputedStyle(page).paddingBottom) : 0;
-      el.style.maxHeight = `${Math.max(MIN_LIST_HEIGHT, window.innerHeight - top - below)}px`;
-    };
-    fit();
-    window.addEventListener('resize', fit);
-    return () => window.removeEventListener('resize', fit);
-  }, []);
+  useFitToWindow(card, MIN_LIST_HEIGHT);
   // the card glides from the skeleton's height to the list's (or the empty state's) instead of jumping
   useSmoothHeight(card, query.isPending ? 'loading' : hasRows ? 'rows' : 'empty');
   // the list fades in where the loading skeleton was (started from script so nothing in the cascade can skip it)
