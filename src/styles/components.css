@@ -19,7 +19,9 @@
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 8px 16px; border-radius: var(--r-sm);
   border: 1px solid var(--line); background: var(--surface); cursor: pointer; font-weight: 600; white-space: nowrap; color: var(--ink);
-  transition: transform 160ms var(--ease-out), background-color 150ms ease, opacity 200ms var(--ease-out);
+  transition: transform 160ms var(--ease-out), background-color 150ms ease, box-shadow 180ms var(--ease-out), opacity 200ms var(--ease-out);
+  /* the hover glow takes the button's own colour (set per variant below) */
+  --btn-glow: var(--accent);
 }
 /* a group that enters one item after the other (each child sets --i to its index); decorative, never blocks a click */
 /* `backwards`: hidden during its delay, then the animation lets go, so the item's own hover/press transitions keep working */
@@ -35,7 +37,6 @@
 .btn[aria-busy="true"] .spin-slot { width: 14px; margin-inline-end: 0; opacity: 1; }
 .btn .spin-slot .spin { flex: none; }
 /* press feedback: a slight give, so the click is felt */
-.btn:active:not([disabled]) { transform: scale(0.97); }
 .btn:hover { background: var(--hover); }
 .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
 .btn.primary:hover { background: var(--accent-hover); }
@@ -48,6 +49,19 @@
 .btn.sm { padding: 5px 11px; font-size: 13.5px; }
 .btn.icon { padding: 6px; }
 .btn[disabled] { opacity: .45; cursor: not-allowed; }
+.btn.danger, .btn.danger.solid { --btn-glow: var(--bad); }
+.btn.hold { --btn-glow: var(--hold); }
+/* hover: the button grows a touch and gets a soft glow in its colour (a mouse only; buttons are passed tens of times a day,
+   so it stays subtle and quick) */
+@media (hover: hover) and (pointer: fine) {
+  .btn:not([disabled]):hover {
+    transform: scale(1.03);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--btn-glow) 16%, transparent), 0 6px 14px -8px color-mix(in srgb, var(--btn-glow) 70%, transparent);
+  }
+  .btn.ghost:not([disabled]):hover { box-shadow: none; }
+}
+/* pressing still gives way, also while hovered (this comes after the hover rule on purpose) */
+.btn:not([disabled]):active { transform: scale(0.97); }
 .btn .spin, .spin { width: 14px; height: 14px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; animation: spin .7s linear infinite; display: inline-block; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .spin-slow { animation: spin 1.4s linear infinite; width: 26px; height: 26px; }

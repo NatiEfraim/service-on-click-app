@@ -14,6 +14,7 @@ import { useSession } from '@/providers/SessionProvider';
 import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
 import { usePresence } from '@/components/ui/usePresence';
+import { MENU_HOVER_CLOSE_MS } from '@/lib/motion';
 import { GlobalSearch } from './GlobalSearch';
 import { Logo } from './Logo';
 
@@ -38,14 +39,35 @@ function useDismiss(open, close) {
   return ref;
 }
 
+/**
+ * A mouse opens a dropdown by resting on it; leaving closes it after a short grace, so a slightly wobbly path to an item
+ * (or out and straight back) does not shut it. Click and keyboard still toggle it. Spread the result on the dropdown's wrapper.
+ */
+function useHoverOpen(setOpen) {
+  const leaveTimer = useRef(null);
+  useEffect(() => () => window.clearTimeout(leaveTimer.current), []);
+  const hoverable = () => window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  return {
+    onMouseEnter: () => {
+      window.clearTimeout(leaveTimer.current);
+      if (hoverable()) setOpen(true);
+    },
+    onMouseLeave: () => {
+      if (!hoverable()) return;
+      leaveTimer.current = window.setTimeout(() => setOpen(false), MENU_HOVER_CLOSE_MS);
+    },
+  };
+}
+
 function ManageMenu({ group, pathname, onNavigate }) {
   const [open, setOpen] = useState(false);
   const ref = useDismiss(open, () => setOpen(false));
+  const hover = useHoverOpen(setOpen);
   const presence = usePresence(open);
   const current = group.items.some((item) => isActivePath(pathname, item.href, item.also));
 
   return (
-    <div className={`dd${current ? ' current' : ''}`} ref={ref}>
+    <div className={`dd${current ? ' current' : ''}`} ref={ref} {...hover}>
       <button type="button" aria-haspopup="true" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
         {group.label}
         <Icon name="down" />
@@ -78,6 +100,7 @@ function UserMenu() {
   const { me, unitName, signOut } = useSession();
   const [open, setOpen] = useState(false);
   const ref = useDismiss(open, () => setOpen(false));
+  const hover = useHoverOpen(setOpen);
   const presence = usePresence(open);
 
   const name = me.user.full_name ?? me.user.personal_number;
@@ -89,7 +112,7 @@ function UserMenu() {
         .join(', ');
 
   return (
-    <div className="dd" ref={ref}>
+    <div className="dd" ref={ref} {...hover}>
       <button type="button" className="userbtn" aria-haspopup="true" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
         <span className="avatar">{initials(name)}</span>
         <span className="nm">

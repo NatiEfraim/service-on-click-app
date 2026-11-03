@@ -78,6 +78,6 @@ body { direction: rtl; }
   .modal, .drawer, .menu, .dcard, .chart-fade, .ticket-stamp .ico, .toast-rise-in, .stagger > * { animation-name: fade !important; }
   .menu[data-closing] { animation-name: toast-fade-out !important; }
   /* pressing, lifting and the loading shimmer stand still */
-  .btn:active, .dtile:hover, .dtile:active { transform: none !important; }
+  .btn:hover, .btn:active, .dtile:hover, .dtile:active { transform: none !important; }
   .skel { animation: none !important; }
 }

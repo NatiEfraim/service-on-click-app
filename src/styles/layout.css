@@ -52,6 +52,8 @@
   /* grows out of its button: the top corner on the button's side */
   transform-origin: top right; animation: menu-in 180ms var(--ease-out);
 }
+/* an invisible bridge over the 10px gap, so a mouse moving from the button to the menu never "leaves" it */
+.dd > .menu::before { content: ""; position: absolute; inset-inline: 0; top: -12px; height: 12px; }
 .menu.end { inset-inline-start: auto; inset-inline-end: 0; transform-origin: top left; }
 /* closing: fades back toward the button (usePresence keeps it mounted for MENU_EXIT_MS) */
 .menu[data-closing] { animation: menu-out 150ms var(--ease-out) forwards; pointer-events: none; }
