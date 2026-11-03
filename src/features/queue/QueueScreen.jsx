@@ -55,11 +55,11 @@ export function QueueScreen() {
   const current = query.isSuccess && !filtered && !query.isPlaceholderData ? (total ? `${total} קריאות נמצאות עכשיו בשלב שלך.` : 'אין כרגע קריאות שממתינות לטיפול שלך.') : '';
   if (current && current !== summary) setSummary(current);
 
-  // stage buttons: every stage seen so far, kept while a filter narrows the list
+  // stage buttons: the handler stage always, plus every stage seen so far, kept while a filter narrows the list
   const [seenStages, setSeenStages] = useState([]);
   const fresh = rows.map((row) => row.stage).filter((id) => !seenStages.includes(id));
   if (fresh.length) setSeenStages([...seenStages, ...new Set(fresh)]);
-  const stages = STAGE_ORDER.filter((id) => seenStages.includes(id) || id === stage);
+  const stages = STAGE_ORDER.filter((id) => id === 'vice_approver' || seenStages.includes(id) || id === stage);
 
   // the next 25 load as the bottom of the list scrolls into view
   const scroller = useRef(null);
