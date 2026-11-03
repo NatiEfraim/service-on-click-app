@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createContext, useCallback, useContext, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
+import { RequesterHome } from '@/features/requester/RequesterHome';
 import { ApiError, setUnauthorizedHandler } from '@/lib/api/client';
 import { authApi, startupApi } from '@/lib/api/endpoints';
 import { keys } from '@/lib/api/keys';
@@ -103,7 +104,7 @@ export function SessionProvider({ children }) {
 
   if (error) {
     const denied = error instanceof ApiError && error.denied;
-    return (
+    const card = (
       <FullPage>
         <div className="login-card" role="alert">
           <div className="login-brand">
@@ -135,6 +136,8 @@ export function SessionProvider({ children }) {
         </div>
       </FullPage>
     );
+    // no management role: a plain user sees the bookings they opened; the card stays for anyone the API does not know
+    return denied ? <RequesterHome onSignOut={signOut} fallback={card} /> : card;
   }
 
   return (

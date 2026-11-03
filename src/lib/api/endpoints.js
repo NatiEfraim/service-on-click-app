@@ -19,6 +19,22 @@ export const authApi = {
   },
 };
 
+/** Statuses of a closed booking (mirror the API's StatusBookingEnum::isTerminal); every other status is open. */
+export const CLOSED_STATUS_IDS = [4, 5, 6, 7, 12, 13];
+export const OPEN_STATUS_IDS = [1, 2, 3, 8, 9, 10, 11, 14, 15, 16, 17, 18];
+
+/** A plain user (no management role): the requester endpoints the mobile app uses. */
+export const requesterApi = {
+  /** The signed-in user (`full_name`, `personal_number`, ...). */
+  user: (signal) => getData('/user', undefined, signal),
+  /** The user's own bookings, 20 a page, newest first; `statusIds` narrows them (sent as status_id[]). */
+  myBookings: async (page, statusIds, signal) => {
+    // axios writes an array as status_id[]=1&status_id[]=2, which the API reads (cleanParams would join it)
+    const response = await http.get('/bookings/my-bookings', { params: { page, status_id: statusIds?.length ? statusIds : undefined }, signal });
+    return response.data;
+  },
+};
+
 export const startupApi = {
   me: (signal) => getData(`${APPROVER}/me`, undefined, signal),
   catalog: (signal) => getData(`${APPROVER}/catalog`, undefined, signal),

@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>החלפת תפקידים · בדיקות</title>
+<style>
+  :root {
+    --bg: #F3F1EC; --surface: #fff; --surface-2: #F8F7F3; --line: #E2E0D3; --line-2: #ECEAE2;
+    --ink: #2B2433; --mute: #5F566A; --accent: #3D314A; --accent-wash: #EFEBF2; --ok: #127A38; --bad: #C0392B;
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 "Assistant", "Segoe UI", Arial, sans-serif; }
+  header { background: var(--accent); color: #fff; padding: 16px 28px; display: flex; align-items: center; gap: 16px; }
+  header h1 { margin: 0; font-size: 19px; }
+  header p { margin: 0; opacity: .8; font-size: 13.5px; }
+  main { max-width: 1200px; margin: 24px auto; padding: 0 20px; }
+  .bar { display: flex; gap: 12px; align-items: center; margin-bottom: 14px; }
+  input[type="search"] { flex: 0 0 300px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; font: inherit; background: var(--surface); }
+  .bar .grow { flex: 1; }
+  .muted { color: var(--mute); font-size: 13.5px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  th { background: var(--surface-2); text-align: start; font-size: 13px; color: var(--mute); font-weight: 600; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+  td { padding: 10px 14px; border-bottom: 1px solid var(--line-2); vertical-align: middle; }
+  tr:last-child td { border-bottom: 0; }
+  tr.dirty td { background: var(--accent-wash); }
+  .name b { display: block; }
+  .name span { font-family: ui-monospace, Consolas, monospace; font-size: 13px; color: var(--mute); }
+  select { padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; font: inherit; background: var(--surface); }
+  .types { display: flex; flex-wrap: wrap; gap: 6px; }
+  .types label { display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px; border: 1px solid var(--line); border-radius: 999px; font-size: 13px; cursor: pointer; user-select: none; transition: background-color 150ms ease, border-color 150ms ease; }
+  .types label:has(input:checked) { background: var(--accent-wash); border-color: var(--accent); }
+  .types input { margin: 0; accent-color: var(--accent); }
+  .types.off { opacity: .45; pointer-events: none; }
+  button { font: inherit; font-weight: 600; padding: 7px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; transition: transform 160ms var(--ease-out), background-color 150ms ease; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button:active:not([disabled]) { transform: scale(0.97); }
+  button[disabled] { opacity: .45; cursor: not-allowed; }
+  .toast { position: fixed; bottom: 20px; left: 20px; padding: 11px 16px; border-radius: 10px; color: #fff; font-size: 14px; opacity: 0; transform: translateY(12px); transition: opacity 220ms var(--ease-out), transform 220ms var(--ease-out); pointer-events: none; max-width: 520px; }
+  .toast.show { opacity: 1; transform: none; }
+  .toast.ok { background: var(--ok); } .toast.bad { background: var(--bad); }
+  .empty { padding: 40px; text-align: center; color: var(--mute); }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>החלפת תפקידים</h1>
+    <p>כלי בדיקות מקומי: משנה תפקיד ותחומים של משתמש דרך <code>php artisan users:permissions</code>. אחרי שמירה: להתנתק ולהתחבר שוב באפליקציה.</p>
+  </div>
+</header>
+<main>
+  <div class="bar">
+    <input id="q" type="search" placeholder="חיפוש לפי שם או מספר אישי" autocomplete="off" />
+    <span class="grow"></span>
+    <span id="count" class="muted"></span>
+    <button id="reload">רענון</button>
+  </div>
+  <div class="card">
+    <table>
+      <thead><tr><th>משתמש</th><th style="width:190px">תפקיד</th><th>תחומים</th><th style="width:96px"></th></tr></thead>
+      <tbody id="rows"><tr><td colspan="4" class="empty">טוען…</td></tr></tbody>
+    </table>
+  </div>
+</main>
+<div id="toast" class="toast" role="status"></div>
+<script>
+  const state = { users: [], roles: [], types: [] };
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+  let toastTimer;
+  function toast(text, kind) {
+    const el = $('toast');
+    el.textContent = text;
+    el.className = `toast ${kind} show`;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => (el.className = `toast ${kind}`), 3500);
+  }
+
+  async function load() {
+    $('rows').innerHTML = '<tr><td colspan="4" class="empty">טוען…</td></tr>';
+    try {
+      const res = await fetch('/api/state');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      state.users = data.users.filter((u) => u.personal_number); // the command finds users by personal number
+      state.roles = data.roles;
+      state.types = data.booking_types;
+      render();
+    } catch (error) {
+      $('rows').innerHTML = `<tr><td colspan="4" class="empty">לא ניתן לטעון: ${esc(error.message)}</td></tr>`;
+    }
+  }
+
+  function render() {
+    const q = $('q').value.trim();
+    const shown = state.users.filter((u) => !q || (u.full_name ?? '').includes(q) || u.personal_number.startsWith(q));
+    $('count').textContent = `${shown.length} משתמשים`;
+    $('rows').innerHTML = shown.length
+      ? shown.map((u) => `
+        <tr data-pn="${esc(u.personal_number)}">
+          <td class="name"><b>${esc(u.full_name ?? 'ללא שם')}</b><span>${esc(u.personal_number)}</span></td>
+          <td><select>${['', ...state.roles.map((r) => r.name)].map((name) => {
+            const label = name ? state.roles.find((r) => r.name === name).label : 'ללא תפקיד';
+            return `<option value="${esc(name)}" ${name === (u.role ?? '') ? 'selected' : ''} ${name ? '' : 'disabled'}>${esc(label)}</option>`;
+          }).join('')}</select></td>
+          <td><div class="types ${u.role === 'super_admin' ? 'off' : ''}">${state.types.map((t) => `
+            <label><input type="checkbox" value="${t.id}" ${u.types.includes(t.id) ? 'checked' : ''} />${esc(t.name)}</label>`).join('')}</div></td>
+          <td><button class="primary" disabled>שמירה</button></td>
+        </tr>`).join('')
+      : '<tr><td colspan="4" class="empty">לא נמצאו משתמשים</td></tr>';
+  }
+
+  // a row turns "dirty" (tinted, save enabled) once its role or types differ from what is saved
+  $('rows').addEventListener('change', (event) => {
+    const row = event.target.closest('tr');
+    if (!row) return;
+    const user = state.users.find((u) => u.personal_number === row.dataset.pn);
+    const role = row.querySelector('select').value;
+    row.querySelector('.types').classList.toggle('off', role === 'super_admin');
+    const types = [...row.querySelectorAll('.types input:checked')].map((i) => Number(i.value));
+    const dirty = role !== user.role || types.join() !== user.types.join();
+    row.classList.toggle('dirty', dirty);
+    row.querySelector('button').disabled = !dirty;
+  });
+
+  $('rows').addEventListener('click', async (event) => {
+    const button = event.target.closest('button');
+    if (!button) return;
+    const row = button.closest('tr');
+    const body = {
+      personal_number: row.dataset.pn,
+      role: row.querySelector('select').value,
+      types: [...row.querySelectorAll('.types input:checked')].map((i) => Number(i.value)),
+    };
+    button.disabled = true;
+    button.textContent = 'שומר…';
+    try {
+      const res = await fetch('/api/set', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const saved = await res.json();
+      if (!res.ok) throw new Error(saved.error);
+      Object.assign(state.users.find((u) => u.personal_number === saved.personal_number), saved);
+      const label = state.roles.find((r) => r.name === saved.role)?.label ?? saved.role;
+      toast(`נשמר: ${saved.full_name ?? saved.personal_number} הוא עכשיו ${label}. להתנתק ולהתחבר שוב באפליקציה.`, 'ok');
+      render();
+    } catch (error) {
+      toast(`השמירה נכשלה: ${error.message}`, 'bad');
+      button.disabled = false;
+      button.textContent = 'שמירה';
+    }
+  });
+
+  $('q').addEventListener('input', render);
+  $('reload').addEventListener('click', load);
+  load();
+</script>
+</body>
+</html>
