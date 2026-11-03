@@ -3,6 +3,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
+import { DatePicker } from '@/components/ui/DateRangePicker';
 import { FormError } from '@/components/ui/Feedback';
 import { Field } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
@@ -23,6 +24,7 @@ export function EditValuesDialog({ booking, onClose }) {
     booking.editable_fields.map((field) => [field.form_field_id, editableInitialValue(booking.booking_values, field.form_field_id, field.field_type_id === FIELD_TYPE_TIME ? 'time' : 'date')]),
   );
   const [values, setValues] = useState(initial);
+  const [todayIso] = useState(() => new Date().toLocaleDateString('sv-SE')); // 'YYYY-MM-DD' in local time
   const [reason, setReason] = useState('');
   const [error, setError] = useState('');
 
@@ -79,17 +81,32 @@ export function EditValuesDialog({ booking, onClose }) {
       <p className="muted" style={{ margin: 0 }}>
         ניתן לעדכן שדות תאריך ושעה עד האישור הסופי. העדכון נשלח גם לאפליקציה.
       </p>
-      {booking.editable_fields.map((field) => (
-        <label key={field.form_field_id} className="field">
-          <span>{field.field_display_name}</span>
-          <input
-            className="input"
-            type={field.field_type_id === FIELD_TYPE_TIME ? 'time' : 'date'}
-            value={values[field.form_field_id] ?? ''}
-            onChange={(event) => setValues((current) => ({ ...current, [field.form_field_id]: event.target.value }))}
-          />
-        </label>
-      ))}
+      {booking.editable_fields.map((field) =>
+        field.field_type_id === FIELD_TYPE_TIME ? (
+          <label key={field.form_field_id} className="field">
+            <span>{field.field_display_name}</span>
+            <input
+              className="input"
+              type="time"
+              value={values[field.form_field_id] ?? ''}
+              onChange={(event) => setValues((current) => ({ ...current, [field.form_field_id]: event.target.value }))}
+            />
+          </label>
+        ) : (
+          // a div, not a <label>: a click on the open calendar must not be forwarded to its button
+          <div key={field.form_field_id} className="field">
+            <span>{field.field_display_name}</span>
+            <DatePicker
+              label=""
+              clearable={false}
+              // the API refuses a date that already passed
+              min={todayIso}
+              value={values[field.form_field_id] ?? ''}
+              onChange={(day) => setValues((current) => ({ ...current, [field.form_field_id]: day }))}
+            />
+          </div>
+        ),
+      )}
       <Field label="סיבת העדכון (רשות)">
         <input className="input" maxLength={200} value={reason} onChange={(event) => setReason(event.target.value)} />
       </Field>

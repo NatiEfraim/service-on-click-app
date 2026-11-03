@@ -9,6 +9,7 @@ import { Seg } from '@/components/ui/Controls';
 import { LOAD_AHEAD_PX, MIN_LIST_HEIGHT, PAGE_SIZE } from '@/features/queue/constants';
 
 import { EmptyState, ErrorNotice, Loading } from '@/components/ui/Feedback';
+import { DateRangePicker } from '@/components/ui/DateRangePicker';
 import { Field } from '@/components/ui/Field';
 import { PageHead } from '@/components/ui/PageHead';
 import { SearchField } from '@/components/ui/SearchField';
@@ -205,12 +206,11 @@ export function RequestsScreen() {
                 </select>
               </Field>
             ) : null}
-            <Field label="נפתחה מ-">
-              <input className="input" type="date" value={filters.from} onChange={(event) => update({ from: event.target.value })} />
-            </Field>
-            <Field label="עד">
-              <input className="input" type="date" value={filters.to} onChange={(event) => update({ to: event.target.value })} />
-            </Field>
+            {/* a div, not Field's <label>: a click on the open calendar must not be forwarded to its button */}
+            <div className="field">
+              <span>תאריך פתיחה</span>
+              <DateRangePicker label="" value={{ from: filters.from, to: filters.to }} onChange={(range) => update({ from: range.from, to: range.to })} />
+            </div>
           </div>
         </div>
 

@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Icon } from './Icon';
 import { usePresence } from './usePresence';
 
@@ -18,6 +19,8 @@ const show = (iso) => {
 const addDays = (date, days) => new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
 
 const MONTH = new Intl.DateTimeFormat('he', { month: 'long', year: 'numeric' });
+/** Matches .drp-pop's width in components.css (used to keep the calendar inside the window). */
+const CALENDAR_WIDTH = 296;
 /** Sunday first, as in Israel. */
 const WEEKDAYS = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
 
@@ -38,11 +41,17 @@ function monthGrid(month) {
   return Array.from({ length: 42 }, (_, i) => addDays(start, i));
 }
 
+/** One day: the same calendar, a click picks the day and closes. `value` / `onChange` are a 'YYYY-MM-DD' string ('' = none). */
+export function DatePicker({ value, onChange, label = 'תאריך', placeholder = 'בחירת תאריך', clearable = true, min, max }) {
+  return <DateRangePicker single value={{ from: value, to: value }} onChange={(range) => onChange(range.from)} label={label} placeholder={placeholder} clearable={clearable} min={min} max={max} />;
+}
+
 /**
  * A from-to date picker: a button showing the range opens a Hebrew month calendar (pick the start, then the end) with
  * quick ranges. `value` / `onChange` use { from, to } as 'YYYY-MM-DD' strings ('' = open-ended).
+ * `single` (use DatePicker) picks one day instead; `min` / `max` ('YYYY-MM-DD') disable the days outside them.
  */
-export function DateRangePicker({ value, onChange, label = 'תאריך' }) {
+export function DateRangePicker({ value, onChange, label = 'תאריך', placeholder = 'כל התאריכים', single = false, clearable = true, min, max }) {
   const { from, to } = value;
   const [open, setOpen] = useState(false);
   const presence = usePresence(open);
@@ -51,10 +60,17 @@ export function DateRangePicker({ value, onChange, label = 'תאריך' }) {
   const [hover, setHover] = useState(null);
   const [month, setMonth] = useState(() => (from ? fromIso(from) : new Date()));
   const ref = useRef(null);
+  const popRef = useRef(null);
+  // the calendar renders in <body> (so no clipping container can hide it) and is placed under its button
+  const [place, setPlace] = useState(null);
 
   useEffect(() => {
     if (!open) return;
-    const onPointer = (event) => ref.current && !ref.current.contains(event.target) && setOpen(false);
+    // outside = neither the button area nor the calendar (which lives elsewhere in the page)
+    const onPointer = (event) => {
+      if (ref.current?.contains(event.target) || popRef.current?.contains(event.target)) return;
+      setOpen(false);
+    };
     const onKey = (event) => event.key === 'Escape' && setOpen(false);
     document.addEventListener('mousedown', onPointer);
     document.addEventListener('keydown', onKey);
@@ -63,6 +79,24 @@ export function DateRangePicker({ value, onChange, label = 'תאריך' }) {
       document.removeEventListener('keydown', onKey);
     };
   }, [open]);
+
+  useLayoutEffect(() => {
+    if (!presence.mounted) return;
+    const measure = () => {
+      const box = ref.current?.getBoundingClientRect();
+      if (!box) return;
+      // the calendar's right edge on the button's right edge (rtl start), kept inside the window
+      const right = Math.max(8, window.innerWidth - box.right);
+      setPlace({ top: box.bottom + 8, right: Math.min(right, window.innerWidth - CALENDAR_WIDTH - 8) });
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    window.addEventListener('scroll', measure, true);
+    return () => {
+      window.removeEventListener('resize', measure);
+      window.removeEventListener('scroll', measure, true);
+    };
+  }, [presence.mounted]);
 
   const toggle = () => {
     if (!open) {
@@ -73,6 +107,11 @@ export function DateRangePicker({ value, onChange, label = 'תאריך' }) {
   };
 
   const pickDay = (iso) => {
+    if (single) {
+      onChange({ from: iso, to: iso });
+      setOpen(false);
+      return;
+    }
     if (!draftStart) {
       setDraftStart(iso);
       return;
@@ -89,23 +128,32 @@ export function DateRangePicker({ value, onChange, label = 'תאריך' }) {
   const rangeTo = draftStart ? (hover && hover > draftStart ? hover : draftStart) : to;
   const todayIso = toIso(new Date());
 
-  const text = from && to ? (from === to ? show(from) : `${show(from)} – ${show(to)}`) : from ? `מ-${show(from)}` : to ? `עד ${show(to)}` : 'כל התאריכים';
+  const text = from && to ? (from === to ? show(from) : `${show(from)} – ${show(to)}`) : from ? `מ-${show(from)}` : to ? `עד ${show(to)}` : placeholder;
+  const outside = (iso) => (min && iso < min) || (max && iso > max);
 
   return (
     <div className="drp" ref={ref}>
       <button type="button" className={`drp-btn${from || to ? ' set' : ''}`} aria-haspopup="dialog" aria-expanded={open} onClick={toggle}>
         <Icon name="calendar" />
-        <span className="drp-label">{label}:</span>
+        {label ? <span className="drp-label">{label}:</span> : null}
         <span>{text}</span>
       </button>
-      {from || to ? (
+      {clearable && (from || to) ? (
         <button type="button" className="drp-clear" aria-label="ניקוי התאריכים" title="ניקוי" onClick={() => onChange({ from: '', to: '' })}>
           <Icon name="x" />
         </button>
       ) : null}
 
-      {presence.mounted ? (
-        <div className="menu drp-pop" role="dialog" aria-label={`בחירת ${label}`} data-closing={presence.closing || undefined}>
+      {presence.mounted && place ? createPortal(
+        <div
+          ref={popRef}
+          className="menu drp-pop"
+          role="dialog"
+          aria-label={label ? `בחירת ${label}` : 'בחירת תאריך'}
+          data-closing={presence.closing || undefined}
+          style={{ position: 'fixed', top: place.top, right: place.right, left: 'auto' }}
+        >
+          {single ? null : (
           <div className="drp-presets">
             {presets().map((preset) => (
               <button
@@ -121,6 +169,7 @@ export function DateRangePicker({ value, onChange, label = 'תאריך' }) {
               </button>
             ))}
           </div>
+          )}
           <div className="drp-head">
             <button type="button" className="drp-nav" aria-label="החודש הקודם" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}>
               <Icon name="right" />
@@ -147,6 +196,7 @@ export function DateRangePicker({ value, onChange, label = 'תאריך' }) {
                   className={['drp-day', date.getMonth() !== month.getMonth() ? 'out' : '', inRange ? 'in' : '', edge ? 'edge' : '', iso === todayIso ? 'today' : ''].filter(Boolean).join(' ')}
                   aria-label={show(iso)}
                   aria-pressed={edge || undefined}
+                  disabled={outside(iso) || undefined}
                   onMouseEnter={() => setHover(iso)}
                   onClick={() => pickDay(iso)}
                 >
@@ -155,8 +205,9 @@ export function DateRangePicker({ value, onChange, label = 'תאריך' }) {
               );
             })}
           </div>
-          <p className="drp-hint">{draftStart ? `מ-${show(draftStart)}: בחרו את תאריך הסיום` : 'בחרו תאריך התחלה ואז תאריך סיום'}</p>
-        </div>
+          {single ? null : <p className="drp-hint">{draftStart ? `מ-${show(draftStart)}: בחרו את תאריך הסיום` : 'בחרו תאריך התחלה ואז תאריך סיום'}</p>}
+        </div>,
+        document.body,
       ) : null}
     </div>
   );

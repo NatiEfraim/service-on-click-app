@@ -40,7 +40,8 @@
 .drp-clear { all: unset; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; cursor: pointer; color: var(--mute); }
 .drp-clear:hover { background: var(--hover); color: var(--ink); }
 .drp-clear .ico { width: 15px; height: 15px; }
-.drp-pop { width: 296px; padding: 12px; inset-inline-start: 0; top: calc(100% + 8px); }
+/* rendered in <body> and placed under its button (DateRangePicker); above dialogs, since a dialog may hold a picker */
+.drp-pop { width: 296px; padding: 12px; z-index: 80; }
 .drp-presets { display: flex; gap: 6px; flex-wrap: wrap; padding-bottom: 10px; margin-bottom: 8px; border-bottom: 1px solid var(--line-2); }
 .drp-presets button {
   border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 4px 10px; font-size: 13px; cursor: pointer; color: var(--ink);
@@ -57,6 +58,10 @@
 .drp-day { all: unset; text-align: center; height: 34px; line-height: 34px; font-size: 14px; cursor: pointer; border-radius: 8px; color: var(--ink); transition: background-color 120ms ease; }
 .drp-day:hover { background: var(--hover); }
 .drp-day.out { color: var(--mute); opacity: .5; }
+.drp-day[disabled] { color: var(--mute); opacity: .3; cursor: not-allowed; background: none; }
+/* a picker standing in for a form field fills its width like the other inputs */
+.field .drp, .field .drp-btn { width: 100%; }
+.field .drp-btn { justify-content: flex-start; padding-block: 8px; }
 .drp-day.today { box-shadow: inset 0 0 0 1px var(--accent-mid); }
 /* the range: a band between the ends, the ends filled */
 .drp-day.in { background: var(--accent-wash); border-radius: 0; }

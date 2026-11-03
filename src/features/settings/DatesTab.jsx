@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chips';
 import { EmptyState, FormError, Notice } from '@/components/ui/Feedback';
-import { Field } from '@/components/ui/Field';
+import { DatePicker } from '@/components/ui/DateRangePicker';
 import { Icon } from '@/components/ui/Icon';
 import { settingsApi } from '@/lib/api/endpoints';
 import { invalidateWork } from '@/lib/api/keys';
@@ -146,23 +146,18 @@ export function DatesTab({ unitId, bookingTypeId, settings, ownUnit, ownUnitId, 
       </div>
       {ownUnit ? (
         <div className="st-add-row">
-          <Field label="הוספת תאריך">
-            <input
-              className="input"
-              type="date"
+          {/* a div, not Field's <label>: a click on the open calendar must not be forwarded to its button */}
+          <div className="field">
+            <span>הוספת תאריך</span>
+            <DatePicker
+              label=""
               value={newDay}
-              onChange={(event) => {
-                setNewDay(event.target.value);
+              onChange={(day) => {
+                setNewDay(day);
                 setError('');
               }}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') {
-                  event.preventDefault();
-                  add();
-                }
-              }}
             />
-          </Field>
+          </div>
           <Button onClick={add}>הוספה</Button>
           <span style={{ flex: 1 }} />
           <Button onClick={() => setDraft(saved)} disabled={!dirty || save.isPending}>
