@@ -47,7 +47,8 @@ export const bookingsApi = {
 
 export const insightsApi = {
   overview: (signal) => getData(`${APPROVER}/overview`, undefined, signal),
-  home: (signal) => getData(`${APPROVER}/home`, undefined, signal),
+  /** System admin and camp commander only (the route lives under the admin prefix on the API). */
+  home: (signal) => getData(`${ADMIN}/home`, undefined, signal),
   domainDashboard: (params, signal) => getData(`${APPROVER}/domain-dashboard`, params, signal),
   bottlenecks: (params, signal) => getData(`${APPROVER}/bottlenecks`, params, signal),
   reports: (params, signal) => getData(`${ADMIN}/reports`, params, signal),

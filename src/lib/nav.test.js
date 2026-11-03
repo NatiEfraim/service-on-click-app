@@ -74,7 +74,8 @@ describe('homeKind', () => {
     expect(homeKind(makeMe({ is_admin: true, caps: ['dashboard.view'], dashboard_booking_types: [1, 2] }))).toBe('tiles');
     expect(homeKind(makeMe({ is_super_admin: true, caps: ['dashboard.view'], dashboard_booking_types: [1, 2] }))).toBe('tiles');
     expect(homeKind(makeMe({ caps: ['dashboard.view'], permissions: ['approver_1'] }))).toBe('dashboard');
-    expect(homeKind(makeMe({ caps: ['dashboard.view'], permissions: ['approver_1', 'approver_2'], dashboard_booking_types: [1, 2] }))).toBe('tiles');
+    // the tiles' endpoint is admin-only on the API: a domain commander of several domains gets the combined dashboard
+    expect(homeKind(makeMe({ caps: ['dashboard.view'], permissions: ['approver_1', 'approver_2'], dashboard_booking_types: [1, 2] }))).toBe('dashboard');
     expect(homeKind(makeMe({ is_admin: true, caps: ['dashboard.view'], dashboard_booking_types: [3] }))).toBe('dashboard');
     expect(homeKind(makeMe({ permissions: ['vice_approver_1'] }))).toBe('queue');
     expect(homeKind(makeMe())).toBe('requests');

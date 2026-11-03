@@ -164,10 +164,12 @@ export function DomainDashboard() {
         )}
       </Card>
 
-      {/* open bookings by status */}
-      <Card spaced title="קריאות פתוחות לפי סטטוס" hint="לחיצה על סטטוס מציגה את הקריאות בו">
-        <StatusBars counts={data.open_by_status ?? {}} onStatus={(id) => router.push(`/requests?view=open&statuses=${id}${typesParam}`)} />
-      </Card>
+      {/* open bookings by status: only when the API sends `open_by_status` (not on dev-nati yet) */}
+      {data.open_by_status ? (
+        <Card spaced title="קריאות פתוחות לפי סטטוס" hint="לחיצה על סטטוס מציגה את הקריאות בו">
+          <StatusBars counts={data.open_by_status} onStatus={(id) => router.push(`/requests?view=open&statuses=${id}${typesParam}`)} />
+        </Card>
+      ) : null}
 
       <SmoothSize>{full ? <FullAnalysis data={data} ordered={ordered} pct={pct} goIds={goIds} /> : null}</SmoothSize>
 
