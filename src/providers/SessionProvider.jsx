@@ -3,7 +3,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createContext, useCallback, useContext, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/Button';
-import { Icon } from '@/components/ui/Icon';
+import { StartupLoading } from '@/components/ui/StartupLoading';
 import { RequesterHome } from '@/features/requester/RequesterHome';
 import { ApiError, setUnauthorizedHandler } from '@/lib/api/client';
 import { authApi, startupApi } from '@/lib/api/endpoints';
@@ -140,12 +140,5 @@ export function SessionProvider({ children }) {
     return denied ? <RequesterHome onSignOut={signOut} fallback={card} /> : card;
   }
 
-  return (
-    <FullPage>
-      <div role="status" aria-label="טוען" style={{ display: 'grid', justifyItems: 'center', gap: 12, color: 'var(--mute)' }}>
-        <Icon name="sync" className="spin-slow" />
-        <span>טוען…</span>
-      </div>
-    </FullPage>
-  );
+  return <StartupLoading />;
 }

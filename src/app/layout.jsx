@@ -12,6 +12,10 @@ export const metadata = {
   title: { default: 'שירות בקליק · ניהול ובקרה', template: '%s · שירות בקליק' },
   description: 'מערכת ניהול ובקרה של שירות בקליק: קריאות, אישורים, תחומי שירות והרשאות.',
   robots: { index: false, follow: false },
+  icons: {
+    icon: { url: '/srvonclick_favicon.ico?v=2ecba7fc59', type: 'image/x-icon' },
+    shortcut: '/srvonclick_favicon.ico?v=2ecba7fc59',
+  },
 };
 
 export const viewport = {
