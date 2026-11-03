@@ -1,8 +1,10 @@
 'use client';
 
 import { useInfiniteQuery } from '@tanstack/react-query';
+import { useSearchParams } from 'next/navigation';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Ticket } from '@/components/booking/Ticket';
+import { DateRangePicker } from '@/components/ui/DateRangePicker';
 import { Seg } from '@/components/ui/Controls';
 import { EmptyState, ErrorNotice, Loading } from '@/components/ui/Feedback';
 import { PageHead } from '@/components/ui/PageHead';
@@ -16,16 +18,24 @@ import { STAGE_ORDER, STAGE_SHORT } from '@/lib/labels';
 import { useDebounced } from '@/lib/useDebounced';
 import { useSession } from '@/providers/SessionProvider';
 import { CARD_EDGE, LOAD_AHEAD_PX, MIN_LIST_HEIGHT, PAGE_SIZE, SEARCH_DELAY_MS } from './constants';
+import { DomainFilter } from './DomainFilter';
 
 /** Bookings waiting for this user (`mine=1`), longest-waiting first; searched and filtered by stage on the server, 25 at a time. */
 export function QueueScreen() {
-  const { me, canAct } = useSession();
+  const { me, canAct, typeName } = useSession();
   const [stage, setStage] = useState('');
   const [text, setText] = useState('');
   const q = useDebounced(text.trim(), SEARCH_DELAY_MS);
   const action = useStatusAction({ animateOut: true });
+  // one domain picked from the top bar's domain icons (handlers only): ?types=<id>
+  const search = useSearchParams();
+  const pickedType = Number(search.get('types')) || null;
+  const types = pickedType && me.managed_booking_types.includes(pickedType) ? String(pickedType) : '';
 
-  const params = { mine: true, open_only: true, per_page: PAGE_SIZE, sort: 'stage_age_hours', dir: 'desc', q, stage };
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+
+  const params = { mine: true, open_only: true, per_page: PAGE_SIZE, sort: 'stage_age_hours', dir: 'desc', q, stage, types, from, to };
   const query = useInfiniteQuery({
     queryKey: [...keys.bookingList(params), 'infinite'],
     queryFn: ({ pageParam, signal }) => bookingsApi.list({ ...params, page: pageParam }, signal),
@@ -36,8 +46,9 @@ export function QueueScreen() {
 
   const rows = query.data?.pages.flatMap((page) => page.data) ?? [];
   const total = query.data?.pages[0]?.meta.total ?? 0;
-  const filtered = Boolean(q || stage);
-  const title = me.is_handler_only ? 'הקריאות שלי לטיפול' : 'ממתין לטיפולי';
+  const filtered = Boolean(q || stage || types || from || to);
+  const baseTitle = me.is_handler_only ? 'הקריאות שלי לטיפול' : 'ממתין לטיפולי';
+  const title = types ? `${baseTitle}: ${typeName(Number(types))}` : baseTitle;
 
   // the unfiltered count, remembered while a filter is on
   const [summary, setSummary] = useState('');
@@ -84,6 +95,7 @@ export function QueueScreen() {
     <div>
       <PageHead
         title={title}
+        center={me.is_handler_only ? <DomainFilter picked={types ? Number(types) : null} /> : null}
         sub={
           // the line keeps its place and only fades, so switching a filter never moves the page
           <span className={`fade-swap${summary && !filtered ? '' : ' hidden'}`} aria-hidden={filtered || undefined}>
@@ -97,6 +109,15 @@ export function QueueScreen() {
           {stages.length > 1 || stage ? (
             <Seg label="שלב" value={stage} onChange={setStage} options={[{ value: '', label: 'הכל' }, ...stages.map((id) => ({ value: id, label: STAGE_SHORT[id] }))]} />
           ) : null}
+          {/* by the day the booking was opened: sent to the API as from / to */}
+          <DateRangePicker
+            label="נפתחה"
+            value={{ from, to }}
+            onChange={(range) => {
+              setFrom(range.from);
+              setTo(range.to);
+            }}
+          />
           <span className="grow" />
           {query.isSuccess ? <span className="small muted">{filtered ? `${total} תוצאות` : 'ממוין לפי זמן ההמתנה בשלב'}</span> : null}
         </div>

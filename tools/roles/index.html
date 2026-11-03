@@ -67,7 +67,8 @@
 </main>
 <div id="toast" class="toast" role="status"></div>
 <script>
-  const state = { users: [], roles: [], types: [] };
+  const state = { users: [], roles: [], types: [], transportationTypeId: null };
+  const CONTROL_OFFICER = 'transportation_control_officer';
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
@@ -89,6 +90,7 @@
       state.users = data.users.filter((u) => u.personal_number); // the command finds users by personal number
       state.roles = data.roles;
       state.types = data.booking_types;
+      state.transportationTypeId = data.transportation_type_id ?? null;
       render();
     } catch (error) {
       $('rows').innerHTML = `<tr><td colspan="4" class="empty">לא ניתן לטעון: ${esc(error.message)}</td></tr>`;
@@ -108,7 +110,7 @@
             return `<option value="${esc(name)}" ${name === (u.role ?? '') ? 'selected' : ''} ${name ? '' : 'disabled'}>${esc(label)}</option>`;
           }).join('')}</select></td>
           <td><div class="types ${u.role === 'super_admin' ? 'off' : ''}">${state.types.map((t) => `
-            <label><input type="checkbox" value="${t.id}" ${u.types.includes(t.id) ? 'checked' : ''} />${esc(t.name)}</label>`).join('')}</div></td>
+            <label><input type="checkbox" value="${t.id}" ${u.types.includes(t.id) ? 'checked' : ''} ${u.role === CONTROL_OFFICER ? 'disabled' : ''} />${esc(t.name)}</label>`).join('')}</div></td>
           <td><button class="primary" disabled>שמירה</button></td>
         </tr>`).join('')
       : '<tr><td colspan="4" class="empty">לא נמצאו משתמשים</td></tr>';
@@ -121,6 +123,14 @@
     const user = state.users.find((u) => u.personal_number === row.dataset.pn);
     const role = row.querySelector('select').value;
     row.querySelector('.types').classList.toggle('off', role === 'super_admin');
+    // the control officer exists only in transportation: picking it ticks transportation alone and locks the rest
+    const boxes = [...row.querySelectorAll('.types input')];
+    if (event.target.matches('select')) {
+      for (const box of boxes) {
+        box.disabled = role === CONTROL_OFFICER;
+        if (role === CONTROL_OFFICER) box.checked = Number(box.value) === state.transportationTypeId;
+      }
+    }
     const types = [...row.querySelectorAll('.types input:checked')].map((i) => Number(i.value));
     const dirty = role !== user.role || types.join() !== user.types.join();
     row.classList.toggle('dirty', dirty);
