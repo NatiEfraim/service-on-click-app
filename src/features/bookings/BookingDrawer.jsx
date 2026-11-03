@@ -16,6 +16,7 @@ import { keys } from '@/lib/api/keys';
 import { fmtDateTime, fmtHours } from '@/lib/format';
 import { actionTone, STAGE_SHORT } from '@/lib/labels';
 import { useSession } from '@/providers/SessionProvider';
+import { bookingActions } from '@/lib/booking-actions';
 import { AttachmentsPanel } from './Attachments';
 import { EditValuesDialog } from './EditValuesDialog';
 import { ResolveConflictDialog } from './ResolveConflictDialog';
@@ -78,7 +79,7 @@ function Body({ booking }) {
           <Rail booking={booking} catalog={catalog} history={history} />
           {booking.actions.length > 0 ? (
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--line-2)' }}>
-              {booking.actions.map((action) => {
+              {bookingActions(booking.actions).map((action) => {
                 const tone = actionTone(action);
                 return (
                   <Button key={action.status_id} variant={tone === 'danger' ? 'danger' : tone === 'hold' ? 'hold' : 'primary'} onClick={() => status.start(booking, action)}>

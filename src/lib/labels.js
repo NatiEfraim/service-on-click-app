@@ -20,7 +20,7 @@ export const STAGE_SHORT = {
   supplier_approval: 'אישור ספק',
   supplier_number: 'מספר ספק',
   realization: 'מימוש וסגירה',
-  barber_done: 'אחרי ספר',
+  barber_done: 'טופל ע"י ספר',
   closed: 'סגורה',
 };
 
@@ -119,3 +119,5 @@ export function commentError(comment, required) {
   if (!COMMENT_PATTERN.test(text)) return 'ההערה יכולה להכיל אותיות בעברית ורווחים בלבד';
   return null;
 }
+
+export const STAGE_FILTER_ORDER = ['barber_done', ...STAGE_ORDER.filter((stage) => stage !== 'barber_done')];

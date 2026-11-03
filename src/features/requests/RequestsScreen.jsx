@@ -17,7 +17,7 @@ import { useSmoothHeight } from '@/components/ui/SmoothSize';
 import { useStatusAction } from '@/features/bookings/useStatusAction';
 import { bookingsApi, peopleApi } from '@/lib/api/endpoints';
 import { keys } from '@/lib/api/keys';
-import { STAGE_ORDER, STAGE_SHORT } from '@/lib/labels';
+import { STAGE_FILTER_ORDER, STAGE_SHORT } from '@/lib/labels';
 import { CONTENT_FADE_MS, EASE_OUT, prefersReducedMotion } from '@/lib/motion';
 import { useFitToWindow } from '@/lib/useFitToWindow';
 import { useSession } from '@/providers/SessionProvider';
@@ -100,11 +100,11 @@ export function RequestsScreen() {
   const handlers = useQuery({ queryKey: keys.approvers(''), queryFn: ({ signal }) => peopleApi.approvers('', signal), enabled: can('users.manage'), staleTime: 5 * 60_000 });
 
   const views = [
+    { id: 'all', label: 'הכל' },
     { id: 'open', label: 'פתוחות' },
     ...(canAct ? [{ id: 'mine', label: 'ממתינות לי' }] : []),
     { id: 'overdue', label: 'חורגות מיעד' },
     { id: 'decide', label: 'דורשות הכרעה' },
-    { id: 'all', label: 'הכל' },
   ];
 
   const managedTypes = catalog.booking_types.filter((type) => me.managed_booking_types.includes(type.id));
@@ -164,7 +164,7 @@ export function RequestsScreen() {
             <Field label="שלב">
               <select className="input" value={filters.stage} onChange={(event) => update({ stage: event.target.value })}>
                 <option value="">הכל</option>
-                {STAGE_ORDER.map((id) => (
+                {STAGE_FILTER_ORDER.map((id) => (
                   <option key={id} value={id}>
                     {STAGE_SHORT[id]}
                   </option>

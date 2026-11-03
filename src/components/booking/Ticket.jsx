@@ -9,6 +9,7 @@ import { useBookingDrawer } from '@/features/bookings/useBookingDrawer';
 import { actionTone, domainColor, STAGE_SHORT } from '@/lib/labels';
 import { EASE_OUT, prefersReducedMotion, ROW_ARRIVE_MS, ROW_COLLAPSE_MS, ROW_SLIDE_MS, ROW_STAMP_MS } from '@/lib/motion';
 import { useSession } from '@/providers/SessionProvider';
+import { bookingActions } from '@/lib/booking-actions';
 import { DomainBadge } from './DomainBadge';
 import { AgeBar, MiniRoute } from './RouteViz';
 
@@ -143,7 +144,7 @@ export function Ticket({ booking, showActions = true, onAction, outcome, enterin
         {booking.stage === 'closed' ? <StatusChip statusId={booking.status_id} label={booking.status_label} /> : <AgeBar booking={booking} />}
         {showActions && booking.actions.length > 0 && onAction ? (
           <div className="acts">
-            {booking.actions.slice(0, 2).map((action) => {
+            {bookingActions(booking.actions).slice(0, 2).map((action) => {
               const tone = actionTone(action);
               return (
                 <Button key={action.status_id} size="sm" variant={tone === 'danger' ? 'danger' : tone === 'hold' ? 'hold' : 'primary'} onClick={() => onAction(booking, action)}>

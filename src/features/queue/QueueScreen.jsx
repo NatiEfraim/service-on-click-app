@@ -14,7 +14,7 @@ import { useStatusAction } from '@/features/bookings/useStatusAction';
 import { bookingsApi } from '@/lib/api/endpoints';
 import { keys } from '@/lib/api/keys';
 
-import { STAGE_ORDER, STAGE_SHORT } from '@/lib/labels';
+import { STAGE_FILTER_ORDER, STAGE_SHORT } from '@/lib/labels';
 import { useDebounced } from '@/lib/useDebounced';
 import { useSession } from '@/providers/SessionProvider';
 import { CARD_EDGE, LOAD_AHEAD_PX, MIN_LIST_HEIGHT, PAGE_SIZE, SEARCH_DELAY_MS } from './constants';
@@ -59,7 +59,7 @@ export function QueueScreen() {
   const [seenStages, setSeenStages] = useState([]);
   const fresh = rows.map((row) => row.stage).filter((id) => !seenStages.includes(id));
   if (fresh.length) setSeenStages([...seenStages, ...new Set(fresh)]);
-  const stages = STAGE_ORDER.filter((id) => id === 'vice_approver' || seenStages.includes(id) || id === stage);
+  const stages = STAGE_FILTER_ORDER.filter((id) => id === 'vice_approver' || seenStages.includes(id) || id === stage);
 
   // the next 25 load as the bottom of the list scrolls into view
   const scroller = useRef(null);
