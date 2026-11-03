@@ -10,6 +10,7 @@ import { bookingsApi } from '@/lib/api/endpoints';
 import { invalidateWork } from '@/lib/api/keys';
 
 import { newKey } from '@/lib/id';
+import { notifyBookingDecision } from '@/lib/booking-decisions';
 import { actionTone, COMMENT_MAX, commentError } from '@/lib/labels';
 import { useSession } from '@/providers/SessionProvider';
 import { useToast } from '@/providers/UiProvider';
@@ -45,9 +46,10 @@ export function ActionDialog({ booking, action, onClose, onDone, onDecided }) {
         onClose();
         return;
       }
-      await invalidateWork(client);
+      const animated = notifyBookingDecision(booking.serial_number, actionTone(action) === 'danger' ? 'bad' : 'ok');
       onDone?.();
       onClose();
+      if (!animated) await invalidateWork(client);
     },
     onError: async (e) => {
       const apiError = e instanceof ApiError ? e : new ApiError(0, 'הפעולה נכשלה.');

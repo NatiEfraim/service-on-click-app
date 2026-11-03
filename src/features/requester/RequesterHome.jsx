@@ -1,13 +1,16 @@
 'use client';
 
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { matchesRequesterSearch } from './search';
 import { Logo } from '@/components/layout/Logo';
 import { DomainBadge } from '@/components/booking/DomainBadge';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { StatusChip } from '@/components/ui/Chips';
 import { Seg } from '@/components/ui/Controls';
+import { SearchField } from '@/components/ui/SearchField';
+import { useDebounced } from '@/lib/useDebounced';
 import { EmptyState, ErrorNotice, Loading } from '@/components/ui/Feedback';
 import { FadeIn } from '@/components/ui/FadeIn';
 import { PageHead } from '@/components/ui/PageHead';
@@ -27,10 +30,12 @@ const REQUESTER_PAGE_SIZE = 20;
  */
 export function RequesterHome({ onSignOut, fallback }) {
   const [view, setView] = useState('open');
+  const [search, setSearch] = useState('');
+  const query = useDebounced(search.trim(), 300);
   const user = useQuery({ queryKey: ['requester', 'user'], queryFn: ({ signal }) => requesterApi.user(signal), retry: false });
 
   const bookings = useInfiniteQuery({
-    queryKey: ['requester', 'bookings', view],
+    queryKey: ['requester', 'bookings', view, 'free-text'],
     queryFn: ({ pageParam, signal }) => requesterApi.myBookings(pageParam, view === 'open' ? OPEN_STATUS_IDS : null, signal),
     initialPageParam: 1,
     // the API wraps the page as {data: [...]} without paging meta: a full page means more may exist, a short one is the end
@@ -38,24 +43,30 @@ export function RequesterHome({ onSignOut, fallback }) {
     enabled: user.isSuccess,
     placeholderData: (previous) => previous,
   });
-  const rows = bookings.data?.pages.flatMap((page) => page.data ?? []) ?? [];
+  const loadedRows = useMemo(() => bookings.data?.pages.flatMap((page) => page.data ?? []) ?? [], [bookings.data]);
+  const rows = useMemo(() => loadedRows.filter((row) => matchesRequesterSearch(row, query)), [loadedRows, query]);
   const countLabel = `${rows.length}${bookings.hasNextPage ? '+' : ''} קריאות`;
 
   // the card ends at the window's bottom; the next 20 load as the bottom of the list scrolls into view
   const card = useRef(null);
-  useFitToWindow(card);
+  useFitToWindow(card, 240, user.isSuccess);
   const scroller = useRef(null);
   const sentinel = useRef(null);
   const { hasNextPage, isFetchingNextPage, fetchNextPage } = bookings;
   useEffect(() => {
+    if (query && hasNextPage && !bookings.isFetching && !bookings.isError && !bookings.isPlaceholderData) {
+      void fetchNextPage();
+    }
+  }, [query, hasNextPage, bookings.isFetching, bookings.isError, bookings.isPlaceholderData, loadedRows.length, fetchNextPage]);
+  useEffect(() => {
     const el = sentinel.current;
-    if (!el || !hasNextPage) return;
+    if (!el || !hasNextPage || query) return;
     const observer = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting && !isFetchingNextPage) void fetchNextPage();
     }, { root: scroller.current, rootMargin: `0px 0px ${LOAD_AHEAD_PX}px 0px` });
     observer.observe(el);
     return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, view, query, bookings.isPending, rows.length]);
 
   if (user.isError) return fallback;
   if (user.isPending) return <div className="login-wrap"><Loading rows={3} /></div>;
@@ -101,11 +112,12 @@ export function RequesterHome({ onSignOut, fallback }) {
                   { value: 'all', label: 'הכל' },
                 ]}
               />
+              <SearchField width={240} value={search} onChange={setSearch} placeholder="מספר קריאה או קטגוריה" aria-label="חיפוש בקריאות שלי לפי מספר קריאה או קטגוריה" />
               <span className="grow" />
               {bookings.isSuccess ? <span className="small muted">{countLabel}</span> : null}
             </div>
-            <FadeIn key={view} className="fit-fill" style={{ opacity: bookings.isPlaceholderData ? 0.55 : 1, transition: 'opacity .15s' }}>
-              {bookings.isPending ? (
+            <FadeIn key={`${view}:${query}`} className="fit-fill" style={{ opacity: bookings.isPlaceholderData ? 0.55 : 1, transition: 'opacity .15s' }}>
+              {bookings.isPending || (query && hasNextPage && !rows.length && !bookings.isError) ? (
                 <div className="card-body">
                   <Loading rows={6} />
                 </div>
@@ -114,9 +126,12 @@ export function RequesterHome({ onSignOut, fallback }) {
                   <ErrorNotice error={bookings.error} onRetry={() => void bookings.refetch()} />
                 </div>
               ) : rows.length === 0 ? (
-                <EmptyState title={view === 'open' ? 'אין לך קריאות פתוחות' : 'עדיין לא פתחת קריאות'}>קריאות נפתחות באפליקציה.</EmptyState>
+                <EmptyState title={query ? 'לא נמצאו קריאות התואמות לחיפוש' : view === 'open' ? 'אין לך קריאות פתוחות' : 'עדיין לא פתחת קריאות'}>
+                  {query ? 'נסה מספר קריאה או קטגוריה אחרים, או נקה את החיפוש. לחיפוש גם בקריאות סגורות, בחר הכל.' : 'קריאות נפתחות באפליקציה.'}
+                </EmptyState>
               ) : (
                 <div ref={scroller} className="queue-scroll">
+                  {bookings.isError ? <ErrorNotice error={bookings.error} onRetry={() => void fetchNextPage()} /> : null}
                   <div className="tickets">
                     {rows.map((row) => (
                       <div key={row.uuid} className="ticket" style={{ cursor: 'default' }}>

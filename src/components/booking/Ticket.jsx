@@ -140,7 +140,7 @@ export function Ticket({ booking, showActions = true, onAction, outcome, enterin
           <span>{booking.stage === 'closed' ? booking.status_label : STAGE_SHORT[booking.stage]}</span>
         </div>
       </div>
-      <div className="side">
+      <div className={`side${showActions && onAction ? ' with-actions' : ''}`}>
         {booking.stage === 'closed' ? <StatusChip statusId={booking.status_id} label={booking.status_label} /> : <AgeBar booking={booking} />}
         {showActions && booking.actions.length > 0 && onAction ? (
           <div className="acts">

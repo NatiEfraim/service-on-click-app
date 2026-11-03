@@ -18,15 +18,13 @@ import { actionTone, STAGE_SHORT } from '@/lib/labels';
 import { useSession } from '@/providers/SessionProvider';
 import { bookingActions } from '@/lib/booking-actions';
 import { AttachmentsPanel } from './Attachments';
-import { EditValuesDialog } from './EditValuesDialog';
 import { ResolveConflictDialog } from './ResolveConflictDialog';
 import { useStatusAction } from './useStatusAction';
 
-function Body({ booking }) {
+function Body({ booking, onDecision }) {
   const session = useSession();
   const { catalog, can, canAct, unitName, typeName, departmentName } = session;
-  const status = useStatusAction();
-  const [editing, setEditing] = useState(false);
+  const status = useStatusAction({ onDone: onDecision });
   const [resolving, setResolving] = useState(null);
 
   const lines = describeValues(booking.booking_values);
@@ -102,11 +100,7 @@ function Body({ booking }) {
         <section className="panel">
           <header>
             <h2>פרטי הקריאה</h2>
-            {booking.can_edit_values && booking.editable_fields.length > 0 ? (
-              <Button size="sm" icon="edit" style={{ marginInlineStart: 'auto' }} onClick={() => setEditing(true)}>
-                עדכון תאריך ושעה
-              </Button>
-            ) : null}
+            <span className="hint" style={{ marginInlineStart: 'auto' }}>עדכון תאריך ושעה מתבצע באפליקציית המובייל בלבד.</span>
           </header>
           <div className="body">
             <dl className="kv">
@@ -228,7 +222,6 @@ function Body({ booking }) {
       ) : null}
 
       {status.dialog}
-      {editing ? <EditValuesDialog booking={booking} onClose={() => setEditing(false)} /> : null}
       {resolving ? <ResolveConflictDialog booking={booking} resolution={resolving} onClose={() => setResolving(null)} /> : null}
     </>
   );
@@ -236,7 +229,16 @@ function Body({ booking }) {
 
 /** One booking in full: route, offered decisions, values, comments, files and timeline. */
 export function BookingDrawer({ serial, onClose }) {
-  const query = useQuery({ queryKey: keys.bookingDetail(serial), queryFn: ({ signal }) => bookingsApi.get(serial, signal), staleTime: 5_000, retry: false });
+  const [decidedSerial, setDecidedSerial] = useState(null);
+  const closing = decidedSerial === serial;
+  const query = useQuery({ queryKey: keys.bookingDetail(serial), queryFn: ({ signal }) => bookingsApi.get(serial, signal), staleTime: 5_000, retry: false, enabled: !closing });
+
+  const onDecision = () => {
+    setDecidedSerial(serial);
+    onClose();
+  };
+
+  if (closing) return null;
 
   return (
     <Drawer
@@ -248,7 +250,7 @@ export function BookingDrawer({ serial, onClose }) {
         </>
       }
     >
-      {query.isPending ? <Loading rows={10} /> : query.isError ? <ErrorNotice error={query.error} title="לא ניתן להציג את הקריאה." onRetry={() => void query.refetch()} /> : <Body booking={query.data} />}
+      {query.isPending ? <Loading rows={10} /> : query.isError ? <ErrorNotice error={query.error} title="לא ניתן להציג את הקריאה." onRetry={() => void query.refetch()} /> : <Body booking={query.data} onDecision={onDecision} />}
       {query.isFetching && !query.isPending ? (
         <span className="sr" role="status">
           מרענן…

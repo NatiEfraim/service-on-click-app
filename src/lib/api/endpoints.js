@@ -28,9 +28,9 @@ export const requesterApi = {
   /** The signed-in user (`full_name`, `personal_number`, ...). */
   user: (signal) => getData('/user', undefined, signal),
   /** The user's own bookings, 20 a page, newest first; `statusIds` narrows them (sent as status_id[]). */
-  myBookings: async (page, statusIds, signal) => {
+  myBookings: async (page, statusIds, signal, serialNumber = '') => {
     // axios writes an array as status_id[]=1&status_id[]=2, which the API reads (cleanParams would join it)
-    const response = await http.get('/bookings/my-bookings', { params: { page, status_id: statusIds?.length ? statusIds : undefined }, signal });
+    const response = await http.get('/bookings/my-bookings', { params: { page, status_id: statusIds?.length ? statusIds : undefined, serial_number: serialNumber || undefined }, signal });
     return response.data;
   },
 };

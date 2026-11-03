@@ -4,6 +4,7 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Ticket } from '@/components/booking/Ticket';
+import { AgeColumnsHeader } from '@/components/booking/RouteViz';
 import { DateRangePicker } from '@/components/ui/DateRangePicker';
 import { Seg } from '@/components/ui/Controls';
 import { EmptyState, ErrorNotice, Loading } from '@/components/ui/Feedback';
@@ -144,6 +145,7 @@ export function QueueScreen() {
           <>
             {/* the list scrolls inside the card; the toolbar stays in view */}
             <div ref={scroller} className="queue-scroll fade-in">
+              <AgeColumnsHeader />
               <div className="tickets" aria-busy={query.isFetching || undefined}>
                 {rows.map((row) => (
                   <Ticket key={row.serial_number} booking={row} onAction={action.start} outcome={action.outcomes[row.serial_number]} />

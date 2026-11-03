@@ -4,6 +4,7 @@ import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Ticket } from '@/components/booking/Ticket';
+import { AgeColumnsHeader } from '@/components/booking/RouteViz';
 import { Button } from '@/components/ui/Button';
 import { Seg } from '@/components/ui/Controls';
 import { LOAD_AHEAD_PX, MIN_LIST_HEIGHT, PAGE_SIZE } from '@/features/queue/constants';
@@ -235,6 +236,7 @@ export function RequestsScreen() {
           ) : hasRows ? (
             // the next page loads as the bottom of the list scrolls into view
             <div ref={scroller} className="queue-scroll">
+              <AgeColumnsHeader />
               <div className="tickets" aria-busy={query.isFetching || undefined}>
                 {rows.map((row) => (
                   <Ticket key={row.serial_number} booking={row} onAction={action.start} outcome={action.outcomes[row.serial_number]} />

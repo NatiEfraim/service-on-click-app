@@ -7,10 +7,10 @@ import { useLayoutEffect } from 'react';
  * only the list inside scrolls and the page itself never does. Capping the card (whose top never moves) rather than the
  * list lets the list follow any panel opening above it frame by frame.
  */
-export function useFitToWindow(ref, minHeight = 240) {
+export function useFitToWindow(ref, minHeight = 240, enabled = true) {
   useLayoutEffect(() => {
     const el = ref.current;
-    if (!el) return;
+    if (!enabled || !el) return;
     const page = el.closest('.page');
     const fit = () => {
       const top = el.getBoundingClientRect().top + window.scrollY;
@@ -20,5 +20,5 @@ export function useFitToWindow(ref, minHeight = 240) {
     fit();
     window.addEventListener('resize', fit);
     return () => window.removeEventListener('resize', fit);
-  }, [ref, minHeight]);
+  }, [ref, minHeight, enabled]);
 }

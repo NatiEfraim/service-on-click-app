@@ -42,6 +42,16 @@ export function MiniRoute({ booking, catalog }) {
   );
 }
 
+export function AgeColumnsHeader() {
+  return (
+    <div className="age-columns-header">
+      <span className="age-header-spacer" />
+      <span className="age-columns"><span style={{ gridColumn: '1 / -1', fontSize: 11 }}>בשעות</span><span>בשלב</span><span>סה״כ</span></span>
+      <span aria-hidden="true" />
+      <span className="sr">הזמנים מוצגים בשעות</span>
+    </div>
+  );
+}
 /** Age against the handling target; red when over, amber when close. */
 export function AgeBar({ booking }) {
   if (booking.stage === 'closed') return <span className="muted small">סגורה</span>;
@@ -52,10 +62,10 @@ export function AgeBar({ booking }) {
   const tone = booking.overdue ? 'over' : target && ratio !== null && ratio > 0.8 ? 'near' : '';
 
   return (
-    <div className={`age ${tone}`.trim()} title={`זמן מפתיחת הקריאה${target ? ' מול יעד הטיפול של התחום' : ''}`}>
-      <span className="v">
-        {fmtHours(age)}
-        {target ? <span className="muted"> מתוך {fmtHours(target)}</span> : null}
+    <div className={`age ${tone}`.trim()} title={`זמן בשלב הנוכחי${target ? ' · הפס מציג את הזמן הכולל מול יעד הטיפול של התחום' : ''}`}>
+      <span className="age-columns" aria-label={`${Math.round(booking.stage_age_hours ?? 0)} שעות בשלב הנוכחי, ${booking.total_age_hours != null ? Math.round(booking.total_age_hours) : 'לא ידוע'} שעות בסך הכול`}>
+        <span className="v">{Math.round(booking.stage_age_hours ?? 0)}</span>
+        <span className="small muted">{booking.total_age_hours != null ? Math.round(booking.total_age_hours) : '—'}</span>
       </span>
       {target && ratio !== null ? (
         <span className="bar">
