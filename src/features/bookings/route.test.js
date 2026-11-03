@@ -18,7 +18,7 @@ describe('routeFor', () => {
   });
 
   it('adds the barber station for a type that can reach "handled by the barber"', () => {
-    expect(ids(routeFor({ booking_type_id: 5, stage: 'approver' }, catalog))).toEqual(['received', 'vice_approver', 'approver', 'barber_done', 'realization', 'closed']);
+    expect(ids(routeFor({ booking_type_id: 5, stage: 'approver' }, catalog))).toEqual(['received', 'vice_approver', 'approver', 'realization', 'barber_done', 'closed']);
   });
 
   it('adds the control-officer station only when a booking is, or has been, in it', () => {
@@ -47,5 +47,21 @@ describe('routePosition', () => {
   it('ends at the last station: finished when completed, stopped otherwise', () => {
     expect(routePosition({ stage: 'closed', status_id: 5 }, stations)).toEqual({ here: 4, mode: 'finished' });
     expect(routePosition({ stage: 'closed', status_id: 4 }, stations)).toEqual({ here: 4, mode: 'stopped' });
+  });
+});
+
+describe('parked holds from the updated API', () => {
+  it.each([8, 9, 10])('keeps status %s at the control officer and marks it as on hold', (status_id) => {
+    const booking = { booking_type_id: 8, stage: 'control_officer', status_id };
+    const stations = routeFor(booking, catalog);
+    expect(routePosition(booking, stations)).toEqual({ here: ids(stations).indexOf('control_officer'), mode: 'hold' });
+  });
+  it.each(['vice_approver', 'approver'])('preserves the server supplied %s stage while waiting', (stage) => {
+    const stations = routeFor({ booking_type_id: 1, stage }, catalog);
+    expect(routePosition({ stage, status_id: 10 }, stations)).toEqual({ here: ids(stations).indexOf(stage), mode: 'hold' });
+  });
+  it('keeps the control officer in routes after takeover when the catalog includes that stage', () => {
+    const stations = routeFor({ booking_type_id: 8, stage: 'vice_approver' }, { booking_type_statuses: { 8: [1, 17, 18, 15, 16] } });
+    expect(ids(stations)).toContain('control_officer');
   });
 });

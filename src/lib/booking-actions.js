@@ -1,6 +1,6 @@
-/** Prefer the final approval only when the API explicitly permits it. */
+/** Prioritize permitted final decisions without inventing or discarding API actions. */
 export function bookingActions(actions) {
-  const finalApproval = actions.find((action) => action.status_id === 3);
-  if (!finalApproval) return actions;
-  return [finalApproval, ...actions.filter((action) => ![3, 15, 17].includes(action.status_id))];
+  const decisions = actions.filter((action) => [3, 4].includes(action.status_id));
+  if (!decisions.length) return actions;
+  return [...decisions.sort((a, b) => a.status_id - b.status_id), ...actions.filter((action) => ![3, 4].includes(action.status_id))];
 }

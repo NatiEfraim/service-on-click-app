@@ -38,7 +38,7 @@ describe('stationsForType', () => {
 
   it('adds the barber step where "handled by the barber" can be reached, held by the vice approver and the approver', () => {
     const stations = stationsForType(5, catalog, managers);
-    expect(stations.map((s) => s.id)).toEqual(['vice_approver', 'approver', 'barber_done', 'realization']);
+    expect(stations.map((s) => s.id)).toEqual(['vice_approver', 'approver', 'realization', 'barber_done']);
     expect(stations.find((s) => s.id === 'barber_done')?.people).toEqual(['דנה', 'גיל', 'נעם']);
   });
 

@@ -17,6 +17,7 @@ import { fmtDateTime, fmtHours } from '@/lib/format';
 import { actionTone, STAGE_SHORT } from '@/lib/labels';
 import { useSession } from '@/providers/SessionProvider';
 import { bookingActions } from '@/lib/booking-actions';
+import { isHoldStatus } from '@/lib/booking-workflow';
 import { AttachmentsPanel } from './Attachments';
 import { ResolveConflictDialog } from './ResolveConflictDialog';
 import { useStatusAction } from './useStatusAction';
@@ -75,6 +76,9 @@ function Body({ booking, onDecision }) {
         </header>
         <div className="body">
           <Rail booking={booking} catalog={catalog} history={history} />
+          {isHoldStatus(booking.status_id) ? (
+            <Notice tone="warn">{booking.status_label}. {booking.stage?.startsWith('supplier') ? 'זו המתנה קודמת שלא משויך אליה שלב הטיפול המקורי.' : 'הקריאה נשארת באותו שלב: ' + booking.stage_label + '.'}</Notice>
+          ) : null}
           {booking.actions.length > 0 ? (
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--line-2)' }}>
               {bookingActions(booking.actions).map((action) => {

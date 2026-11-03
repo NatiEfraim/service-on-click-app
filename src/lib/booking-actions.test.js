@@ -1,23 +1,25 @@
 import { describe, expect, it } from 'vitest';
 import { bookingActions } from './booking-actions';
-
-const action = (status_id) => ({ status_id, label: String(status_id) });
+const action = (status_id) => ({ status_id, label: String(status_id), comment_required: status_id === 4 });
 
 describe('bookingActions', () => {
-  it('puts the permitted final approval in the first two card actions and removes intermediate approvals', () => {
-    const final = action(3);
-    const result = bookingActions([action(15), action(16), action(8), final]);
-    expect(result.map((a) => a.status_id)).toEqual([3, 16, 8]);
-    expect(result[0]).toBe(final);
+  it('shows final approval and rejection as the two quick actions for senior roles', () => {
+    const actions = [17, 18, 8, 9, 10, 3, 4].map(action);
+    const result = bookingActions(actions);
+    expect(result.slice(0, 2).map((a) => a.status_id)).toEqual([3, 4]);
+    expect(result[1]).toBe(actions[6]);
+    expect(result[1].comment_required).toBe(true);
+    expect(result.map((a) => a.status_id)).toEqual([3, 4, 17, 18, 8, 9, 10]);
+    expect(actions.map((a) => a.status_id)).toEqual([17, 18, 8, 9, 10, 3, 4]);
   });
-  it('preserves handler actions when the API does not permit final approval', () => {
-    const actions = [action(15), action(16)];
+  it('keeps vice approver takeover and hold actions without granting final decisions', () => {
+    const actions = [15, 16, 8, 9, 10].map(action);
     expect(bookingActions(actions)).toBe(actions);
   });
-  it('preserves rejection and hold actions while replacing the control officer approval', () => {
-    expect(bookingActions([17, 18, 8, 9, 10, 3].map(action)).map((a) => a.status_id)).toEqual([3, 18, 8, 9, 10]);
+  it('does not hide an intermediate action if only final approval is available', () => {
+    expect(bookingActions([15, 16, 8, 3].map(action)).map((a) => a.status_id)).toEqual([3, 15, 16, 8]);
   });
-  it('keeps completed and closed booking actions intact', () => {
+  it('keeps completion, cancellation and closed bookings intact', () => {
     expect(bookingActions([5, 7].map(action)).map((a) => a.status_id)).toEqual([5, 7]);
     expect(bookingActions([])).toEqual([]);
   });

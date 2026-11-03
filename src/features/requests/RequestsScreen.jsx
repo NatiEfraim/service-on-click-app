@@ -12,6 +12,7 @@ import { LOAD_AHEAD_PX, MIN_LIST_HEIGHT, PAGE_SIZE } from '@/features/queue/cons
 import { EmptyState, ErrorNotice, Loading } from '@/components/ui/Feedback';
 import { DateRangePicker } from '@/components/ui/DateRangePicker';
 import { Field } from '@/components/ui/Field';
+import { SmoothSelect } from '@/components/ui/SmoothSelect';
 import { PageHead } from '@/components/ui/PageHead';
 import { SearchField } from '@/components/ui/SearchField';
 import { useSmoothHeight } from '@/components/ui/SmoothSize';
@@ -128,10 +129,11 @@ export function RequestsScreen() {
             </Button>
           ) : null}
           <span className="grow" />
+          <AgeColumnsHeader />
           <label className="small muted" htmlFor="requests-sort">
             מיון
           </label>
-          <select
+          <SmoothSelect
             id="requests-sort"
             className="input"
             style={{ paddingBlock: 5 }}
@@ -146,24 +148,24 @@ export function RequestsScreen() {
                 {s.label}
               </option>
             ))}
-          </select>
+          </SmoothSelect>
         </div>
 
         {/* stays mounted so it can fade and fold both ways; inert while closed */}
         <div className={`adv-wrap${advancedOpen ? ' open' : ''}`} inert={!advancedOpen}>
           <div className="adv">
             <Field label="תחום">
-              <select className="input" value={filters.types} onChange={(event) => update({ types: event.target.value })}>
+              <SmoothSelect className="input" value={filters.types} onChange={(event) => update({ types: event.target.value })}>
                 <option value="">הכל</option>
                 {managedTypes.map((type) => (
                   <option key={type.id} value={type.id}>
                     {type.display_name}
                   </option>
                 ))}
-              </select>
+              </SmoothSelect>
             </Field>
             <Field label="שלב">
-              <select className="input" value={filters.stage} onChange={(event) => update({ stage: event.target.value })}>
+              <SmoothSelect className="input" value={filters.stage} onChange={(event) => update({ stage: event.target.value })}>
                 <option value="">הכל</option>
                 {STAGE_FILTER_ORDER.map((id) => (
                   <option key={id} value={id}>
@@ -171,40 +173,40 @@ export function RequestsScreen() {
                   </option>
                 ))}
                 <option value="closed">סגורה</option>
-              </select>
+              </SmoothSelect>
             </Field>
             <Field label="סטטוס">
-              <select className="input" value={filters.statuses} onChange={(event) => update({ statuses: event.target.value })}>
+              <SmoothSelect className="input" value={filters.statuses} onChange={(event) => update({ statuses: event.target.value })}>
                 <option value="">הכל</option>
                 {catalog.statuses.map((status) => (
                   <option key={status.id} value={status.id}>
                     {status.display_name}
                   </option>
                 ))}
-              </select>
+              </SmoothSelect>
             </Field>
             {handlers.data?.length ? (
               <Field label="גורם מטפל">
-                <select className="input" value={filters.handler} onChange={(event) => update({ handler: event.target.value })}>
+                <SmoothSelect className="input" value={filters.handler} onChange={(event) => update({ handler: event.target.value })}>
                   <option value="">הכל</option>
                   {handlers.data.map((person) => (
                     <option key={person.uuid} value={person.uuid}>
                       {person.full_name}
                     </option>
                   ))}
-                </select>
+                </SmoothSelect>
               </Field>
             ) : null}
             {me.is_super_admin ? (
               <Field label="יחידה">
-                <select className="input" value={filters.units} onChange={(event) => update({ units: event.target.value })}>
+                <SmoothSelect className="input" value={filters.units} onChange={(event) => update({ units: event.target.value })}>
                   <option value="">הכל</option>
                   {catalog.units.map((unit) => (
                     <option key={unit.id} value={unit.id}>
                       {unit.name}
                     </option>
                   ))}
-                </select>
+                </SmoothSelect>
               </Field>
             ) : null}
             {/* a div, not Field's <label>: a click on the open calendar must not be forwarded to its button */}
@@ -236,7 +238,6 @@ export function RequestsScreen() {
           ) : hasRows ? (
             // the next page loads as the bottom of the list scrolls into view
             <div ref={scroller} className="queue-scroll">
-              <AgeColumnsHeader />
               <div className="tickets" aria-busy={query.isFetching || undefined}>
                 {rows.map((row) => (
                   <Ticket key={row.serial_number} booking={row} onAction={action.start} outcome={action.outcomes[row.serial_number]} />

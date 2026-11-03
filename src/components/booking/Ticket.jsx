@@ -10,6 +10,7 @@ import { actionTone, domainColor, STAGE_SHORT } from '@/lib/labels';
 import { EASE_OUT, prefersReducedMotion, ROW_ARRIVE_MS, ROW_COLLAPSE_MS, ROW_SLIDE_MS, ROW_STAMP_MS } from '@/lib/motion';
 import { useSession } from '@/providers/SessionProvider';
 import { bookingActions } from '@/lib/booking-actions';
+import { isHoldStatus } from '@/lib/booking-workflow';
 import { DomainBadge } from './DomainBadge';
 import { AgeBar, MiniRoute } from './RouteViz';
 
@@ -97,6 +98,7 @@ export function Ticket({ booking, showActions = true, onAction, outcome, enterin
   const ref = useRef(null);
   useLeave(ref, outcome);
   useArrive(ref, entering);
+  const actions = bookingActions(booking.actions);
   const owner = booking.owner_name || booking.owner_personal_id || '—';
   const open = () => drawer.open(booking.serial_number);
 
@@ -130,6 +132,7 @@ export function Ticket({ booking, showActions = true, onAction, outcome, enterin
             </span>
           ) : null}
           {booking.has_conflict || booking.sync_state === 'conflict' ? <NeedsDecision /> : null}
+          {isHoldStatus(booking.status_id) ? <StatusChip statusId={booking.status_id} label={booking.status_label} /> : null}
           {booking.sync_state === 'pending' ? <Chip tone="info">ממתינה לשליחה</Chip> : null}
         </div>
         <div className="t2">
@@ -140,11 +143,11 @@ export function Ticket({ booking, showActions = true, onAction, outcome, enterin
           <span>{booking.stage === 'closed' ? booking.status_label : STAGE_SHORT[booking.stage]}</span>
         </div>
       </div>
-      <div className={`side${showActions && onAction ? ' with-actions' : ''}`}>
+      <div className={`side${showActions && onAction ? ' with-actions' : ''}${booking.stage === 'closed' ? ' closed-status' : ''}`}>
         {booking.stage === 'closed' ? <StatusChip statusId={booking.status_id} label={booking.status_label} /> : <AgeBar booking={booking} />}
         {showActions && booking.actions.length > 0 && onAction ? (
           <div className="acts">
-            {bookingActions(booking.actions).slice(0, 2).map((action) => {
+            {actions.slice(0, 2).map((action) => {
               const tone = actionTone(action);
               return (
                 <Button key={action.status_id} size="sm" variant={tone === 'danger' ? 'danger' : tone === 'hold' ? 'hold' : 'primary'} onClick={() => onAction(booking, action)}>

@@ -4,6 +4,8 @@
 
 
 
+import { isHoldStatus } from '@/lib/booking-workflow';
+
 /** Statuses of the control-officer step (14 handling, 17 approved, 18 rejected) and of the barber (11 done). */
 const CONTROL_OFFICER_STATUSES = [14, 17, 18];
 const BARBER_STATUS = 11;
@@ -12,15 +14,15 @@ const BARBER_STATUS = 11;
 export function routeFor(booking, catalog, history) {
   const reachable = catalog?.booking_type_statuses?.[String(booking.booking_type_id)] ?? [];
   const hasBarber = booking.stage === 'barber_done' || reachable.includes(BARBER_STATUS);
-  const hasControlOfficer = booking.stage === 'control_officer' || (history ?? []).some((entry) => CONTROL_OFFICER_STATUSES.includes(entry.status_id));
+  const hasControlOfficer = booking.stage === 'control_officer' || reachable.some((id) => CONTROL_OFFICER_STATUSES.includes(id)) || (history ?? []).some((entry) => CONTROL_OFFICER_STATUSES.includes(entry.status_id));
 
   return [
     { id: 'received', label: 'התקבלה' },
     ...(hasControlOfficer ? [{ id: 'control_officer', label: 'רמ"ד תו"ב' }] : []),
     { id: 'vice_approver', label: 'גורם מטפל' },
     { id: 'approver', label: 'מפקד תחום' },
-    ...(hasBarber ? [{ id: 'barber_done', label: 'הספר' }] : []),
     { id: 'realization', label: 'מימוש' },
+    ...(hasBarber ? [{ id: 'barber_done', label: 'הספר' }] : []),
     { id: 'closed', label: 'סגירה' },
   ];
 }
@@ -35,6 +37,7 @@ export function routePosition(booking, stations) {
     here = stations.findIndex((station) => station.id === 'approver');
     mode = 'hold';
   }
+  if (isHoldStatus(booking.status_id)) mode = 'hold';
   if (booking.stage === ('closed')) {
     here = stations.length - 1;
     mode = booking.status_id === 5 ? 'finished' : 'stopped';

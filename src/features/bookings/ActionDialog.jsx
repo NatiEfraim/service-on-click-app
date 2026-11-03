@@ -11,6 +11,7 @@ import { invalidateWork } from '@/lib/api/keys';
 
 import { newKey } from '@/lib/id';
 import { notifyBookingDecision } from '@/lib/booking-decisions';
+import { isHoldStatus } from '@/lib/booking-workflow';
 import { actionTone, COMMENT_MAX, commentError } from '@/lib/labels';
 import { useSession } from '@/providers/SessionProvider';
 import { useToast } from '@/providers/UiProvider';
@@ -40,6 +41,12 @@ export function ActionDialog({ booking, action, onClose, onDone, onDecided }) {
     },
     onSuccess: async (result) => {
       toast(result.message || 'הקריאה עודכנה.', 'ok');
+      if (isHoldStatus(action.status_id)) {
+        onDone?.();
+        onClose();
+        await invalidateWork(client);
+        return;
+      }
       if (onDecided) {
         onDecided(actionTone(action) === 'danger' ? 'bad' : 'ok');
         onDone?.();
@@ -97,6 +104,7 @@ export function ActionDialog({ booking, action, onClose, onDone, onDecided }) {
       <p style={{ margin: 0 }}>
         קריאה <span className="serial">{booking.serial_number}</span> ({booking.booking_type_label}) תעבור מ&quot;{booking.status_label}&quot; ל&quot;{nextLabel}&quot;.
       </p>
+      {isHoldStatus(action.status_id) ? <p className="small muted">{booking.stage?.startsWith('supplier') ? 'סיבת ההמתנה תשתנה; ההמתנה הקודמת נשארת באחריות מפקד התחום.' : 'זו השהיה בלבד. הקריאה נשארת באותו שלב: ' + booking.stage_label + '. הסטטוס יועבר לאפליקציה בסבב הסנכרון הבא.'}</p> : null}
       <label className="field">
         <span>הערה{action.comment_required ? ' (חובה)' : ' (רשות)'}</span>
         <textarea

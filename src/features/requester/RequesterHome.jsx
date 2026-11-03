@@ -3,6 +3,7 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { matchesRequesterSearch } from './search';
+import { isHoldStatus, holdDescription } from '@/lib/booking-workflow';
 import { Logo } from '@/components/layout/Logo';
 import { DomainBadge } from '@/components/booking/DomainBadge';
 import { Button } from '@/components/ui/Button';
@@ -140,6 +141,7 @@ export function RequesterHome({ onSignOut, fallback }) {
                           <div className="t1">
                             {row.booking_type?.display_name} <span className="serial">{row.serial_number}</span>
                           </div>
+                          {isHoldStatus(row.status?.id) ? <p className="requester-hold-message">{holdDescription(row.status.id)}</p> : null}
                           <div className="t2">
                             <span>נפתחה {row.created_at}</span>
                             {row.updated_at && row.updated_at !== row.created_at ? <span>· עודכנה {row.updated_at}</span> : null}

@@ -5,6 +5,7 @@ import '@/styles/tokens.css';
 import '@/styles/layout.css';
 import '@/styles/components.css';
 import '@/styles/screens.css';
+import '@/styles/selects.css';
 import { QueryProvider } from '@/providers/QueryProvider';
 import { UiProvider } from '@/providers/UiProvider';
 

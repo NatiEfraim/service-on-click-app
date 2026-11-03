@@ -17,7 +17,7 @@ export function Rail({ booking, catalog, history }) {
             <span className="name">{station.label}</span>
             {index === here ? (
               <span className="sub">
-                {mode === 'hold' ? booking.stage_label : mode === 'stopped' ? booking.status_label : mode === 'finished' ? 'הושלמה' : fmtHours(booking.stage_age_hours)}
+                {mode === 'hold' ? booking.status_label : mode === 'stopped' ? booking.status_label : mode === 'finished' ? 'הושלמה' : fmtHours(booking.stage_age_hours)}
               </span>
             ) : null}
           </div>
@@ -34,7 +34,7 @@ export function MiniRoute({ booking, catalog }) {
   const modeClass = { here: 'h', hold: 'hold', stopped: 'stop', finished: 'fin' }[mode];
 
   return (
-    <span className="mr" title={booking.stage_label}>
+    <span className="mr" title={mode === 'hold' ? `${booking.stage_label} · ${booking.status_label}` : booking.stage_label}>
       {stations.map((station, index) => (
         <i key={station.id} className={index < here ? 'd' : index === here ? modeClass : ''} />
       ))}
@@ -45,9 +45,7 @@ export function MiniRoute({ booking, catalog }) {
 export function AgeColumnsHeader() {
   return (
     <div className="age-columns-header">
-      <span className="age-header-spacer" />
       <span className="age-columns"><span style={{ gridColumn: '1 / -1', fontSize: 11 }}>בשעות</span><span>בשלב</span><span>סה״כ</span></span>
-      <span aria-hidden="true" />
       <span className="sr">הזמנים מוצגים בשעות</span>
     </div>
   );

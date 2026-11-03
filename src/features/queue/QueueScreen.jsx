@@ -120,6 +120,7 @@ export function QueueScreen() {
             }}
           />
           <span className="grow" />
+          <AgeColumnsHeader />
           {query.isSuccess ? <span className="small muted">{filtered ? `${total} תוצאות` : 'ממוין לפי זמן ההמתנה בשלב'}</span> : null}
         </div>
 
@@ -145,7 +146,6 @@ export function QueueScreen() {
           <>
             {/* the list scrolls inside the card; the toolbar stays in view */}
             <div ref={scroller} className="queue-scroll fade-in">
-              <AgeColumnsHeader />
               <div className="tickets" aria-busy={query.isFetching || undefined}>
                 {rows.map((row) => (
                   <Ticket key={row.serial_number} booking={row} onAction={action.start} outcome={action.outcomes[row.serial_number]} />
