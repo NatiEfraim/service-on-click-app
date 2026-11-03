@@ -58,14 +58,13 @@ export function buildNav(me) {
 }
 
 /**
- * Which screen `/` shows. The domain tiles (GET admin/home) are for the system admin and camp commanders over several
- * domains; anyone else with a dashboard (one domain, or a domain commander of several) gets their (combined) dashboard.
+ * Which screen `/` shows: with a dashboard over several domains the tiles to pick one (a domain commander's built from
+ * GET overview, see HomeScreen), over a single domain that domain's dashboard.
  */
 export function homeKind(me) {
   if (me.is_handler_only) return 'queue';
   if (!can(me, 'dashboard.view')) return me.is_super_admin || me.is_admin ? 'requests' : canAct(me) ? 'queue' : 'requests';
-  if ((me.is_super_admin || me.is_admin) && me.dashboard_booking_types.length > 1) return 'tiles';
-  return 'dashboard';
+  return me.dashboard_booking_types.length > 1 ? 'tiles' : 'dashboard';
 }
 
 export function isActivePath(pathname, href, also = []) {

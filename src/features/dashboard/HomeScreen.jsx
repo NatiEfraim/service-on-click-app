@@ -50,11 +50,28 @@ function TileBody({ iconType, iconSrc, name, open, overdue }) {
   );
 }
 
-/** Admin home: domain tiles beside one domain's column chart, then open bookings by domain and stage. */
+/**
+ * The home data for a domain commander of several domains, built from GET overview (GET admin/home is admin-only on
+ * the API): their domains with open bookings, and open bookings per domain and stage. Overdue is not split by domain there.
+ */
+function homeFromOverview(overview, typeIds, typeName) {
+  return {
+    domains: typeIds.map((id) => ({ booking_type_id: id, name: typeName(id), open: overview.by_type?.[id] ?? 0, overdue: null })),
+    by_type_stage: Object.fromEntries(Object.entries(overview.by_type_stage ?? {}).filter(([type]) => typeIds.includes(Number(type)))),
+  };
+}
+
+/** Home: domain tiles beside one domain's column chart, then open bookings by domain and stage. */
 export function HomeScreen() {
   const router = useRouter();
-  const { typeName } = useSession();
-  const query = useQuery({ queryKey: keys.home, queryFn: ({ signal }) => insightsApi.home(signal) });
+  const { me, typeName } = useSession();
+  // the system admin and camp commanders read GET admin/home; a domain commander's tiles come from GET overview
+  const fullHome = me.is_super_admin || me.is_admin;
+  const query = useQuery(
+    fullHome
+      ? { queryKey: keys.home, queryFn: ({ signal }) => insightsApi.home(signal) }
+      : { queryKey: keys.overview, queryFn: ({ signal }) => insightsApi.overview(signal), select: (data) => homeFromOverview(data, me.dashboard_booking_types, typeName) },
+  );
   const [pickedType, setPickedType] = useState(null);
   // Drawn once per visit, so the chart does not jump on every refetch.
   const [randomPick] = useState(() => Math.random());
