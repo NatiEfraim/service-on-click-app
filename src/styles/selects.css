@@ -90,6 +90,7 @@ select.input[aria-invalid="true"] { border-color: var(--bad); }
     box-shadow: 0 20px 48px -12px rgb(43 36 51 / 28%), 0 4px 12px rgb(43 36 51 / 7%);
     color: var(--ink);
     font: inherit;
+    direction: ltr;
     overflow-y: auto;
     overscroll-behavior: contain;
     scrollbar-width: thin;
@@ -97,6 +98,8 @@ select.input[aria-invalid="true"] { border-color: var(--bad); }
   }
 
   select.input option {
+    direction: rtl;
+    text-align: start;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -161,7 +164,9 @@ select.input[aria-invalid="true"] { border-color: var(--bad); }
 @media (prefers-reduced-motion: reduce) {
   select.input,
   select.input::picker-icon,
-  select.input option { transition: none; }
+  select.input option {
+    direction: rtl;
+    text-align: start; transition: none; }
 }
 
 @media (forced-colors: active) {
@@ -176,3 +181,48 @@ select.input.smooth-select {
 @media (prefers-reduced-motion: reduce) {
   select.input.smooth-select { transition: none; }
 }
+
+select.input.requests-sort-select { min-width: 0; max-width: none; height: 40px; flex-shrink: 0; white-space: nowrap; }
+select.input.requests-sort-select option { white-space: nowrap; }
+
+/* Keep filter labels and triggers aligned, independent of the selected text. */
+.requests-filters > .field { align-self: flex-start; }
+.requests-filters > .field > span { font-size: 13px; line-height: 20px; }
+.requests-filters select.input,
+.requests-filters .drp-btn {
+  box-sizing: border-box;
+  height: 44px;
+  min-block-size: 44px;
+  padding-block: 9px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 24px;
+  border-radius: 11px;
+  white-space: nowrap;
+}
+.requests-filters .drp-btn {
+  border-color: color-mix(in srgb, var(--accent) 20%, var(--line));
+  box-shadow: 0 2px 3px rgb(61 49 74 / 3%), inset 0 1px 0 rgb(255 255 255 / 90%);
+}
+.requests-filters select.requests-status-select { min-width: 0; max-width: none; flex-shrink: 0; }
+.requests-filters select.requests-status-select option { white-space: nowrap; }
+select.input.smooth-select { flex-shrink: 0; white-space: nowrap; }
+select.input.smooth-select option { white-space: nowrap; }
+@supports (appearance: base-select) {
+  select.input::picker(select) {
+    opacity: 0;
+    translate: 0 -4px;
+    transition: opacity 150ms ease, translate 150ms ease, display 150ms allow-discrete, overlay 150ms allow-discrete;
+  }
+  select.input:open::picker(select) { opacity: 1; translate: 0 0; animation: none; }
+  @starting-style {
+    select.input:open::picker(select) { opacity: 0; translate: 0 -4px; }
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  select.input::picker(select) { transition: none; translate: none; }
+}
+select.input.smooth-select { box-sizing: border-box; }
+/* The selected label must not consume the icon's space while width animates. */
+select.input.smooth-select::picker-icon { margin-inline-start: auto; }
+select.input.requests-sort-select { font-size: 14px; gap: 10px; }

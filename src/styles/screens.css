@@ -346,7 +346,7 @@ span.chart-fade { flex-direction: row; align-items: center; gap: 8px; white-spac
 .age-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 116px; text-align: center; align-items: center; font-variant-numeric: tabular-nums; }
 .ticket .side.with-actions { display: grid; grid-template-columns: 116px var(--ticket-actions-width, 192px); gap: 14px; }
 .ticket .acts { width: var(--ticket-actions-width, 192px); }
-.age-columns-header { flex: none; width: 116px; color: var(--mute); font-size: 12px; line-height: 1.25; position: relative; left: 36px; }
+.age-columns-header { flex: none; width: 116px; color: var(--mute); font-size: 12px; line-height: 1.25; position: absolute; left: calc(18px + var(--ticket-actions-width, 192px) + 14px); top: 50%; transform: translateY(-50%); }
 @media (max-width: 980px) {
   .ticket .side.with-actions { grid-template-columns: 116px minmax(0, 192px); width: 100%; }
   .ticket .side.with-actions .acts { width: 100%; }
@@ -356,3 +356,13 @@ span.chart-fade { flex-direction: row; align-items: center; gap: 8px; white-spac
 
 .ticket .side.closed-status { justify-content: end; }
 .ticket .side.closed-status > .chip { grid-column: 2; justify-self: center; max-width: 100%; text-align: center; }
+
+.toolbar:has(> .age-columns-header) { position: relative; min-height: 66px; }
+/* The sort label is part of its control, so it cannot be hidden by grid placement. */
+.toolbar:has(> .requests-sort-control) { display: grid; column-gap: 14px; grid-template-columns: auto auto auto 1fr 116px 192px; }
+.toolbar:has(> .requests-sort-control) > .grow { display: none; }
+.toolbar:has(> .requests-sort-control) > .age-columns-header { grid-column: 5; grid-row: 1; position: static; transform: none; }
+.requests-sort-control { grid-column: 6; grid-row: 1; display: flex; flex-direction: row; align-items: center; justify-content: flex-end; gap: 8px; min-width: 0; }
+.requests-sort-control > label { font-size: 14px; line-height: 1.4; flex: none; }
+.requests-filter-actions { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.requests-clear.btn { width: 32px; height: 32px; padding: 6px; justify-content: center; }

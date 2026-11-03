@@ -232,3 +232,15 @@ table.t { width: 100%; border-collapse: collapse; font-size: 14.5px; }
 .lb-nav { border: 0; width: 44px; height: 44px; border-radius: 50%; background: rgba(255, 255, 255, .16); color: #fff; cursor: pointer; display: grid; place-items: center; flex: none; }
 .lb-nav:hover { background: rgba(255, 255, 255, .28); }
 @media (max-width: 980px) { .lb-stage img { max-width: 92vw; } .lb-nav { width: 36px; height: 36px; } }
+
+.animated-text { position: relative; display: inline-block; vertical-align: middle; flex: none; white-space: nowrap; transition: width 260ms var(--ease-out); }
+.animated-text-current { display: inline-block; white-space: nowrap; }
+.animated-text-old { position: absolute; inset-inline-start: 0; top: 0; white-space: nowrap; pointer-events: none; }
+.requests-clear, .drp-clear { animation: clear-appear 220ms var(--ease-out) both; }
+.requests-clear[data-closing], .drp-clear[data-closing] { animation: clear-disappear 220ms var(--ease-out) both; pointer-events: none; }
+@keyframes clear-appear { from { opacity: 0; scale: .8; } to { opacity: 1; scale: 1; } }
+@keyframes clear-disappear { from { opacity: 1; scale: 1; } to { opacity: 0; scale: .8; } }
+@media (prefers-reduced-motion: reduce) {
+ .animated-text { transition: none; }
+ .requests-clear, .drp-clear { animation: none; }
+}

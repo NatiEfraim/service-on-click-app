@@ -5,6 +5,8 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Ticket } from '@/components/booking/Ticket';
 import { AgeColumnsHeader } from '@/components/booking/RouteViz';
+import { AnimatedText } from '@/components/ui/AnimatedText';
+import { usePresence } from '@/components/ui/usePresence';
 import { Button } from '@/components/ui/Button';
 import { Seg } from '@/components/ui/Controls';
 import { LOAD_AHEAD_PX, MIN_LIST_HEIGHT, PAGE_SIZE } from '@/features/queue/constants';
@@ -67,7 +69,15 @@ export function RequestsScreen() {
     getNextPageParam: (last) => (last.meta.page < last.meta.last_page ? last.meta.page + 1 : undefined),
     placeholderData: (previous) => previous,
   });
-  const rows = query.data?.pages.flatMap((page) => page.data) ?? [];
+  // Keep the previous results mounted until their exit finishes, including an empty result.
+  const [visibleData, setVisibleData] = useState(query.data);
+  const resultsExiting = visibleData !== query.data && !query.isPlaceholderData;
+  useEffect(() => {
+    if (query.isPlaceholderData || visibleData === query.data) return;
+    const timer = window.setTimeout(() => setVisibleData(query.data), prefersReducedMotion() ? 0 : 180);
+    return () => window.clearTimeout(timer);
+  }, [query.data, query.isPlaceholderData, visibleData]);
+  const rows = visibleData?.pages.flatMap((page) => page.data) ?? [];
   const total = query.data?.pages[0]?.meta.total ?? 0;
 
   // The card ends at the bottom of the window and the list takes what the toolbar and filters leave, so only the list
@@ -112,6 +122,7 @@ export function RequestsScreen() {
   const managedTypes = catalog.booking_types.filter((type) => me.managed_booking_types.includes(type.id));
   const advanced = advancedCount(filters);
   const hasFilters = advanced > 0 || filters.ids || filters.q;
+  const clearPresence = usePresence(Boolean(hasFilters), 220);
 
   return (
     <div>
@@ -120,22 +131,24 @@ export function RequestsScreen() {
         <div className="toolbar">
           <Seg label="תצוגה" value={filters.view} onChange={(view) => update({ view })} options={views.map((view) => ({ value: view.id, label: view.label }))} />
           <SearchField id="requests-q" width={240} value={text} placeholder="מספר קריאה, מספר אישי או שם" aria-label="חיפוש לפי מספר קריאה, מספר אישי או שם" onChange={setText} />
+          <div className="requests-filter-actions">
           <Button size="sm" icon="sliders" aria-expanded={advancedOpen} onClick={() => setAdvancedOpen((v) => !v)}>
-            סינון{advanced ? ` (${advanced})` : ''}
+            <AnimatedText>{advanced ? `סינון (${advanced})` : 'סינון'}</AnimatedText>
           </Button>
-          {hasFilters ? (
-            <Button size="sm" variant="ghost" onClick={() => router.replace(filters.view === DEFAULT_FILTERS.view ? pathname : `${pathname}?view=${filters.view}`, { scroll: false })}>
-              ניקוי
+          {clearPresence.mounted ? (
+            <Button size="sm" variant="ghost" icon="x" className="requests-clear" data-closing={clearPresence.closing || undefined} disabled={!hasFilters} aria-label="ניקוי הסינון" title="ניקוי הסינון" onClick={() => router.replace(filters.view === DEFAULT_FILTERS.view ? pathname : `${pathname}?view=${filters.view}`, { scroll: false })}>
             </Button>
           ) : null}
+          </div>
           <span className="grow" />
           <AgeColumnsHeader />
+          <div className="requests-sort-control">
           <label className="small muted" htmlFor="requests-sort">
             מיון
           </label>
           <SmoothSelect
             id="requests-sort"
-            className="input"
+            className="input requests-sort-select"
             style={{ paddingBlock: 5 }}
             value={`${filters.sort}|${filters.dir}`}
             onChange={(event) => {
@@ -149,11 +162,12 @@ export function RequestsScreen() {
               </option>
             ))}
           </SmoothSelect>
+          </div>
         </div>
 
         {/* stays mounted so it can fade and fold both ways; inert while closed */}
         <div className={`adv-wrap${advancedOpen ? ' open' : ''}`} inert={!advancedOpen}>
-          <div className="adv">
+          <div className="adv requests-filters">
             <Field label="תחום">
               <SmoothSelect className="input" value={filters.types} onChange={(event) => update({ types: event.target.value })}>
                 <option value="">הכל</option>
@@ -176,7 +190,7 @@ export function RequestsScreen() {
               </SmoothSelect>
             </Field>
             <Field label="סטטוס">
-              <SmoothSelect className="input" value={filters.statuses} onChange={(event) => update({ statuses: event.target.value })}>
+              <SmoothSelect className="input requests-status-select" value={filters.statuses} onChange={(event) => update({ statuses: event.target.value })}>
                 <option value="">הכל</option>
                 {catalog.statuses.map((status) => (
                   <option key={status.id} value={status.id}>
@@ -226,7 +240,7 @@ export function RequestsScreen() {
           </div>
         ) : null}
 
-        <div className="fit-fill" style={{ opacity: query.isPlaceholderData ? 0.55 : 1, transition: 'opacity .15s' }}>
+        <div className="fit-fill" style={{ opacity: resultsExiting ? 0 : query.isPlaceholderData ? 0.55 : 1, transition: prefersReducedMotion() ? 'none' : 'opacity 180ms ease', pointerEvents: resultsExiting ? 'none' : undefined }}>
           {query.isPending ? (
             <div className="card-body">
               <Loading rows={8} />

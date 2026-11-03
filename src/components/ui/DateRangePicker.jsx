@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { AnimatedText } from './AnimatedText';
 import { Icon } from './Icon';
 import { usePresence } from './usePresence';
 
@@ -128,6 +129,7 @@ export function DateRangePicker({ value, onChange, label = 'תאריך', placeho
   const rangeTo = draftStart ? (hover && hover > draftStart ? hover : draftStart) : to;
   const todayIso = toIso(new Date());
 
+  const clearPresence = usePresence(Boolean(clearable && (from || to)), 220);
   const text = from && to ? (from === to ? show(from) : `${show(from)} – ${show(to)}`) : from ? `מ-${show(from)}` : to ? `עד ${show(to)}` : placeholder;
   const outside = (iso) => (min && iso < min) || (max && iso > max);
 
@@ -136,10 +138,10 @@ export function DateRangePicker({ value, onChange, label = 'תאריך', placeho
       <button type="button" className={`drp-btn${from || to ? ' set' : ''}`} aria-haspopup="dialog" aria-expanded={open} onClick={toggle}>
         <Icon name="calendar" />
         {label ? <span className="drp-label">{label}:</span> : null}
-        <span>{text}</span>
+        <AnimatedText>{text}</AnimatedText>
       </button>
-      {clearable && (from || to) ? (
-        <button type="button" className="drp-clear" aria-label="ניקוי התאריכים" title="ניקוי" onClick={() => onChange({ from: '', to: '' })}>
+      {clearPresence.mounted ? (
+        <button type="button" className="drp-clear" data-closing={clearPresence.closing || undefined} disabled={clearPresence.closing} aria-label="ניקוי התאריכים" title="ניקוי" onClick={() => onChange({ from: '', to: '' })}>
           <Icon name="x" />
         </button>
       ) : null}
