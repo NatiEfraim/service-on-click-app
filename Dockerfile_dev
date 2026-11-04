@@ -1,10 +1,13 @@
 # ---------- Build stage: install deps and build the Next.js app ----------
 FROM node:21.5-alpine AS builder
 
-# Inlined at build time: the /api proxy target (rewrites are fixed by `next build`) and the login settings.
-# TODO: set API_ORIGIN to the dev address of service-on-click-api (the API image listens on 8080).
-ENV API_ORIGIN=http://service-on-click-api:8080
+# All of these are fixed by `next build` (rewrites and NEXT_PUBLIC_* are baked in), so each environment is its own image.
+# API_ORIGIN: where service-on-click-api (DEV) is; origin only - the app adds the API's /api prefix itself.
+ENV API_ORIGIN=http://denverdev.idf
+# Login: false = ADFS (this image); true = personal-number form, local development only (see .env.example).
 ENV NEXT_PUBLIC_DEV_LOGIN=false
+# ADFS: the login page loads ${NEXT_PUBLIC_ADFS_URL}/api/token in a hidden frame, takes the token it posts and sends `{ token }` to the API's /login.
+ENV NEXT_PUBLIC_ADFS_URL=https://vm0099adfs.army.secret
 ENV NEXT_PUBLIC_LOGIN_URL=https://vm0099adfs.army.secret
 ENV NEXT_TELEMETRY_DISABLED=1
 

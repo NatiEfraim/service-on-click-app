@@ -18,6 +18,7 @@ AGENTS.md
 README.md
 *.md
 .claude
+.agents
 .vscode
 .idea
 .editorconfig

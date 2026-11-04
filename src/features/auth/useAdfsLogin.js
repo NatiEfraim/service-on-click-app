@@ -6,9 +6,10 @@ import { authApi } from '@/lib/api/endpoints';
 import { ADFS_URL } from '@/lib/config';
 
 /**
- * ADFS sign-in: the hidden iframe of `${ADFS_URL}/api/token` posts the user's token to this window; it is sent to the
+ * ADFS sign-in: a hidden iframe of `${ADFS_URL}/api/token` posts the user's token to this window; it is sent to the
  * API's /login, which sets the session cookie, and then `onSignedIn` runs. Messages from any other origin are ignored.
- * Returns the iframe's src (null when ADFS is off) and the state for the page.
+ * The iframe is added only after the listener is on: a frame in the page's HTML can answer before React has hydrated,
+ * and that one message would be lost. Returns the state for the page ('off' when ADFS is not configured).
  */
 export function useAdfsLogin(onSignedIn) {
   const [state, setState] = useState(ADFS_URL ? 'waiting' : 'off');
@@ -36,8 +37,21 @@ export function useAdfsLogin(onSignedIn) {
       }
     };
     window.addEventListener('message', onMessage);
-    return () => window.removeEventListener('message', onMessage);
+
+    const frame = document.createElement('iframe');
+    frame.title = 'ADFS';
+    frame.hidden = true;
+    frame.setAttribute('aria-hidden', 'true');
+    frame.tabIndex = -1;
+    frame.style.cssText = 'position:absolute;width:0;height:0;border:0';
+    frame.src = `${ADFS_URL}/api/token`;
+    document.body.append(frame);
+
+    return () => {
+      window.removeEventListener('message', onMessage);
+      frame.remove();
+    };
   }, []);
 
-  return { src: ADFS_URL ? `${ADFS_URL}/api/token` : null, state, error };
+  return { state, error };
 }

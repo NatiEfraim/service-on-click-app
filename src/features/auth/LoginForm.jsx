@@ -102,8 +102,6 @@ export function LoginForm() {
           </div>
         )}
       </main>
-      {/* ADFS hands the token to this page from a hidden frame */}
-      {adfs.src ? <iframe src={adfs.src} title="ADFS" hidden aria-hidden="true" tabIndex={-1} style={{ position: 'absolute', width: 0, height: 0, border: 0 }} /> : null}
     </div>
   );
 }
