@@ -1,3 +1,7 @@
+import { existsSync } from 'node:fs';
+if (process.env.NODE_ENV === 'production' || existsSync('/.dockerenv') || existsSync('/run/.containerenv')) {
+  throw new Error('Local-only roles tool cannot run in production or a container.');
+}
 // Local role switcher: a page on http://localhost:3001 that shows every user and sets one's role and booking types,
 // so testing as another kind of user does not need a terminal command each time.
 // It only runs the API's own `php artisan users:permissions` (local-only) in the API folder; nothing in the API changes.

@@ -1,0 +1,2 @@
+# Local role-switching utility: never include in the Docker build context.
+tools/roles/
