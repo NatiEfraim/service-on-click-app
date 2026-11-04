@@ -1,8 +1,6 @@
+import { redirect } from 'next/navigation';
+import { legacyQueueTarget } from '@/features/requests/filters';
 
-import { QueueScreen } from '@/features/queue/QueueScreen';
-
-export const metadata = { title: 'ממתין לטיפולי' };
-
-export default function QueuePage() {
-  return <QueueScreen />;
+export default async function QueuePage({ searchParams }) {
+  redirect(legacyQueueTarget(await searchParams));
 }

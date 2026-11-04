@@ -368,3 +368,4 @@ span.chart-fade { flex-direction: row; align-items: center; gap: 8px; white-spac
 .requests-clear.btn { width: 32px; height: 32px; padding: 6px; justify-content: center; }
 
 .barber-status-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+

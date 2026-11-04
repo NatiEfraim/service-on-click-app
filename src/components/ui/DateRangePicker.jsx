@@ -43,8 +43,8 @@ function monthGrid(month) {
 }
 
 /** One day: the same calendar, a click picks the day and closes. `value` / `onChange` are a 'YYYY-MM-DD' string ('' = none). */
-export function DatePicker({ value, onChange, label = 'תאריך', placeholder = 'בחירת תאריך', clearable = true, min, max }) {
-  return <DateRangePicker single value={{ from: value, to: value }} onChange={(range) => onChange(range.from)} label={label} placeholder={placeholder} clearable={clearable} min={min} max={max} />;
+export function DatePicker({ value, onChange, label = 'תאריך', placeholder = 'בחירת תאריך', clearable = true, min, max, isDateDisabled }) {
+  return <DateRangePicker single value={{ from: value, to: value }} onChange={(range) => onChange(range.from)} label={label} placeholder={placeholder} clearable={clearable} min={min} max={max} isDateDisabled={isDateDisabled} />;
 }
 
 /**
@@ -52,7 +52,7 @@ export function DatePicker({ value, onChange, label = 'תאריך', placeholder 
  * quick ranges. `value` / `onChange` use { from, to } as 'YYYY-MM-DD' strings ('' = open-ended).
  * `single` (use DatePicker) picks one day instead; `min` / `max` ('YYYY-MM-DD') disable the days outside them.
  */
-export function DateRangePicker({ value, onChange, label = 'תאריך', placeholder = 'כל התאריכים', single = false, clearable = true, min, max }) {
+export function DateRangePicker({ value, onChange, label = 'תאריך', placeholder = 'כל התאריכים', single = false, clearable = true, min, max, isDateDisabled }) {
   const { from, to } = value;
   const [open, setOpen] = useState(false);
   const presence = usePresence(open);
@@ -108,6 +108,7 @@ export function DateRangePicker({ value, onChange, label = 'תאריך', placeho
   };
 
   const pickDay = (iso) => {
+    if (isDateDisabled?.(iso)) return;
     if (single) {
       onChange({ from: iso, to: iso });
       setOpen(false);
@@ -198,7 +199,7 @@ export function DateRangePicker({ value, onChange, label = 'תאריך', placeho
                   className={['drp-day', date.getMonth() !== month.getMonth() ? 'out' : '', inRange ? 'in' : '', edge ? 'edge' : '', iso === todayIso ? 'today' : ''].filter(Boolean).join(' ')}
                   aria-label={show(iso)}
                   aria-pressed={edge || undefined}
-                  disabled={outside(iso) || undefined}
+                  disabled={outside(iso) || isDateDisabled?.(iso) || undefined}
                   onMouseEnter={() => setHover(iso)}
                   onClick={() => pickDay(iso)}
                 >

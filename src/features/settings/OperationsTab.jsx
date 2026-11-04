@@ -2,6 +2,7 @@
 
 import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
+import { TimePicker } from '@/components/ui/TimePicker';
 import { Button } from '@/components/ui/Button';
 import { EmptyState, Notice } from '@/components/ui/Feedback';
 import { settingsApi } from '@/lib/api/endpoints';
@@ -76,28 +77,29 @@ function RefRow({ reference, bookingTypeId, unitId, readOnly }) {
             );
           }
           const problem = problems[key];
+          if (kind === 'time') return <div key={key} className="field"><span>{label}</span><TimePicker label={label} value={typeof value === 'string' ? value : ''} onChange={(time) => change(key, time)} disabled={readOnly} invalid={Boolean(problem)} title={problem || undefined} /></div>;
           return (
             <label key={key} className="field">
               <span>{label}</span>
               <input
                 className="input"
                 type={kind === 'number' ? 'number' : kind === 'time' ? 'time' : kind === 'phone' ? 'tel' : 'text'}
-                {...(kind === 'number' ? { min: 1, step: 1, inputMode: 'numeric' } : {})}
-                {...(kind === 'phone' ? { dir: 'ltr' } : {})}
-                style={{ width: kind === 'phone' ? 150 : 110 }}
+                {...(kind === 'number' ? { min: 1, step: 1, inputMode: 'numeric', dir: 'ltr' } : {})}
+                {...(kind === 'phone' ? { dir: 'ltr', inputMode: 'numeric', maxLength: 10, pattern: '[0-9]{1,10}' } : {})}
+                style={{ width: kind === 'phone' ? 150 : 110, textAlign: kind === 'number' ? 'right' : undefined }}
                 value={typeof value === 'string' ? value : ''}
                 disabled={readOnly}
                 aria-invalid={problem ? true : undefined}
                 title={problem || undefined}
-                onChange={(event) => change(key, event.target.value)}
+                onChange={(event) => change(key, kind === 'phone' ? event.target.value.replace(/[^0-9]/g, '').slice(0, 10) : event.target.value)}
               />
             </label>
           );
         })}
         {!readOnly ? (
-          <Button size="sm" variant="primary" className="save" loading={mutation.isPending} onClick={save}>
+          <div className="st-operation-save"><Button size="sm" variant="primary" className="save" loading={mutation.isPending} onClick={save}>
             שמירה
-          </Button>
+          </Button></div>
         ) : null}
       </div>
       {Object.values(problems).some(Boolean) || error ? (
@@ -116,7 +118,7 @@ function RefRow({ reference, bookingTypeId, unitId, readOnly }) {
 export function OperationsTab({ unitId, bookingTypeId, settings, ownUnit }) {
   const references = settings.system_references.filter((reference) => !isDatesReference(reference));
   return (
-    <div>
+    <div className="st-readable-settings">
       {!ownUnit ? (
         <div className="st-readonly-bar">
           <Notice>ניתן לערוך הגדרות תפעול ליחידה שלך בלבד. כאן מוצגים הערכים של היחידה שנבחרה.</Notice>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { advancedCount, DEFAULT_FILTERS, parseFilters, toApiParams, toSearchParams } from './filters';
+import { advancedCount, legacyQueueTarget, DEFAULT_FILTERS, parseFilters, toApiParams, toSearchParams } from './filters';
 
 const parse = (query) => parseFilters(new URLSearchParams(query));
 
@@ -58,5 +58,22 @@ describe('advancedCount', () => {
   it('counts only the filters behind the "advanced" button', () => {
     expect(advancedCount({ ...DEFAULT_FILTERS, q: 'x', ids: '1' })).toBe(0);
     expect(advancedCount({ ...DEFAULT_FILTERS, types: '3', from: '2026-10-01' })).toBe(2);
+  });
+});
+
+describe('unified work queue filters', () => {
+  it('redirects a legacy queue link with all filters and the open booking preserved', () => {
+    const target = new URL(legacyQueueTarget({ types: '5', stage: 'barber', from: '2026-11-01', booking: '123', q: 'בדיקה' }), 'http://localhost');
+    expect(target.pathname).toBe('/requests');
+    expect(Object.fromEntries(target.searchParams)).toMatchObject({ view: 'mine', types: '5', stage: 'barber', from: '2026-11-01', booking: '123', q: 'בדיקה', sort: 'stage_age_hours', dir: 'desc' });
+  });
+  it('keeps explicit sorting on old links', () => {
+    expect(legacyQueueTarget({ sort: 'serial_number', dir: 'asc' })).toContain('sort=serial_number&dir=asc');
+  });
+  it('preserves search, advanced filters and sorting when changing views', () => {
+    const current = parse('view=mine&q=123&types=5&stage=barber&statuses=1&from=2026-11-01&sort=serial_number&dir=asc');
+    const next = parse(toSearchParams({ ...current, view: 'all' }).toString());
+    expect(next).toEqual({ ...current, view: 'all' });
+    expect(toApiParams(next)).toMatchObject({ mine: false, open_only: false });
   });
 });

@@ -140,3 +140,25 @@
 @media (prefers-reduced-motion: reduce) {
   .st-switch .track, .st-switch .track::after { transition: none; }
 }
+
+/* Readable operating settings and handling targets. */
+.st-readable-settings { font-size: 16px; line-height: 1.6; }
+.st-readable-settings .setting .what b { font-size: 17px; }
+.st-readable-settings .setting .what span,
+.st-readable-settings .field > span,
+.st-readable-settings .small { font-size: 15px; line-height: 1.6; }
+.st-readable-settings .input { font-size: 16px; }
+/* Keep Save centered on the controls, below their labels. */
+.st-readable-settings .setting .vals { --operation-control-height: 44px; }
+.st-readable-settings .setting .field > .input { height: var(--operation-control-height); }
+.st-operation-save { height: var(--operation-control-height); display: flex; align-items: center; }
+
+/* Keep tabs visible and scroll settings inside the viewport-sized card. */
+.st-fit-card { display: flex; flex-direction: column; min-height: 0; }
+.st-fit-card > :first-child { flex: none; }
+.st-fit-card > .st-panel-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-gutter: stable; direction: ltr; }
+
+/* Keep the options categories visible while the settings panel scrolls. */
+@media (min-width: 981px) {
+  .st-opt-nav { position: sticky; top: 0; max-height: min(72dvh, 100dvh - 320px); background: var(--surface); z-index: 1; }
+}

@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Loading } from '@/components/ui/Feedback';
-import { homeKind } from '@/lib/nav';
+import { homeKind, requestsHref } from '@/lib/nav';
 import { useSession } from '@/providers/SessionProvider';
 import { DomainDashboard } from './DomainDashboard';
 import { HomeScreen } from './HomeScreen';
@@ -15,8 +15,8 @@ export function HomeRouter() {
   const kind = homeKind(me);
 
   useEffect(() => {
-    if (kind === 'queue' || kind === 'requests') router.replace(`/${kind}`);
-  }, [kind, router]);
+    if (kind === 'requests') router.replace(requestsHref(me));
+  }, [kind, router, me]);
 
   if (kind === 'tiles') return <HomeScreen />;
   if (kind === 'dashboard') return <DomainDashboard />;

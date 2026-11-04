@@ -1,13 +1,14 @@
 'use client';
 
 import Link from 'next/link';
+import { useRef } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { DomainBadge } from '@/components/booking/DomainBadge';
 import { Tabs } from '@/components/ui/Controls';
 import { Denied, ErrorNotice, Loading } from '@/components/ui/Feedback';
 import { Icon } from '@/components/ui/Icon';
 import { PageHead } from '@/components/ui/PageHead';
-import { SmoothSize } from '@/components/ui/SmoothSize';
+import { useFitToWindow } from '@/lib/useFitToWindow';
 import { useSetSearchParams } from '@/lib/useSetSearchParams';
 import { useSession } from '@/providers/SessionProvider';
 import { TABS } from './constants';
@@ -35,6 +36,9 @@ export function SettingsScreen() {
   const unitId = toId(params.unitId);
   const bookingTypeId = toId(params.bookingTypeId);
   const query = useSettingsQuery(unitId, bookingTypeId, unitId > 0 && bookingTypeId > 0);
+
+  const card = useRef(null);
+  useFitToWindow(card, 180, query.isSuccess);
 
   // the form structure is for the system admin only; a domain commander (approver) does not see the statement either
   const hidden = new Set([...(me.is_super_admin ? [] : ['form']), ...(me.is_super_admin || me.is_admin ? [] : ['statement'])]);
@@ -91,16 +95,17 @@ export function SettingsScreen() {
           </>
         }
       />
-      <section className="card st-tabs-card" aria-label={`הגדרות ${name}`}>
+      <section ref={card} className="card st-tabs-card st-fit-card" aria-label={`הגדרות ${name}`}>
         <Tabs tabs={tabs} value={tab} onChange={setTab} label="הגדרות התחום" />
-        <SmoothSize className="st-panel" role="tabpanel" aria-label={tabs.find((candidate) => candidate.id === tab)?.label}>
+        <div className="st-panel st-panel-scroll" role="tabpanel" aria-label={tabs.find((candidate) => candidate.id === tab)?.label}>
+          <div dir="rtl">
           {tab === 'form' && me.is_super_admin ? <FormTab unitId={unitId} bookingTypeId={bookingTypeId} settings={settings} /> : null}
           {tab === 'target' ? <TargetTab bookingTypeId={bookingTypeId} /> : null}
           {tab === 'refs' ? <OperationsTab unitId={unitId} bookingTypeId={bookingTypeId} settings={settings} ownUnit={ownUnit} /> : null}
           {tab === 'dates' ? <DatesTab unitId={unitId} bookingTypeId={bookingTypeId} settings={settings} ownUnit={ownUnit} ownUnitId={me.user.unit_id} typeName={name} /> : null}
           {tab === 'options' ? <OptionsTab unitId={unitId} bookingTypeId={bookingTypeId} settings={settings} /> : null}
           {tab === 'statement' ? <StatementTab unitId={unitId} bookingTypeId={bookingTypeId} settings={settings} /> : null}
-        </SmoothSize>
+        </div></div>
       </section>
     </>
   );

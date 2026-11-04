@@ -59,6 +59,7 @@ export function draftProblems(original, draft) {
     if (kind === 'number' && (typeof value !== 'string' || value.trim() === '' || !Number.isFinite(Number(value)))) problems[key] = 'יש להזין מספר';
     else if (kind === 'number' && Number(value) < 0) problems[key] = 'יש להזין מספר חיובי';
     else if (kind === 'time' && (typeof value !== 'string' || !TIME_VALUE.test(value))) problems[key] = 'יש להזין שעה';
+    else if (kind === 'phone' && typeof value === 'string' && value.trim() !== '' && !/^[0-9]{1,10}$/.test(value)) problems[key] = 'יש להזין עד 10 ספרות בלבד';
     else if ((kind === 'text' || kind === 'phone') && (typeof value !== 'string' || value.trim() === '')) problems[key] = 'יש למלא את השדה';
   }
   return problems;

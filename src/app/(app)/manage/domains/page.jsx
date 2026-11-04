@@ -5,7 +5,7 @@ export const metadata = { title: 'תחומי שירות' };
 
 export default function Page() {
   return (
-    <Guard>
+    <Guard superAdmin message="ניהול תחומי שירות שמור למנהל מערכת.">
       <DomainsScreen />
     </Guard>
   );

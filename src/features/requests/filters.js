@@ -95,3 +95,16 @@ export function toApiParams(filters, perPage = 25) {
 export function advancedCount(filters) {
   return (['types', 'stage', 'statuses', 'units', 'from', 'to', 'handler']).filter((key) => filters[key]).length;
 }
+
+/** Preserve old queue deep links, including filters, sorting and an open booking. */
+export function legacyQueueTarget(search = {}) {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(search)) {
+    if (Array.isArray(value)) value.forEach((part) => params.append(key, part));
+    else if (value != null) params.set(key, value);
+  }
+  params.set('view', 'mine');
+  if (!params.has('sort')) params.set('sort', 'stage_age_hours');
+  if (!params.has('dir')) params.set('dir', 'desc');
+  return '/requests?' + params.toString();
+}

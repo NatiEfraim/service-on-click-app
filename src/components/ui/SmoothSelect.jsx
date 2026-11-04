@@ -3,8 +3,16 @@
 import { useLayoutEffect, useRef } from 'react';
 
 /** Measure the selected label so intrinsic width changes can animate in pixels. */
-export function SmoothSelect({ className = '', children, ...props }) {
+export function SmoothSelect({ className = '', children, fadeOnChange = false, ...props }) {
   const ref = useRef(null);
+  const previousValue = useRef(props.value);
+  useLayoutEffect(() => {
+    const changed = previousValue.current !== props.value;
+    previousValue.current = props.value;
+    if (!changed || !fadeOnChange || !ref.current || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const animation = ref.current.animate([{ opacity: 1 }, { opacity: 0.3, offset: 0.4 }, { opacity: 1 }], { duration: 280, easing: 'ease-in-out' });
+    return () => animation.cancel();
+  }, [props.value, fadeOnChange]);
 
   useLayoutEffect(() => {
     const select = ref.current;

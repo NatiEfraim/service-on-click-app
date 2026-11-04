@@ -23,7 +23,7 @@ export function TargetTab({ bookingTypeId }) {
 
   if (!canSee) {
     return (
-      <div className="st-panel-body">
+      <div className="st-panel-body st-readable-settings">
         <p style={{ margin: 0 }}>יעד הטיפול של התחום מוגדר על ידי מפקד המחנה או מנהל המערכת.</p>
         {can('dashboard.view') ? (
           <p style={{ margin: 0 }}>
@@ -33,14 +33,14 @@ export function TargetTab({ bookingTypeId }) {
       </div>
     );
   }
-  if (query.isPending) return <div className="st-panel-body"><Loading rows={2} /></div>;
-  if (query.isError) return <div className="st-panel-body"><ErrorNotice error={query.error} onRetry={() => void query.refetch()} /></div>;
+  if (query.isPending) return <div className="st-panel-body st-readable-settings"><Loading rows={2} /></div>;
+  if (query.isError) return <div className="st-panel-body st-readable-settings"><ErrorNotice error={query.error} onRetry={() => void query.refetch()} /></div>;
 
   const target = query.data.find((item) => item.booking_type_id === bookingTypeId) ?? null;
   const text = target ? fmtLongHours(target.target_hours) : 'לא הוגדר';
 
   return (
-    <div className="st-panel-body">
+    <div className="st-panel-body st-readable-settings">
       <div className="setting" style={{ padding: 0, border: 0 }}>
         <div className="what">
           <b>יעד טיפול לתחום: {text}</b>

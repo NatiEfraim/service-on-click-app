@@ -9,6 +9,8 @@ import { AnimatedText } from '@/components/ui/AnimatedText';
 import { usePresence } from '@/components/ui/usePresence';
 import { Button } from '@/components/ui/Button';
 import { Seg } from '@/components/ui/Controls';
+import { DomainFilter } from '@/features/queue/DomainFilter';
+import { insightsApi } from '@/lib/api/endpoints';
 import { LOAD_AHEAD_PX, MIN_LIST_HEIGHT, PAGE_SIZE } from '@/features/queue/constants';
 
 import { EmptyState, ErrorNotice, Loading } from '@/components/ui/Feedback';
@@ -21,10 +23,11 @@ import { useSmoothHeight } from '@/components/ui/SmoothSize';
 import { useStatusAction } from '@/features/bookings/useStatusAction';
 import { bookingsApi, peopleApi } from '@/lib/api/endpoints';
 import { keys } from '@/lib/api/keys';
-import { STAGE_FILTER_ORDER, STAGE_SHORT } from '@/lib/labels';
+import { STAGE_SHORT } from '@/lib/labels';
 import { CONTENT_FADE_MS, EASE_OUT, prefersReducedMotion } from '@/lib/motion';
 import { useFitToWindow } from '@/lib/useFitToWindow';
 import { useSession } from '@/providers/SessionProvider';
+import { workflowFilterOptions, normalizeWorkflowFilters } from './workflow-filters';
 import { advancedCount, DEFAULT_FILTERS, parseFilters, SORTS, toApiParams, toSearchParams } from './filters';
 
 /** Every booking the user may see; filters live in the URL so links and Back reproduce the list. */
@@ -35,17 +38,24 @@ export function RequestsScreen() {
   const search = useSearchParams();
   const action = useStatusAction({ animateOut: true });
 
-  const filters = useMemo(() => parseFilters(new URLSearchParams(search.toString())), [search]);
+  const filters = useMemo(() => normalizeWorkflowFilters(parseFilters(new URLSearchParams(search.toString())), me, catalog), [search, me, catalog]);
   const [advancedOpen, setAdvancedOpen] = useState(() => advancedCount(filters) > 0);
 
   const update = useCallback(
     (patch, resetPage = true) => {
-      const next = { ...filters, ...patch, ...(resetPage ? { page: 1 } : {}) };
+      const next = normalizeWorkflowFilters({ ...filters, ...patch, ...(resetPage ? { page: 1 } : {}) }, me, catalog);
       const query = toSearchParams(next, new URLSearchParams(search.toString())).toString();
       router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
     },
-    [filters, pathname, router, search],
+    [filters, pathname, router, search, me, catalog],
   );
+
+  useEffect(() => {
+    const raw = parseFilters(new URLSearchParams(search.toString()));
+    if (raw.stage === filters.stage && raw.statuses === filters.statuses) return;
+    const query = toSearchParams({ ...filters, page: 1 }, new URLSearchParams(search.toString())).toString();
+    router.replace(query ? pathname + '?' + query : pathname, { scroll: false });
+  }, [filters, search, pathname, router]);
 
   // The box updates the URL after a pause and follows URL changes (Back, clear); synced during render.
   const [text, setText] = useState(filters.q);
@@ -125,25 +135,29 @@ export function RequestsScreen() {
   // Handler filter options; only for users who manage users.
   const handlers = useQuery({ queryKey: keys.approvers(''), queryFn: ({ signal }) => peopleApi.approvers('', signal), enabled: can('users.manage'), staleTime: 5 * 60_000 });
 
+  const overview = useQuery({ queryKey: keys.overview, queryFn: ({ signal }) => insightsApi.overview(signal), enabled: canAct, staleTime: 60_000 });
+  const waiting = overview.data?.awaiting_me?.count;
+
   const views = [
     { id: 'all', label: 'הכל' },
     { id: 'open', label: 'פתוחות' },
-    ...(canAct ? [{ id: 'mine', label: 'ממתינות לי' }] : []),
+    ...(canAct ? [{ id: 'mine', label: 'ממתינות לי', count: waiting }] : []),
     { id: 'overdue', label: 'חורגות מיעד' },
     { id: 'decide', label: 'דורשות הכרעה' },
   ];
 
   const managedTypes = catalog.booking_types.filter((type) => me.managed_booking_types.includes(type.id));
+  const filterOptions = workflowFilterOptions(me, catalog, filters.types);
   const advanced = advancedCount(filters);
   const hasFilters = advanced > 0 || filters.ids || filters.q;
   const clearPresence = usePresence(Boolean(hasFilters), 220);
 
   return (
     <div>
-      <PageHead title="קריאות" sub="כל הקריאות בתחומים שבאחריותך. קריאות נפתחות באפליקציה בלבד." />
+      <PageHead title="קריאות" center={me.is_handler_only ? <DomainFilter picked={filters.types && !filters.types.includes(',') ? Number(filters.types) : null} /> : null} sub={filters.view === 'mine' ? 'קריאות שממתינות לטיפולך לפי ההרשאות והשלב שלהן.' : 'כל הקריאות בתחומים שבאחריותך. קריאות נפתחות באפליקציה בלבד.'} />
       <section ref={card} className="card fit-card">
         <div className="toolbar">
-          <Seg label="תצוגה" value={filters.view} onChange={(view) => update({ view })} options={views.map((view) => ({ value: view.id, label: view.label }))} />
+          <Seg label="תצוגה" value={filters.view} onChange={(view) => update({ view })} options={views.map((view) => ({ value: view.id, label: view.label, count: view.count }))} />
           <SearchField id="requests-q" width={240} value={text} placeholder="מספר קריאה, מספר אישי או שם" aria-label="חיפוש לפי מספר קריאה, מספר אישי או שם" onChange={setText} />
           <div className="requests-filter-actions">
           <Button size="sm" icon="sliders" aria-expanded={advancedOpen} onClick={() => setAdvancedOpen((v) => !v)}>
@@ -179,6 +193,7 @@ export function RequestsScreen() {
           </div>
         </div>
 
+
         {/* stays mounted so it can fade and fold both ways; inert while closed */}
         <div className={`adv-wrap${advancedOpen ? ' open' : ''}`} inert={!advancedOpen}>
           <div className="adv requests-filters">
@@ -195,18 +210,18 @@ export function RequestsScreen() {
             <Field label="שלב">
               <SmoothSelect className="input" value={filters.stage} onChange={(event) => update({ stage: event.target.value })}>
                 <option value="">הכל</option>
-                {STAGE_FILTER_ORDER.map((id) => (
+                {filterOptions.stages.map((id) => (
                   <option key={id} value={id}>
                     {STAGE_SHORT[id]}
                   </option>
                 ))}
-                <option value="closed">סגורה</option>
+
               </SmoothSelect>
             </Field>
             <Field label="סטטוס">
               <SmoothSelect className="input requests-status-select" value={filters.statuses} onChange={(event) => update({ statuses: event.target.value })}>
                 <option value="">הכל</option>
-                {catalog.statuses.map((status) => (
+                {filterOptions.statuses.map((status) => (
                   <option key={status.id} value={status.id}>
                     {status.display_name}
                   </option>

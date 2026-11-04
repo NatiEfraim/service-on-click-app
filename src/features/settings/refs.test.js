@@ -50,7 +50,14 @@ describe('drafts', () => {
       start_time: 'יש להזין שעה',
       contact_phone: 'יש למלא את השדה',
     });
-    expect(draftProblems(value, { stock_cars: '-3', start_time: '09:30', contact_phone: '050-1234567' })).toEqual({ stock_cars: 'יש להזין מספר חיובי' });
-    expect(draftProblems(value, { stock_cars: '12', start_time: '09:30', contact_phone: '050-1234567' })).toEqual({});
+    expect(draftProblems(value, { stock_cars: '-3', start_time: '09:30', contact_phone: '0501234567' })).toEqual({ stock_cars: 'יש להזין מספר חיובי' });
+    expect(draftProblems(value, { stock_cars: '12', start_time: '09:30', contact_phone: '0501234567' })).toEqual({});
   });
+});
+
+it('rejects phone letters, punctuation and more than ten digits', () => {
+  for (const phone of ['050-1234567', '12345678901', 'abc', 'אבג', '!@#']) {
+    expect(draftProblems({ contact_phone: '' }, { contact_phone: phone })).toHaveProperty('contact_phone');
+  }
+  expect(draftProblems({ contact_phone: '' }, { contact_phone: '0501234567' })).toEqual({});
 });
