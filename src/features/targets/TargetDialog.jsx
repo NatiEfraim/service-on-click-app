@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { FormError } from '@/components/ui/Feedback';
 import { Field } from '@/components/ui/Field';
-import { SmoothSelect } from '@/components/ui/SmoothSelect';
+import { Select } from '@/components/ui/Select';
 import { Modal } from '@/components/ui/Modal';
 import { ApiError } from '@/lib/api/client';
 import { insightsApi } from '@/lib/api/endpoints';
@@ -80,10 +80,10 @@ export function TargetDialog({ bookingTypeId, current, onClose }) {
           <input className="input" type="text" inputMode="numeric" pattern="[0-9]{1,3}" maxLength={3} style={{ width: 110 }} value={value} onChange={(event) => { if (/^\d{0,3}$/.test(event.target.value)) setValue(event.target.value); }} />
         </Field>
         <Field label="יחידה">
-          <SmoothSelect className="input" fadeOnChange value={unit} onChange={(event) => setUnit(event.target.value)}>
+          <Select autoWidth className="input" fadeOnChange value={unit} onChange={(event) => setUnit(event.target.value)}>
             <option value="d">ימים</option>
             <option value="h">שעות</option>
-          </SmoothSelect>
+          </Select>
         </Field>
         <Field label="התראה מוקדמת">
 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><input className="input" type="text" inputMode="numeric" pattern="[0-9]{1,2}" maxLength={2} style={{ width: 110 }} value={warnPercent} aria-label="אחוז מהיעד להתראה מוקדמת" onChange={(event) => { if (acceptsWarningInput(event.target.value)) setWarnPercent(event.target.value); }} /><span aria-hidden="true">%</span></div>

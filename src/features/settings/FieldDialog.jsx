@@ -1,6 +1,7 @@
 'use client';
 
 import { useMutation } from '@tanstack/react-query';
+import { Select } from '@/components/ui/Select';
 import Link from 'next/link';
 import { useId, useState } from 'react';
 import { Button } from '@/components/ui/Button';
@@ -124,7 +125,7 @@ export function FieldDialog({ unitId, bookingTypeId, settings, field, onClose })
       <div className="field st-types">
         <label htmlFor={`${ids}-type`}>סוג השדה</label>
         {isNew || field.can_change_type ? (
-          <select
+          <Select
             id={`${ids}-type`}
             className="input"
             value={typeId}
@@ -139,7 +140,7 @@ export function FieldDialog({ unitId, bookingTypeId, settings, field, onClose })
                 {type.display_name}
               </option>
             ))}
-          </select>
+          </Select>
         ) : (
           <>
             <div id={`${ids}-type`} className="st-locked">

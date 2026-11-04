@@ -37,7 +37,7 @@ describe('buildNav', () => {
     const me = makeMe({ is_super_admin: true, caps: ['audit.view', 'sync.view', 'sync.operate', 'config.global', 'users.manage', 'dashboard.view', 'reports.view', 'targets.manage'] });
     expect(labels(me)).toEqual(['home', 'requests', 'reports', 'manage', 'audit', 'sync']);
     const manage = buildNav(me).find((entry) => entry.id === 'manage');
-    expect(manage?.kind === 'group' && manage.items.map((item) => item.id)).toEqual(['domains', 'users', 'org']);
+    expect(manage?.kind === 'group' && manage.items.map((item) => item.id)).toEqual(['domains', 'users', 'org', 'hatch']);
   });
 
   it('gives an admin the list and users management, but not the service domains, history or sync', () => {
@@ -50,7 +50,7 @@ describe('buildNav', () => {
   it('gives the service domains to the super admin only', () => {
     const me = makeMe({ is_super_admin: true, caps: ['users.manage'] });
     const manage = buildNav(me).find((entry) => entry.id === 'manage');
-    expect(manage?.kind === 'group' && manage.items.map((item) => item.id)).toEqual(['domains', 'users']);
+    expect(manage?.kind === 'group' && manage.items.map((item) => item.id)).toEqual(['domains', 'users', 'hatch']);
   });
 
   it('gives an approver the queue because they act on bookings, and no empty management menu', () => {

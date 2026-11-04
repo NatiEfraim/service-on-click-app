@@ -1,4 +1,5 @@
 import { Icon } from '@/components/ui/Icon';
+import { Select } from '@/components/ui/Select';
 
 import { OPTION_FIELD_TYPES } from '@/lib/labels';
 import { PREVIEW_MAX_CHIPS } from './constants';
@@ -11,9 +12,9 @@ function Control({ node, options }) {
   if (OPTION_FIELD_TYPES.includes(type)) {
     if (type === 5) {
       return (
-        <select className="input" disabled>
+        <Select className="input" disabled>
           <option>{own[0]?.name ?? 'בחירה'}</option>
-        </select>
+        </Select>
       );
     }
     const shown = own.slice(0, PREVIEW_MAX_CHIPS);

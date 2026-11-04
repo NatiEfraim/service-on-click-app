@@ -1,6 +1,7 @@
 'use client';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Select } from '@/components/ui/Select';
 import { useId, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { FormError } from '@/components/ui/Feedback';
@@ -151,7 +152,7 @@ export function NewUserDialog({ onClose, onCreated }) {
         <div className="cols2">
           {me.is_super_admin ? (
             <Field label="יחידה">
-              <select
+              <Select
                 className="input"
                 value={chosenUnit}
                 onChange={(event) => {
@@ -164,18 +165,18 @@ export function NewUserDialog({ onClose, onCreated }) {
                     {unit.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </Field>
           ) : null}
           <Field label="מחלקה (רשות)">
-            <select className="input" value={departmentId} onChange={(event) => setDepartmentId(event.target.value)}>
+            <Select className="input" value={departmentId} onChange={(event) => setDepartmentId(event.target.value)}>
               <option value="">ללא מחלקה</option>
               {departments.map((department) => (
                 <option key={department.id} value={department.id}>
                   {department.name}
                 </option>
               ))}
-            </select>
+            </Select>
           </Field>
         </div>
 

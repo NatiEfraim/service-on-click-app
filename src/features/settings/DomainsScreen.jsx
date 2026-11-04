@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { Select } from '@/components/ui/Select';
 import { useSearchParams } from 'next/navigation';
 
 import { DomainBadge } from '@/components/booking/DomainBadge';
@@ -105,13 +106,13 @@ export function DomainsScreen() {
           me.is_super_admin ? (
             <label className="st-unit">
               יחידה
-              <select className="input" value={unitId} onChange={(event) => setUnit(Number(event.target.value))}>
+              <Select className="input" value={unitId} onChange={(event) => setUnit(Number(event.target.value))}>
                 {catalog.units.map((unit) => (
                   <option key={unit.id} value={unit.id}>
                     {unit.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
           ) : undefined
         }

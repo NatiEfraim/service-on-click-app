@@ -1,6 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Select } from '@/components/ui/Select';
 import { useId, useMemo, useState } from 'react';
 import { DomainIcon } from '@/components/booking/DomainBadge';
 import { Button } from '@/components/ui/Button';
@@ -231,7 +232,7 @@ export function PermissionsDialog({ target, onClose }) {
               </span>
             </div>
             <Field label="מחלקה">
-              <select
+              <Select
                 className="input"
                 value={departmentEdit ?? (currentDepartment === null ? '' : String(currentDepartment))}
                 disabled={busy}
@@ -246,7 +247,7 @@ export function PermissionsDialog({ target, onClose }) {
                     {department.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </Field>
           </div>
 

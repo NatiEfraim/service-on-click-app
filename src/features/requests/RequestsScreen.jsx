@@ -16,7 +16,7 @@ import { LOAD_AHEAD_PX, MIN_LIST_HEIGHT, PAGE_SIZE } from '@/features/queue/cons
 import { EmptyState, ErrorNotice, Loading } from '@/components/ui/Feedback';
 import { DateRangePicker } from '@/components/ui/DateRangePicker';
 import { Field } from '@/components/ui/Field';
-import { SmoothSelect } from '@/components/ui/SmoothSelect';
+import { Select } from '@/components/ui/Select';
 import { PageHead } from '@/components/ui/PageHead';
 import { SearchField } from '@/components/ui/SearchField';
 import { useSmoothHeight } from '@/components/ui/SmoothSize';
@@ -174,7 +174,7 @@ export function RequestsScreen() {
           <label className="small muted" htmlFor="requests-sort">
             מיון
           </label>
-          <SmoothSelect
+          <Select autoWidth
             id="requests-sort"
             className="input requests-sort-select"
             style={{ paddingBlock: 5 }}
@@ -189,7 +189,7 @@ export function RequestsScreen() {
                 {s.label}
               </option>
             ))}
-          </SmoothSelect>
+          </Select>
           </div>
         </div>
 
@@ -198,17 +198,17 @@ export function RequestsScreen() {
         <div className={`adv-wrap${advancedOpen ? ' open' : ''}`} inert={!advancedOpen}>
           <div className="adv requests-filters">
             <Field label="תחום">
-              <SmoothSelect className="input" value={filters.types} onChange={(event) => update({ types: event.target.value })}>
+              <Select autoWidth className="input" value={filters.types} onChange={(event) => update({ types: event.target.value })}>
                 <option value="">הכל</option>
                 {managedTypes.map((type) => (
                   <option key={type.id} value={type.id}>
                     {type.display_name}
                   </option>
                 ))}
-              </SmoothSelect>
+              </Select>
             </Field>
             <Field label="שלב">
-              <SmoothSelect className="input" value={filters.stage} onChange={(event) => update({ stage: event.target.value })}>
+              <Select autoWidth className="input" value={filters.stage} onChange={(event) => update({ stage: event.target.value })}>
                 <option value="">הכל</option>
                 {filterOptions.stages.map((id) => (
                   <option key={id} value={id}>
@@ -216,40 +216,40 @@ export function RequestsScreen() {
                   </option>
                 ))}
 
-              </SmoothSelect>
+              </Select>
             </Field>
             <Field label="סטטוס">
-              <SmoothSelect className="input requests-status-select" value={filters.statuses} onChange={(event) => update({ statuses: event.target.value })}>
+              <Select autoWidth className="input requests-status-select" value={filters.statuses} onChange={(event) => update({ statuses: event.target.value })}>
                 <option value="">הכל</option>
                 {filterOptions.statuses.map((status) => (
                   <option key={status.id} value={status.id}>
                     {status.display_name}
                   </option>
                 ))}
-              </SmoothSelect>
+              </Select>
             </Field>
             {handlers.data?.length ? (
               <Field label="גורם מטפל">
-                <SmoothSelect className="input" value={filters.handler} onChange={(event) => update({ handler: event.target.value })}>
+                <Select autoWidth className="input" value={filters.handler} onChange={(event) => update({ handler: event.target.value })}>
                   <option value="">הכל</option>
                   {handlers.data.map((person) => (
                     <option key={person.uuid} value={person.uuid}>
                       {person.full_name}
                     </option>
                   ))}
-                </SmoothSelect>
+                </Select>
               </Field>
             ) : null}
             {me.is_super_admin ? (
               <Field label="יחידה">
-                <SmoothSelect className="input" value={filters.units} onChange={(event) => update({ units: event.target.value })}>
+                <Select autoWidth className="input" value={filters.units} onChange={(event) => update({ units: event.target.value })}>
                   <option value="">הכל</option>
                   {catalog.units.map((unit) => (
                     <option key={unit.id} value={unit.id}>
                       {unit.name}
                     </option>
                   ))}
-                </SmoothSelect>
+                </Select>
               </Field>
             ) : null}
             {/* a div, not Field's <label>: a click on the open calendar must not be forwarded to its button */}

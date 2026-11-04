@@ -1,6 +1,7 @@
 'use client';
 
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { Select } from '@/components/ui/Select';
 import { useId, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { FormError } from '@/components/ui/Feedback';
@@ -144,13 +145,13 @@ export function OptionDialog({ unitId, bookingTypeId, settings, field, target, s
       </div>
 
       <Field label="סוג שדה">
-        <select className="input" value={chosen ?? ''} onChange={(event) => setTypeId(Number(event.target.value))}>
+        <Select className="input" value={chosen ?? ''} onChange={(event) => setTypeId(Number(event.target.value))}>
           {types.map((type) => (
             <option key={type.id} value={type.id}>
               {type.display_name}
             </option>
           ))}
-        </select>
+        </Select>
       </Field>
       <p className="small muted" style={{ margin: 0 }}>
         {kind === 'input' ? 'המבקש יקליד ערך במקום לבחור.' : isList ? 'אפשרות מסוג רשימה מכילה תתי-אפשרויות משלה.' : 'אפשרות רגילה לבחירה.'}

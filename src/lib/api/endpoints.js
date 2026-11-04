@@ -157,6 +157,17 @@ export const auditApi = {
   verify: (signal) => getData(`${SUPER}/audit/verify`, undefined, signal),
 };
 
+/** Digital hatch: runs the scheduler's exports (r2b) and imports (b2r) now, inline (sync=1), and returns `data`. */
+const HATCH = `${SUPER}/digital-hatch`;
+const hatchRun = async (path, body) => (await send('post', `${HATCH}/${path}`, { ...body, sync: 1 })).data;
+export const hatchApi = {
+  exportBookingStatus: (body) => hatchRun('export-booking-status', body),
+  exportUsers: (body) => hatchRun('export-users', body),
+  importBookingJson: (body) => hatchRun('import-booking-json', body),
+  importApplicationLogJson: (body) => hatchRun('import-application-log-json', body),
+  importFiles: (body) => hatchRun('import-files', body),
+};
+
 export const syncApi = {
   overview: (signal) => getData(`${SUPER}/sync`, undefined, signal),
   file: (id, signal) => getData(`${SUPER}/sync/files/${id}`, undefined, signal),

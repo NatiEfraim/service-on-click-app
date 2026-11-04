@@ -369,3 +369,10 @@ span.chart-fade { flex-direction: row; align-items: center; gap: 8px; white-spac
 
 .barber-status-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
 
+
+/* Digital hatch (super admin): one card per operation, its last result under the button. */
+.hatch-section { font-size: 16px; margin: 24px 0 12px; }
+.hatch-grid { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); align-items: start; }
+.hatch-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 16px; }
+.hatch-form .field { min-width: 200px; }
+.hatch-result { display: grid; gap: 8px; margin-top: 14px; }
