@@ -8,8 +8,8 @@ export const STAGE_ORDER = [
   'supplier_files',
   'supplier_approval',
   'supplier_number',
+  'barber',
   'realization',
-  'barber_done',
 ];
 
 export const STAGE_SHORT = {
@@ -20,7 +20,7 @@ export const STAGE_SHORT = {
   supplier_approval: 'אישור ספק',
   supplier_number: 'מספר ספק',
   realization: 'מימוש וסגירה',
-  barber_done: 'טופל ע"י ספר',
+  barber: 'ממתין לספר',
   closed: 'סגורה',
 };
 
@@ -33,7 +33,7 @@ export const STAGE_COLOR = {
   supplier_approval: '#B5AE93',
   supplier_number: '#948E72',
   realization: '#145E4A',
-  barber_done: '#5E8C7E',
+  barber: '#5E8C7E',
   closed: '#8A8296',
 };
 
@@ -96,7 +96,7 @@ export function statusTone(statusId) {
 
 /** Reject / cancel are destructive, supplier waits are "hold", the rest are primary. */
 export function actionTone(action) {
-  if ([4, 7, 16, 18].includes(action.status_id)) return 'danger';
+  if ([4, 7, 12, 16, 18].includes(action.status_id)) return 'danger';
   if ([8, 9, 10].includes(action.status_id)) return 'hold';
   return 'primary';
 }
@@ -120,4 +120,4 @@ export function commentError(comment, required) {
   return null;
 }
 
-export const STAGE_FILTER_ORDER = ['barber_done', ...STAGE_ORDER.filter((stage) => stage !== 'barber_done')];
+export const STAGE_FILTER_ORDER = ['barber', ...STAGE_ORDER.filter((stage) => stage !== 'barber')];

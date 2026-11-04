@@ -21,8 +21,8 @@ export const APPROVAL_STAGES = ['control_officer', 'vice_approver', 'approver'];
 /** The six cards of the stage pipeline, always shown. */
 export const PIPELINE_STAGES = ['control_officer', 'vice_approver', 'approver', 'supplier_approval', 'supplier_number', 'realization'];
 
-/** Short side stages are counted inside the pipeline card next to them. */
-export const FOLDED_INTO = { supplier_files: 'supplier_approval', barber_done: 'realization' };
+/** Short side stages are counted inside the pipeline card next to them (the barber is the type's approver). */
+export const FOLDED_INTO = { supplier_files: 'supplier_approval', barber: 'approver' };
 
 /** Rows shown in each bottleneck table. */
 export const BOTTLENECK_ROWS = 8;

@@ -161,7 +161,7 @@ export function pendingChanges(matrix, edits) {
   return changes;
 }
 
-/** `role_assignments` for `assign-approver-role`: changed booking types only, each with both required flags. */
+/** `role_assignments` for `assign-approver-role`: changed booking types only, each with its flags (no vice approver flag where the type has none, e.g. the barber). */
 export function approverAssignments(matrix, edits) {
   const changed = new Set(pendingChanges(matrix, edits).filter((change) => change.role !== 'admin').map((change) => change.bookingTypeId));
   return matrix.rows
@@ -170,10 +170,9 @@ export function approverAssignments(matrix, edits) {
       const assignment = {
         booking_type_id: row.bookingTypeId,
         is_approver: shownValue(row, 'approver', edits) ?? false,
-        is_vice_approver: shownValue(row, 'vice_approver', edits) ?? false,
       };
       for (const role of Object.keys(row.cells)) {
-        if (role !== 'admin' && role !== 'approver' && role !== 'vice_approver') assignment[`is_${role}`] = shownValue(row, role, edits) ?? false;
+        if (role !== 'admin' && role !== 'approver') assignment[`is_${role}`] = shownValue(row, role, edits) ?? false;
       }
       return assignment;
     });

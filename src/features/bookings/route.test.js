@@ -5,7 +5,7 @@ import { routeFor, routePosition } from './route';
 const catalog = {
   booking_type_statuses: {
     '1': [1, 3, 4, 5, 6, 7, 15, 16],
-    '5': [1, 3, 4, 5, 6, 7, 11, 12, 13, 15, 16],
+    '5': [1, 6, 11, 12, 13],
   },
 };
 
@@ -17,8 +17,14 @@ describe('routeFor', () => {
     expect(ids(routeFor({ booking_type_id: 1, stage: 'approver' }, catalog))).toEqual(['received', 'vice_approver', 'approver', 'realization', 'closed']);
   });
 
-  it('adds the barber station for a type that can reach "handled by the barber"', () => {
-    expect(ids(routeFor({ booking_type_id: 5, stage: 'approver' }, catalog))).toEqual(['received', 'vice_approver', 'approver', 'realization', 'barber_done', 'closed']);
+  it('gives a barber booking its one step: received - barber - closed', () => {
+    expect(ids(routeFor({ booking_type_id: 5, stage: 'barber' }, catalog))).toEqual(['received', 'barber', 'closed']);
+  });
+
+  it('finishes a barber booking approved by the barber, stops a rejected one', () => {
+    const stations = routeFor({ booking_type_id: 5, stage: 'closed' }, catalog);
+    expect(routePosition({ stage: 'closed', status_id: 11 }, stations)).toEqual({ here: 2, mode: 'finished' });
+    expect(routePosition({ stage: 'closed', status_id: 12 }, stations)).toEqual({ here: 2, mode: 'stopped' });
   });
 
   it('adds the control-officer station only when a booking is, or has been, in it', () => {

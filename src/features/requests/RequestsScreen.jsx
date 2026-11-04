@@ -71,7 +71,10 @@ export function RequestsScreen() {
   });
   // Keep the previous results mounted until their exit finishes, including an empty result.
   const [visibleData, setVisibleData] = useState(query.data);
-  const resultsExiting = visibleData !== query.data && !query.isPlaceholderData;
+  // a next page keeps the earlier page objects: the same results, grown - no exit, only the new rows fade in
+  const appended = Boolean(visibleData && query.data && query.data.pages.length > visibleData.pages.length && visibleData.pages.every((page, i) => page === query.data.pages[i]));
+  if (appended) setVisibleData(query.data);
+  const resultsExiting = visibleData !== query.data && !query.isPlaceholderData && !appended;
   useEffect(() => {
     if (query.isPlaceholderData || visibleData === query.data) return;
     const timer = window.setTimeout(() => setVisibleData(query.data), prefersReducedMotion() ? 0 : 180);
@@ -97,6 +100,16 @@ export function RequestsScreen() {
     const fade = el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: CONTENT_FADE_MS, easing: EASE_OUT });
     return () => fade.cancel();
   }, [hasRows]);
+  // rows added by a next page fade in; the rows already shown stay as they are
+  const shownCount = useRef(0);
+  useLayoutEffect(() => {
+    const before = shownCount.current;
+    shownCount.current = rows.length;
+    const list = scroller.current?.querySelector('.tickets');
+    if (!list || before === 0 || rows.length <= before || prefersReducedMotion()) return;
+    const fades = [...list.children].slice(before).map((el) => el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: CONTENT_FADE_MS, easing: EASE_OUT }));
+    return () => fades.forEach((fade) => fade.cancel());
+  }, [rows.length]);
   const { hasNextPage, isFetchingNextPage, fetchNextPage } = query;
   useEffect(() => {
     const el = sentinel.current;
@@ -106,7 +119,8 @@ export function RequestsScreen() {
     }, { root: scroller.current, rootMargin: `0px 0px ${LOAD_AHEAD_PX}px 0px` });
     observer.observe(el);
     return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+    // hasRows: the sentinel mounts only with the rows, which can come after the first page (the exit delay)
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, hasRows]);
 
   // Handler filter options; only for users who manage users.
   const handlers = useQuery({ queryKey: keys.approvers(''), queryFn: ({ signal }) => peopleApi.approvers('', signal), enabled: can('users.manage'), staleTime: 5 * 60_000 });

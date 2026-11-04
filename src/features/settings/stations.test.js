@@ -5,7 +5,7 @@ import { campCommanders, hasEmptyStation, peopleWithRoles, stationsForType } fro
 const catalog = {
   booking_type_statuses: {
     '1': [1, 3, 4, 5, 6, 7, 15, 16],
-    '5': [1, 3, 4, 5, 6, 7, 11, 12, 13, 15, 16],
+    '5': [1, 6, 11, 12, 13],
     '8': [1, 3, 4, 5, 6, 7, 8, 9, 10, 15, 16, 17, 18],
   },
 };
@@ -36,10 +36,10 @@ describe('stationsForType', () => {
     expect(stations.map((s) => s.people)).toEqual([['גיל'], ['דנה', 'נעם'], ['דנה', 'נעם']]);
   });
 
-  it('adds the barber step where "handled by the barber" can be reached, held by the vice approver and the approver', () => {
+  it('gives the barber type only the barber step, held by the approver', () => {
     const stations = stationsForType(5, catalog, managers);
-    expect(stations.map((s) => s.id)).toEqual(['vice_approver', 'approver', 'realization', 'barber_done']);
-    expect(stations.find((s) => s.id === 'barber_done')?.people).toEqual(['דנה', 'גיל', 'נעם']);
+    expect(stations.map((s) => s.id)).toEqual(['barber']);
+    expect(stations[0].people).toEqual(['דנה', 'נעם']);
   });
 
   it('adds the control officer where his statuses can be reached, and flags the station nobody holds', () => {

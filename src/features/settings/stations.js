@@ -9,7 +9,7 @@ const STATION_ROLES = {
   control_officer: ['transportation_control_officer'],
   vice_approver: ['vice_approver'],
   approver: ['approver'],
-  barber_done: ['vice_approver', 'approver'],
+  barber: ['approver'],
   realization: ['approver'],
 };
 
