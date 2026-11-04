@@ -11,6 +11,7 @@ import { authApi } from '@/lib/api/endpoints';
 import { APP_NAME, DEV_LOGIN, LOGIN_URL } from '@/lib/config';
 import { PERSONAL_NUMBER_PATTERN } from '@/lib/patterns';
 import { safeNext } from '@/lib/safe-next';
+import { useAdfsLogin } from './useAdfsLogin';
 
 
 /** Dev login by personal number (the API sets the HttpOnly cookie); production uses ADFS via NEXT_PUBLIC_LOGIN_URL. */
@@ -19,6 +20,9 @@ export function LoginForm() {
   const [personalNumber, setPersonalNumber] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  // Hard navigation clears caches so nothing of a previous user shows.
+  const goNext = () => window.location.assign(safeNext(new URLSearchParams(window.location.search).get('next'), window.location.origin));
+  const adfs = useAdfsLogin(goNext);
 
   async function submit(event) {
     event.preventDefault();
@@ -31,8 +35,7 @@ export function LoginForm() {
     setError('');
     try {
       await authApi.login(value);
-      // Hard navigation clears caches so nothing of a previous user shows.
-      window.location.assign(safeNext(new URLSearchParams(window.location.search).get('next'), window.location.origin));
+      goNext();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'ההתחברות נכשלה.');
       setBusy(false);
@@ -82,8 +85,16 @@ export function LoginForm() {
         ) : (
           <div style={{ display: 'grid', gap: 14 }}>
             <h1>התחברות</h1>
-            <p className="login-hint">ההתחברות למערכת מתבצעת דרך שירות הזיהוי הארגוני.</p>
-            {LOGIN_URL ? (
+            {adfs.state === 'off' ? (
+              <p className="login-hint">ההתחברות למערכת מתבצעת דרך שירות הזיהוי הארגוני.</p>
+            ) : adfs.state === 'failed' ? (
+              <Notice tone="bad">{adfs.error}</Notice>
+            ) : (
+              <p className="login-hint" aria-live="polite">
+                <span className="spin" aria-hidden="true" /> {adfs.state === 'signing-in' ? 'מתחברים...' : 'מזהים אותך דרך שירות הזיהוי הארגוני...'}
+              </p>
+            )}
+            {LOGIN_URL && adfs.state !== 'waiting' && adfs.state !== 'signing-in' ? (
               <Button variant="primary" onClick={() => window.location.assign(LOGIN_URL)}>
                 מעבר להתחברות
               </Button>
@@ -91,6 +102,8 @@ export function LoginForm() {
           </div>
         )}
       </main>
+      {/* ADFS hands the token to this page from a hidden frame */}
+      {adfs.src ? <iframe src={adfs.src} title="ADFS" hidden aria-hidden="true" tabIndex={-1} style={{ position: 'absolute', width: 0, height: 0, border: 0 }} /> : null}
     </div>
   );
 }
