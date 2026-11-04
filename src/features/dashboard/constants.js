@@ -16,13 +16,31 @@ export const WINDOWS = [
 export const DEFAULT_WINDOW_DAYS = 30;
 
 /** Stages where a booking waits for an approver's decision. */
-export const APPROVAL_STAGES = ['control_officer', 'vice_approver', 'approver'];
+export const APPROVAL_STAGES = ['control_officer', 'vice_approver', 'approver', 'barber'];
 
-/** The six cards of the stage pipeline, always shown. */
-export const PIPELINE_STAGES = ['control_officer', 'vice_approver', 'approver', 'supplier_approval', 'supplier_number', 'realization'];
+/** The cards of the stage pipeline, in route order; each is shown only for types that reach its statuses. */
+export const PIPELINE_STAGES = ['control_officer', 'vice_approver', 'approver', 'barber', 'supplier_approval', 'supplier_number', 'realization'];
 
-/** Short side stages are counted inside the pipeline card next to them (the barber is the type's approver). */
-export const FOLDED_INTO = { supplier_files: 'supplier_approval', barber: 'approver' };
+/** The statuses that put a type on each card (14 / 17 / 18 control officer, 8 / 9 / 10 supplier holds, 11 / 12 the barber). */
+const STAGE_STATUSES = {
+  control_officer: [14, 17, 18],
+  vice_approver: [15, 16],
+  approver: [3, 4],
+  barber: [11, 12],
+  supplier_approval: [8, 9],
+  supplier_number: [10],
+  realization: [5, 7],
+};
+
+/** The pipeline cards of these types, from `catalog.booking_type_statuses`; every card when the catalog does not know them. */
+export function pipelineStagesFor(bookingTypeIds, catalog) {
+  const reachable = bookingTypeIds.flatMap((id) => catalog?.booking_type_statuses?.[String(id)] ?? []);
+  if (reachable.length === 0) return PIPELINE_STAGES;
+  return PIPELINE_STAGES.filter((stage) => STAGE_STATUSES[stage].some((status) => reachable.includes(status)));
+}
+
+/** Short side stages are counted inside the pipeline card next to them, when they have no card of their own. */
+export const FOLDED_INTO = { supplier_files: 'supplier_approval' };
 
 /** Rows shown in each bottleneck table. */
 export const BOTTLENECK_ROWS = 8;

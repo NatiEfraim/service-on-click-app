@@ -104,6 +104,8 @@ const isApproverSide = (role) => role !== 'admin' && !NOT_A_GRANT.has(role);
 export function buildMatrix({ approver, admin, permissionNames, caller, targetUuid }) {
   const rows = new Map();
   const put = (bookingTypeId, role, value) => {
+    // The barber answers as the approver; stale permission names must not revive a handler role.
+    if (Number(bookingTypeId) === 5 && role === 'vice_approver') return;
     const row = rows.get(bookingTypeId) ?? { bookingTypeId, cells: {} };
     row.cells[role] = { value, lock: lockReason(caller, targetUuid, bookingTypeId) };
     rows.set(bookingTypeId, row);

@@ -20,8 +20,8 @@ export const authApi = {
 };
 
 /** Statuses of a closed booking (mirror the API's StatusBookingEnum::isTerminal); every other status is open. */
-export const CLOSED_STATUS_IDS = [4, 5, 6, 7, 12, 13];
-export const OPEN_STATUS_IDS = [1, 2, 3, 8, 9, 10, 11, 14, 15, 16, 17, 18];
+export const CLOSED_STATUS_IDS = [4, 5, 6, 7, 11, 12, 13];
+export const OPEN_STATUS_IDS = [1, 2, 3, 8, 9, 10, 14, 15, 16, 17, 18];
 
 /** A plain user (no management role): the requester endpoints the mobile app uses. */
 export const requesterApi = {
@@ -65,6 +65,7 @@ export const insightsApi = {
   overview: (signal) => getData(`${APPROVER}/overview`, undefined, signal),
   /** System admin and camp commander only (the route lives under the admin prefix on the API). */
   home: (signal) => getData(`${ADMIN}/home`, undefined, signal),
+  barberDashboard: (signal) => getData(`${APPROVER}/dashboard/barber-booking`, undefined, signal),
   domainDashboard: (params, signal) => getData(`${APPROVER}/domain-dashboard`, params, signal),
   bottlenecks: (params, signal) => getData(`${APPROVER}/bottlenecks`, params, signal),
   reports: (params, signal) => getData(`${ADMIN}/reports`, params, signal),

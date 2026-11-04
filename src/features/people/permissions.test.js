@@ -281,3 +281,13 @@ describe('reasonError', () => {
     expect(reasonError('א'.repeat(501), true)).toBe('הסיבה יכולה להכיל עד 500 תווים');
   });
 });
+
+describe('barber roles', () => {
+  it('offers only the approver flag on the barber, including the super admin fallback', () => {
+    const matrix = buildMatrix({ approver: approverAnswer([]), admin: adminAnswer([{ id: 5, admin: false }, { id: 1, admin: false }]), permissionNames: ['vice_approver_5'], caller: SUPER_CALLER, targetUuid: 'p' });
+    const barber = matrix.rows.find((row) => row.bookingTypeId === 5);
+    expect(barber.cells.vice_approver).toBeUndefined();
+    expect(matrix.rows.find((row) => row.bookingTypeId === 1).cells.vice_approver).toBeDefined();
+    expect(approverAssignments(matrix, { [cellKey('approver', 5)]: true })).toEqual([{ booking_type_id: 5, is_approver: true }]);
+  });
+});

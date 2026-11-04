@@ -12,6 +12,7 @@ import { invalidateWork } from '@/lib/api/keys';
 import { newKey } from '@/lib/id';
 import { notifyBookingDecision } from '@/lib/booking-decisions';
 import { isHoldStatus } from '@/lib/booking-workflow';
+import { isBarberDecision } from '@/lib/booking-actions';
 import { actionTone, COMMENT_MAX, commentError } from '@/lib/labels';
 import { useSession } from '@/providers/SessionProvider';
 import { useToast } from '@/providers/UiProvider';
@@ -41,7 +42,7 @@ export function ActionDialog({ booking, action, onClose, onDone, onDecided }) {
     },
     onSuccess: async (result) => {
       toast(result.message || 'הקריאה עודכנה.', 'ok');
-      if (isHoldStatus(action.status_id)) {
+      if (isHoldStatus(action.status_id) || isBarberDecision(booking, action)) {
         onDone?.();
         onClose();
         await invalidateWork(client);

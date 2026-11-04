@@ -81,7 +81,7 @@ function Body({ booking, onDecision }) {
           ) : null}
           {booking.actions.length > 0 ? (
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--line-2)' }}>
-              {bookingActions(booking.actions).map((action) => {
+              {bookingActions(booking.actions).toSorted((a, b) => { const rank = (item) => actionTone(item) === 'danger' ? 2 : actionTone(item) === 'hold' ? 1 : 0; return rank(a) - rank(b); }).map((action) => {
                 const tone = actionTone(action);
                 return (
                   <Button key={action.status_id} variant={tone === 'danger' ? 'danger' : tone === 'hold' ? 'hold' : 'primary'} onClick={() => status.start(booking, action)}>

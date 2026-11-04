@@ -3,17 +3,16 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
 
-import { fmtDate, fmtHours } from '@/lib/format';
+import { fmtDate } from '@/lib/format';
 import { STAGE_COLOR, STAGE_SHORT } from '@/lib/labels';
 import { FOLDED_INTO, PIPELINE_STAGES } from './constants';
 
 
 /** Stage pipeline: open bookings per stage, coloured by severity against the handling target. */
-export function Pipeline({ byStage: raw, analysis, onStage }) {
-  const stages = PIPELINE_STAGES;
+export function Pipeline({ byStage: raw, analysis, onStage, stages = PIPELINE_STAGES }) {
   const byStage = { ...raw };
   for (const [from, to] of Object.entries(FOLDED_INTO)) {
-    if (raw[from]) byStage[to] = (byStage[to] ?? 0) + (raw[from] ?? 0);
+    if (raw[from] && !stages.includes(from)) byStage[to] = (byStage[to] ?? 0) + (raw[from] ?? 0);
   }
   return (
     <div className="pipe">
@@ -27,8 +26,7 @@ export function Pipeline({ byStage: raw, analysis, onStage }) {
             </span>
             <span className="n">{byStage[id] ?? 0}</span>
             <span className="m">
-              {info?.median_hours != null ? `חציון ${fmtHours(info.median_hours)}` : ' '}
-              {info?.breached_open ? ` · ${info.breached_open} חורגות` : ''}
+              {info?.breached_open ? `${info.breached_open} חורגות` : ' '}
             </span>
             <span className="arrow">
               <Icon name="left" />

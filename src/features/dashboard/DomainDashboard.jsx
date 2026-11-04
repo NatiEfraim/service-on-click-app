@@ -25,10 +25,10 @@ import { homeKind } from '@/lib/nav';
 import { useArrivals } from '@/lib/useArrivals';
 import { useHeldHeight } from '@/lib/useHeldHeight';
 import { useSetSearchParams } from '@/lib/useSetSearchParams';
-import { useSession } from '@/providers/SessionProvider';
-import { BottlenecksPanel } from './BottlenecksPanel';
+import { useSession } from '@/providers/SessionProvider';import { BottlenecksPanel } from './BottlenecksPanel';
 import { indexStages, Pipeline, TrendChart, worstStage } from './charts';
-import { APPROVAL_STAGES, DEFAULT_WINDOW_DAYS, SEVERITY, STAT_COLOR, WINDOWS } from './constants';
+import { APPROVAL_STAGES, DEFAULT_WINDOW_DAYS, pipelineStagesFor, SEVERITY, STAT_COLOR, WINDOWS } from './constants';
+import { BarberStatusSummary } from './BarberStatusSummary';
 import { StageBars } from './StageBars';
 
 function parseTypes(raw) {
@@ -43,7 +43,7 @@ export function DomainDashboard() {
   const router = useRouter();
   const search = useSearchParams();
   const setParams = useSetSearchParams();
-  const { me, typeName } = useSession();
+  const { me, typeName, catalog } = useSession();
   const action = useStatusAction({ animateOut: true });
   const [targetOpen, setTargetOpen] = useState(false);
   const [full, setFull] = useState(false);
@@ -67,8 +67,7 @@ export function DomainDashboard() {
   const typesParam = single ? `&types=${data.booking_type_ids.join(',')}` : '';
   const info = indexStages(data.stages);
   const ordered = STAGE_ORDER.map((id) => info[id]).filter((s) => Boolean(s));
-  const worst = worstStage(data.stages);
-  const scale = Math.max(1, ...ordered.map((s) => s.p90_hours ?? 0)) * 1.15;
+  const worst = worstStage(data.stages);  const scale = Math.max(1, ...ordered.map((s) => s.p90_hours ?? 0)) * 1.15;
   const pct = (hours) => `${Math.min(100, ((hours ?? 0) / scale) * 100)}%`;
   const awaitingApproval = APPROVAL_STAGES.reduce((sum, id) => sum + (data.by_stage[id] ?? 0), 0);
 
@@ -117,6 +116,8 @@ export function DomainDashboard() {
         </div>
       </div>
 
+      {single === 5 ? <BarberStatusSummary /> : null}
+
       {/* 1. headline numbers */}
       <div className="card stats stagger">
         <Stat index={0} icon="list" color={STAT_COLOR.open} label="קריאות פתוחות" value={data.totals.open} foot={`מתוך ${data.totals.total} בתחומים שלך`} onClick={() => router.push(`/requests?view=open${typesParam}`)} />
@@ -145,7 +146,7 @@ export function DomainDashboard() {
           </Button>
         }
       >
-        <Pipeline byStage={data.by_stage} analysis={info} onStage={goStage} />
+        <Pipeline byStage={data.by_stage} analysis={info} onStage={goStage} stages={pipelineStagesFor(data.booking_type_ids, catalog)} />
         {worst ? (
           <div className="insight">
             <Icon name="alert" />

@@ -299,7 +299,16 @@ export function PermissionsDialog({ target, onClose }) {
                                 aria-label={cell.lock ? `${label}. ${cell.lock}` : label}
                                 onChange={(event) => {
                                   const next = event.target.checked;
-                                  setEdits((current) => ({ ...current, [cellKey(role, row.bookingTypeId)]: next }));
+                                  setEdits((current) => {
+                                    const updated = { ...current, [cellKey(role, row.bookingTypeId)]: next };
+                                    // one role per domain: checking a role clears the other ones of the row
+                                    if (next) {
+                                      for (const [other, otherCell] of Object.entries(row.cells)) {
+                                        if (other !== role && otherCell.lock === null && shownValue(row, other, current)) updated[cellKey(other, row.bookingTypeId)] = false;
+                                      }
+                                    }
+                                    return updated;
+                                  });
                                   setFormError('');
                                 }}
                               />
