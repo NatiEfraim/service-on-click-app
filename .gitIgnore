@@ -1,5 +1,8 @@
 /project-files
 
+# Claude Code: local skills and settings, never committed
+/.claude/
+
 # dependencies
 /node_modules
 

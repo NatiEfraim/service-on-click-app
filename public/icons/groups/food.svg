@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="28.5 42.75 148 148" role="img" aria-labelledby="title desc">
+  <title id="title">Sandwich</title>
+  <desc id="desc">A triangular sandwich with bread, green lettuce, cheese, and filling.</desc>
+  <g stroke="#0B0B0B" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round">
+    <!-- lower bread slice -->
+    <path d="M43 151.5 C39 156 37.5 164 39 171.5 C40 177.5 43.5 181 48 180 L157 145 C161 143.5 163 139.5 163 134 L162.5 127.5 Z" fill="#F6D9A5"/>
+    <path d="M41 165.5 L159 128.5" fill="none"/>
+
+    <!-- cheese and filling -->
+    <path d="M43 145 L61 136 L93 139 L119 127 L157 120 L162 128 L143 142 L117 149.5 L87 146.5 L51 157 C44 159 38 154 39 149 Z" fill="#FFD276"/>
+    <path d="M118 149.5 L141 126" fill="none"/>
+
+    <!-- lettuce -->
+    <path d="M39 139 C35 143 35 149 39 152 C43 155 48 153 53 151 L76 144 C83 142 90 146 98 145 C106 144 110 138 117 136 L157 124 C164 122 170 118 168 112 C167 108 162 106 158 106 L45 132 Z" fill="#A9CB69"/>
+
+    <!-- middle bread layer -->
+    <path d="M42 122 L157 91 C161 90 165 94 166 99 C167 104 164 108 159 110 L46 143 C40 145 36 142 36 137 C36 132 38 126 42 122 Z" fill="#F7D99F"/>
+    <path d="M39 132 L163 98" fill="none"/>
+
+    <!-- top bread triangle -->
+    <path d="M38 124 L78 59 C82 52.5 89 52.5 95 55 L156 83 C162 86 165 91 163 96 C162 99 159 101 155 102 L44 130 C39 131 35 128 38 124 Z" fill="#F7E6C5"/>
+  </g>
+</svg>

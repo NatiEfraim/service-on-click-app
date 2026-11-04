@@ -1,6 +1,9 @@
-/* ---------- floating top navigation (grape bar). Text on the bar is white; the active item is a translucent pill;
-   hover draws a thin bone line from the centre under the label (no fill, no frame), so contrast never changes. */
-.topbar { position: sticky; top: 0; z-index: 40; background: transparent; padding: 12px clamp(16px, 2.5vw, 40px) 0; pointer-events: none; }
+/* ---------- floating top navigation (steel blue bar). Text on the bar is white; the active item is a white pill;
+   hover draws a thin white line from the centre under the label (no fill, no frame), so contrast never changes. */
+.topbar { position: sticky; top: 0; z-index: 40; padding: 12px clamp(16px, 2.5vw, 40px) 24px; margin-bottom: -24px; pointer-events: none;
+  /* solid behind the bar, then a soft fade below it: scrolled content melts away instead of being cut on a hard line */
+  background: linear-gradient(to bottom, var(--bg) calc(100% - 24px), transparent);
+}
 .topbar-in {
   pointer-events: auto; max-width: 1600px; margin: 0 auto; height: 62px; padding: 0 14px 0 10px;
   display: flex; align-items: center; gap: 22px; border-radius: 18px; background: var(--nav);
@@ -8,11 +11,19 @@
   box-shadow: 0 16px 36px -18px rgba(43, 36, 51, .55), 0 2px 6px rgba(43, 36, 51, .10);
 }
 .brand { display: flex; align-items: center; gap: 10px; white-space: nowrap; padding-inline-end: 6px; }
-.brand svg { width: 32px; height: 32px; }
+.brand .system-logo { width: 40px; height: 40px; box-sizing: border-box; padding: 5px; background: #EDEBE6; border-radius: 11px; }
 .brand b { display: block; font-size: 16.5px; font-weight: 700; line-height: 1.15; color: var(--nav-ink); }
 .brand span { font-size: 12.5px; font-weight: 400; color: var(--nav-ink); }
 
-.tabs-nav { display: flex; align-items: center; height: 100%; gap: 4px; }
+.tabs-nav { display: flex; align-items: center; height: 100%; gap: 4px; position: relative; }
+/* the active-screen pill: one element that glides (and resizes) to the current item (TopBar places it) */
+.nav-indicator {
+  position: absolute; top: 50%; left: 0; height: 40px; margin-top: -20px; border-radius: 12px; background: var(--nav-active);
+  pointer-events: none; opacity: 0;
+}
+.nav-indicator.ready { transition: transform 280ms var(--ease-out), width 280ms var(--ease-out), opacity 200ms var(--ease-out); }
+.tabs-nav > a, .tabs-nav > .dd { position: relative; z-index: 1; }
+.tabs-nav.open .nav-indicator { display: none; }
 .tabs-nav > a, .tabs-nav > .dd > button {
   position: relative; display: flex; align-items: center; gap: 7px; height: 40px; padding: 0 14px; border-radius: 12px;
   color: var(--nav-ink); font-weight: 600; font-size: 15px; border: 0; background: transparent; cursor: pointer; white-space: nowrap;
@@ -22,17 +33,32 @@
   content: ""; position: absolute; inset-inline: 14px; bottom: 6px; height: 2px; border-radius: 2px; background: var(--nav-pill);
   transform: scaleX(0); transition: transform .18s ease;
 }
-.tabs-nav > a:hover::before, .tabs-nav > .dd > button:hover::before, .tabs-nav > .dd > button[aria-expanded="true"]::before { transform: scaleX(1); }
-.tabs-nav > a[aria-current="page"], .tabs-nav > .dd.current > button { background: rgba(255, 255, 255, .14); font-weight: 700; }
+/* the hover underline is for a mouse only; an open menu shows it on any device */
+@media (hover: hover) and (pointer: fine) {
+  .tabs-nav > a:hover::before, .tabs-nav > .dd > button:hover::before { transform: scaleX(1); }
+}
+.tabs-nav > .dd > button[aria-expanded="true"]::before { transform: scaleX(1); }
+/* the pill behind it is .nav-indicator; the item only takes the active text colour */
+.tabs-nav > a[aria-current="page"], .tabs-nav > .dd.current > button { color: var(--nav-active-ink); }
+.tabs-nav.open > a[aria-current="page"] { background: var(--nav-active); }
 .tabs-nav > a[aria-current="page"]::before, .tabs-nav > .dd.current > button::before { display: none; }
 .count { font-size: 12px; font-weight: 700; min-width: 20px; padding: 0 6px; line-height: 19px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-ink); text-align: center; }
-.topbar .count { background: #684756; color: #fff; }
+.topbar .count { background: var(--ink); color: #fff; }
 
 .dd { position: relative; }
 .menu {
   position: absolute; top: calc(100% + 10px); inset-inline-start: 0; min-width: 230px; background: var(--surface); border: 1px solid var(--line);
   border-radius: var(--r); box-shadow: var(--shadow-lg); padding: 6px; z-index: 50; color: var(--ink);
+  /* grows out of its button: the top corner on the button's side */
+  transform-origin: top right; animation: menu-in 180ms var(--ease-out);
 }
+/* an invisible bridge over the 10px gap, so a mouse moving from the button to the menu never "leaves" it */
+.dd > .menu::before { content: ""; position: absolute; inset-inline: 0; top: -12px; height: 12px; }
+.menu.end { inset-inline-start: auto; inset-inline-end: 0; transform-origin: top left; }
+/* closing: fades back toward the button (usePresence keeps it mounted for MENU_EXIT_MS) */
+.menu[data-closing] { animation: menu-out 150ms var(--ease-out) forwards; pointer-events: none; }
+@keyframes menu-in { from { opacity: 0; transform: translateY(-4px) scale(0.97); } }
+@keyframes menu-out { to { opacity: 0; transform: translateY(-4px) scale(0.97); } }
 .menu a, .menu button.mi {
   display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; border-radius: var(--r-sm); color: var(--ink); font-weight: 600;
   background: none; border: 0; cursor: pointer; text-align: start;
@@ -42,6 +68,22 @@
 .menu small { display: block; font-weight: 400; color: var(--mute); font-size: 12.5px; }
 
 .top-tools { margin-inline-start: auto; display: flex; align-items: center; gap: 12px; }
+/* a handler's domains (QueueScreen head): icon + name each, the picked one filled */
+/* one row; if the domains outgrow it, the row scrolls sideways rather than breaking onto a second line */
+.domain-filter { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; overflow-x: auto; max-width: 100%; padding: 2px; scrollbar-width: none; }
+.domain-filter::-webkit-scrollbar { display: none; }
+.domain-pick {
+  flex: none; white-space: nowrap; font-size: 14px;
+  display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-weight: 600; cursor: pointer;
+  transition: background-color 180ms var(--ease-out), border-color 180ms var(--ease-out), color 180ms var(--ease-out), transform 160ms var(--ease-out);
+}
+.domain-pick .dico, .domain-pick .ico { width: 18px; height: 18px; }
+.domain-pick[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+@media (hover: hover) and (pointer: fine) {
+  .domain-pick:not([aria-pressed="true"]):hover { border-color: var(--accent-mid); background: var(--accent-wash); }
+}
+.domain-pick:active { transform: scale(0.97); }
 .search { position: relative; width: 260px; }
 .search input { width: 100%; height: 40px; padding: 8px 36px 8px 12px; border-radius: 12px; border: 1px solid var(--line); background: #fff; }
 .search .ico { position: absolute; inset-inline-start: 11px; top: 50%; transform: translateY(-50%); color: var(--mute); pointer-events: none; }
@@ -54,15 +96,15 @@
 .search-results button:hover, .search-results button:focus-visible { background: var(--hover); }
 
 .userbtn {
-  display: flex; align-items: center; gap: 9px; padding: 4px 6px 4px 10px; border-radius: 999px; border: 1px solid rgba(221, 219, 203, .5);
+  display: flex; align-items: center; gap: 9px; padding: 4px 6px 4px 10px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, .5);
   background: transparent; color: var(--nav-ink); cursor: pointer; transition: box-shadow .15s ease;
 }
-.userbtn:hover { box-shadow: inset 0 0 0 1px rgba(221, 219, 203, .85); }
+.userbtn:hover { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .85); }
 .userbtn .nm { font-weight: 600; font-size: 14px; line-height: 1.2; text-align: start; }
 .userbtn .nm small { display: block; font-weight: 400; color: var(--nav-ink); font-size: 12px; }
 .avatar { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 13px; background: var(--accent-soft); color: var(--accent-ink); flex: none; }
-.topbar .userbtn .avatar { background: var(--nav-pill); color: var(--nav-pill-ink); }
-.topbar .menu-btn { display: none; background: transparent; color: var(--nav-ink); border-color: rgba(221, 219, 203, .5); }
+.topbar .userbtn .avatar { background: var(--nav-chip); color: var(--nav-chip-ink); }
+.topbar .menu-btn { display: none; background: transparent; color: var(--nav-ink); border-color: rgba(255, 255, 255, .5); }
 .topbar .menu-btn:hover { background: transparent; }
 .topbar :focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 .topbar .menu :focus-visible, .topbar .search :focus-visible { outline-color: var(--accent); }
@@ -74,6 +116,9 @@
 .page-head h1 { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -.01em; line-height: 1.2; }
 .page-head p { margin: 6px 0 0; color: var(--ink-2); font-size: 15.5px; max-width: 76ch; }
 .page-head .actions { margin-inline-start: auto; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+/* something centred in the head (e.g. the handler's domain filter): it takes the room beside the title, in one row */
+.page-head.has-center { flex-wrap: nowrap; align-items: center; }
+.page-head-center { flex: 1 1 auto; min-width: 0; display: flex; justify-content: center; }
 .back { margin-bottom: 6px; padding-inline: 4px; }
 .narrow { max-width: 1120px; margin-inline: auto; }
 .grid { display: grid; gap: 20px; }
@@ -100,13 +145,13 @@
   .brand span { display: none; }
 }
 @media (max-width: 980px) {
-  .topbar { padding: 8px 10px 0; }
+  .topbar { padding: 8px 10px 24px; }
   .topbar-in { height: 56px; padding: 0 10px; gap: 10px; border-radius: 16px; }
   .topbar .menu-btn { display: inline-flex; }
   .tabs-nav { display: none; }
   .tabs-nav.open {
     display: grid; position: absolute; top: calc(100% + 8px); inset-inline: 10px; height: auto; padding: 8px; gap: 2px; border-radius: 16px;
-    background: var(--nav); border: 1px solid rgba(255, 255, 255, .08); box-shadow: 0 16px 36px -18px rgba(34, 55, 79, .55);
+    background: var(--nav); border: 1px solid rgba(255, 255, 255, .08); box-shadow: 0 16px 36px -18px rgba(43, 36, 51, .55);
   }
   .tabs-nav.open > a, .tabs-nav.open > .dd > button { width: 100%; height: 44px; justify-content: flex-start; border-radius: var(--r-sm); }
   .tabs-nav.open .menu { position: static; box-shadow: none; border: 0; padding: 0 12px; background: transparent; }

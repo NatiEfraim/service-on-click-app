@@ -1,0 +1,228 @@
+/* Brand treatment shared by every native select; the browser retains keyboard,
+   form, label and validation behavior. */
+select.input {
+  min-block-size: 40px;
+  padding-block: 9px;
+  padding-inline-start: 14px;
+  padding-inline-end: 38px;
+  border-color: color-mix(in srgb, var(--accent) 20%, var(--line));
+  border-radius: 11px;
+  background-color: var(--surface);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24'%3E%3Cpath d='m7 10 5 5 5-5' fill='none' stroke='%236E5F7D' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-size: 14px;
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: 0 2px 3px rgb(61 49 74 / 3%), inset 0 1px 0 rgb(255 255 255 / 90%);
+  cursor: pointer;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+select.input:hover:not(:disabled) {
+  border-color: var(--accent-mid);
+  background-color: var(--surface-2);
+  box-shadow: 0 3px 10px rgb(61 49 74 / 7%);
+}
+
+select.input:focus-visible {
+  outline: 2px solid var(--accent-teal);
+  outline-offset: 3px;
+  border-color: var(--accent);
+}
+
+select.input:disabled {
+  cursor: not-allowed;
+  box-shadow: none;
+  opacity: .65;
+}
+
+select.input[aria-invalid="true"] { border-color: var(--bad); }
+
+/* Customizable native selects: popup lives in the browser's top layer, so it
+   stays above drawers and is not clipped by scrolling cards. */
+@supports (appearance: base-select) {
+  select.input,
+  select.input::picker(select) { appearance: base-select; }
+
+  select.input {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding-inline-end: 10px;
+    background-image: none;
+    text-align: start;
+  }
+
+  select.input::picker-icon {
+    display: grid;
+    place-items: center;
+    flex: none;
+    inline-size: 24px;
+    block-size: 24px;
+    border-radius: 7px;
+    background: var(--accent-wash);
+    color: var(--accent-mid);
+    font-size: 12px;
+    transition: rotate 220ms ease, background-color 160ms ease, color 160ms ease;
+  }
+
+  select.input:open {
+    border-color: var(--accent);
+    background-color: var(--surface);
+    box-shadow: 0 0 0 3px var(--accent-wash), 0 4px 12px rgb(61 49 74 / 9%);
+  }
+
+  select.input:open::picker-icon {
+    rotate: 180deg;
+    background: var(--accent);
+    color: white;
+  }
+
+  select.input::picker(select) {
+    min-inline-size: anchor-size(width);
+    max-inline-size: min(440px, calc(100vw - 24px));
+    max-block-size: min(380px, 55dvh);
+    margin-block: 8px;
+    padding: 7px;
+    border: 1px solid color-mix(in srgb, var(--accent-mid) 25%, var(--line));
+    border-radius: 15px;
+    background: linear-gradient(155deg, #fff 65%, var(--surface-2));
+    box-shadow: 0 20px 48px -12px rgb(43 36 51 / 28%), 0 4px 12px rgb(43 36 51 / 7%);
+    color: var(--ink);
+    font: inherit;
+    direction: ltr;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent-soft) transparent;
+  }
+
+  select.input option {
+    direction: rtl;
+    text-align: start;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-block-size: 39px;
+    padding: 9px 12px;
+    margin-block: 2px;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    color: var(--ink-2);
+    background: transparent;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.45;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+    transition: background-color 100ms ease, color 100ms ease;
+  }
+
+  select.input option:hover,
+  select.input option:focus-visible {
+    outline: none;
+    border-color: var(--accent-soft);
+    background: var(--accent-wash);
+    color: var(--accent);
+  }
+
+  select.input option:checked {
+    border-color: var(--accent);
+    background: linear-gradient(115deg, var(--accent), #51405e);
+    color: #fff;
+    font-weight: 700;
+    box-shadow: 0 3px 7px rgb(61 49 74 / 12%);
+  }
+
+  select.input option::checkmark {
+    content: '✓';
+    display: grid;
+    place-items: center;
+    flex: none;
+    inline-size: 20px;
+    block-size: 20px;
+    border-radius: 6px;
+    background: rgb(255 255 255 / 14%);
+    color: #b9e7d9;
+    font-size: 13px;
+  }
+
+  select.input option:disabled { opacity: .45; cursor: not-allowed; }
+  select.input optgroup { padding: 4px; color: var(--mute); font-size: 12px; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    select.input:open::picker(select) { animation: select-reveal 150ms ease-out; }
+  }
+}
+
+@keyframes select-reveal {
+  from { opacity: 0; translate: 0 -4px; }
+  to { opacity: 1; translate: 0 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  select.input,
+  select.input::picker-icon,
+  select.input option {
+    direction: rtl;
+    text-align: start; transition: none; }
+}
+
+@media (forced-colors: active) {
+  select.input { border: 1px solid ButtonText; }
+  select.input option:checked { background: Highlight; color: HighlightText; }
+}
+
+select.input.smooth-select {
+  max-width: 100%;
+  transition: width 260ms var(--ease-out), border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  select.input.smooth-select { transition: none; }
+}
+
+select.input.requests-sort-select { min-width: 0; max-width: none; height: 40px; flex-shrink: 0; white-space: nowrap; }
+select.input.requests-sort-select option { white-space: nowrap; }
+
+/* Keep filter labels and triggers aligned, independent of the selected text. */
+.requests-filters > .field { align-self: flex-start; }
+.requests-filters > .field > span { font-size: 13px; line-height: 20px; }
+.requests-filters select.input,
+.requests-filters .drp-btn {
+  box-sizing: border-box;
+  height: 44px;
+  min-block-size: 44px;
+  padding-block: 9px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 24px;
+  border-radius: 11px;
+  white-space: nowrap;
+}
+.requests-filters .drp-btn {
+  border-color: color-mix(in srgb, var(--accent) 20%, var(--line));
+  box-shadow: 0 2px 3px rgb(61 49 74 / 3%), inset 0 1px 0 rgb(255 255 255 / 90%);
+}
+.requests-filters select.requests-status-select { min-width: 0; max-width: none; flex-shrink: 0; }
+.requests-filters select.requests-status-select option { white-space: nowrap; }
+select.input.smooth-select { flex-shrink: 0; white-space: nowrap; }
+select.input.smooth-select option { white-space: nowrap; }
+@supports (appearance: base-select) {
+  select.input::picker(select) {
+    opacity: 0;
+    translate: 0 -4px;
+    transition: opacity 150ms ease, translate 150ms ease, display 150ms allow-discrete, overlay 150ms allow-discrete;
+  }
+  select.input:open::picker(select) { opacity: 1; translate: 0 0; animation: none; }
+  @starting-style {
+    select.input:open::picker(select) { opacity: 0; translate: 0 -4px; }
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  select.input::picker(select) { transition: none; translate: none; }
+}
+select.input.smooth-select { box-sizing: border-box; }
+/* The selected label must not consume the icon's space while width animates. */
+select.input.smooth-select::picker-icon { margin-inline-start: auto; }
+select.input.requests-sort-select { font-size: 14px; gap: 10px; }

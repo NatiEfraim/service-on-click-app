@@ -6,7 +6,7 @@
 .stat:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .stat.static { cursor: default; }
 .stat .si { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; background: color-mix(in srgb, var(--sc) 14%, #fff); color: var(--sc); margin-bottom: 8px; }
-.stat::after { content: ""; position: absolute; inset-inline: 20px; bottom: 0; height: 3px; border-radius: 3px 3px 0 0; background: var(--accent-soft); }
+.stat::after { content: ""; position: absolute; inset-inline: 20px; bottom: 0; height: 3px; border-radius: 3px 3px 0 0; background: var(--sc); }
 .stat.bad::after { background: var(--bad); }
 .stat .l { font-size: 14px; color: var(--ink-2); font-weight: 600; }
 .stat .v { font-size: 32px; font-weight: 700; letter-spacing: -.02em; line-height: 1.15; }
@@ -17,15 +17,15 @@
 .pipe { display: flex; gap: 0; overflow-x: auto; }
 .cell { all: unset; cursor: pointer; flex: 1 1 0; min-width: 120px; position: relative; padding: 16px 18px 14px; border-inline-start: 1px solid var(--line-2); box-sizing: border-box; }
 .cell:first-child { border-inline-start: 0; }
-.cell::before { content: ""; position: absolute; top: 0; inset-inline: 0; height: 4px; background: var(--accent-soft); }
+.cell::before { content: ""; position: absolute; top: 0; inset-inline: 0; height: 4px; background: var(--c); }
 .cell:hover { background: var(--surface-2); }
 .cell:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .cell .n { display: block; font-size: 26px; font-weight: 700; line-height: 1.2; }
 .cell .s { display: block; font-size: 14px; font-weight: 600; color: var(--ink-2); }
 .cell .m { display: block; font-size: 12.5px; color: var(--mute); margin-top: 2px; }
 .cell .sdot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--c); margin-inline-end: 6px; vertical-align: 1px; }
-.cell.critical { background: #FBF3F1; } .cell.critical::before { background: var(--bad); } .cell.critical .n { color: var(--bad); }
-.cell.warning { background: #FDFAF3; } .cell.warning::before { background: #B88A3D; } .cell.warning .n { color: var(--warn); }
+.cell.critical { background: var(--bad-w); } .cell.critical .n { color: var(--bad); }
+.cell.warning { background: var(--warn-w); } .cell.warning .n { color: var(--warn); }
 .cell.critical .m, .cell.warning .m { font-weight: 600; color: var(--ink-2); }
 .cell .arrow { position: absolute; inset-inline-end: -9px; top: 26px; width: 16px; height: 16px; border-radius: 50%; background: var(--surface); border: 1px solid var(--line); display: grid; place-items: center; z-index: 1; color: var(--mute); }
 .cell:last-child .arrow { display: none; }
@@ -36,19 +36,42 @@
 .insight .btn { margin-inline-start: auto; }
 
 /* ---------- tickets: the call card list, the list unit used everywhere */
-.tickets { display: grid; }
+/* the queue list scrolls inside its card, below the toolbar (bar side and look: the scroll bars section in tokens.css) */
+.queue-scroll { /* max-height set by QueueScreen to end at the window's bottom */ overflow-y: auto; overscroll-behavior: contain; }
+/* a card capped at the window's bottom (max-height set by RequestsScreen): its list fills what is left and scrolls */
+.fit-card { display: flex; flex-direction: column; overflow: hidden; }
+.fit-card > * { flex: none; }
+.fit-card > .fit-fill { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.fit-fill > .queue-scroll { flex: 1 1 auto; min-height: 0; }
+/* a fill inside a fill (e.g. a list plus its pager) passes the room on */
+.fit-fill > .fit-fill { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.fit-fill > .pager { flex: none; }
+/* clip: a decided row slides fully out without widening the page */
+.tickets { display: grid; overflow-x: clip; }
 .ticket {
   --dc: var(--line); display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 13px 18px;
   border-bottom: 1px solid var(--line-2); border-inline-start: 4px solid var(--dc); cursor: pointer;
 }
 .ticket:last-child { border-bottom: 0; }
+/* a decided row turns solid green ✓ / red ✗, then slides out right / left (Ticket.useLeave) */
+.ticket.leaving { position: relative; pointer-events: none; }
+/* timed from ROW_STAMP_MS in lib/motion.js (Ticket sets --stamp-ms): the colour takes 40% of it, the mark pops in over the next 60% */
+.ticket-stamp {
+  position: absolute; inset: 0; z-index: 1; display: grid; place-items: center; color: #fff;
+  animation: fade calc(var(--stamp-ms, 300ms) * 0.4) var(--ease-out);
+}
+.ticket.ok .ticket-stamp { background: var(--ok); }
+.ticket.bad .ticket-stamp { background: var(--bad); }
+.ticket-stamp .ico { width: 30px; height: 30px; stroke-width: 2.8; animation: stamp-in calc(var(--stamp-ms, 300ms) * 0.5) var(--ease-out) calc(var(--stamp-ms, 300ms) * 0.1) both; }
+@keyframes stamp-in { from { opacity: 0; transform: scale(0.6); } }
 .ticket:hover { background: var(--hover); }
 .ticket .t1 { font-weight: 700; font-size: 15px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .ticket .t2 { font-size: 13.5px; color: var(--mute); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 2px; }
 .ticket .ticket-open { all: unset; cursor: pointer; display: inline-flex; gap: 8px; align-items: baseline; }
 .ticket .ticket-open:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
 .ticket .side { display: flex; gap: 14px; align-items: center; }
-.ticket .acts { display: flex; gap: 6px; }
+.ticket .acts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; width: 192px; max-width: 100%; flex-shrink: 0; }
+.ticket .acts .btn { width: 100%; min-width: 0; height: 40px; padding: 4px 8px; justify-content: center; text-align: center; white-space: normal; line-height: 1.2; }
 .dom { --dc: var(--accent); width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; background: #fff; border: 1px solid var(--line); color: var(--dc); flex: none; }
 .dom.sm { width: 30px; height: 30px; border-radius: 8px; }
 .dom.sm .ico { width: 16px; height: 16px; }
@@ -75,26 +98,117 @@ img.dico { width: 18px; height: 18px; object-fit: contain; flex: none; vertical-
 }
 
 /* ---------- bars and list rows (main screen, attention lists) */
+/* "needs attention" rows on the dashboard */
+.attn { list-style: none; margin: 0; padding: 0; }
+.attn li + li { border-top: 1px solid var(--line-2); }
+.attn a { display: grid; grid-template-columns: 10px 1fr auto; gap: 12px; align-items: center; padding: 14px 18px; color: inherit; }
+.attn a:hover { background: var(--hover); }
+.attn i { width: 8px; height: 8px; border-radius: 50%; }
+.attn a > span { display: grid; gap: 2px; }
+.attn .ico { color: var(--mute); }
+
 .hbar { display: grid; grid-template-columns: 170px 1fr 36px; gap: 12px; align-items: center; padding: 8px 18px; }
 .hbar:hover { background: var(--hover); }
 .hbar .lab { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; }
+button.lab { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; cursor: pointer; }
+button.lab:hover, button.lab.on { color: var(--accent); }
+button.lab:hover { text-decoration: underline; }
+/* column chart of one domain's stages (opened from the domain name) */
+.vbars { display: flex; align-items: stretch; gap: 14px; height: 300px; padding: 8px 4px 0; }
+.vbar { all: unset; box-sizing: border-box; flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 6px; cursor: pointer; min-width: 0; }
+.vbar:disabled { cursor: default; }
+.vbar:not(:disabled):hover .col { filter: brightness(1.1); }
+.vbar .col { width: 70%; max-width: 64px; min-height: 2px; border-radius: 6px 6px 0 0; }
+.vbar .num { font-size: 15px; }
+.vbar .lab { font-size: 12.5px; color: var(--ink-2); text-align: center; line-height: 1.3; min-height: 2.6em; }
 .hbar .track { display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: var(--line-2); }
 .hbar .track button { border: 0; padding: 0; cursor: pointer; height: 100%; }
 .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--ink-2); padding: 10px 18px 14px; }
 .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-inline-end: 6px; vertical-align: -1px; }
-svg.chart text { fill: var(--mute); font-size: 11px; font-family: var(--font); }
+svg.chart text { fill: var(--mute); font-size: 13px; font-family: var(--font); }
+.trend-box { position: relative; width: 100%; }
+.trend-box svg { display: block; cursor: crosshair; }
+.trend-tip {
+  position: absolute; top: 8px; width: 140px; pointer-events: none; display: grid; gap: 2px; padding: 8px 10px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-sm); box-shadow: var(--shadow-lg); font-size: 13px;
+}
+.trend-tip i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-inline-end: 6px; }
 .li { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; padding: 12px 18px; border-bottom: 1px solid var(--line-2); }
 .li:last-child { border-bottom: 0; }
 .li .t1 { font-weight: 700; } .li .t2 { font-size: 13.5px; color: var(--mute); }
 
 /* main screen: domain tiles (icon square + name, with counts) */
+/* tiles on the right (RTL start), the picked domain's column chart on the left */
+.home-top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: stretch; }
+/* balanced rows (--per-row / --rows from HomeScreen), a shorter last row centred */
+.home-top .tiles { display: flex; flex-wrap: wrap; justify-content: center; align-content: stretch; gap: 12px; }
+.home-top .tiles > .dtile {
+  flex: 0 0 calc((100% - (var(--per-row) - 1) * 12px) / var(--per-row));
+  height: calc((100% - (var(--rows) - 1) * 12px) / var(--rows));
+}
+/* group tile: hover or focus folds the group's face away and shows its domains side by side */
+.dgroup { position: relative; overflow: hidden; }
+/* no browser focus ring on the group: clicking it focuses it; keyboard focus still shows on the inner card */
+.dgroup:focus, .dgroup:focus-visible { outline: none; }
+.dgroup > :not(.dgroup-menu) { transition: opacity .16s ease; }
+.dgroup-menu {
+  position: absolute; inset: 0; border-radius: inherit; display: flex; gap: 6px; padding: 6px; background: var(--surface);
+  opacity: 0; pointer-events: none; transition: opacity .16s ease;
+}
+.dgroup:hover > .dgroup-menu, .dgroup:focus-within > .dgroup-menu { opacity: 1; pointer-events: auto; }
+.dgroup:hover > :not(.dgroup-menu), .dgroup:focus-within > :not(.dgroup-menu) { opacity: 0; }
+.dgroup-item {
+  all: unset; box-sizing: border-box; cursor: pointer; flex: 1; min-width: 0; display: grid; justify-items: center; align-content: center; gap: 4px;
+  border-radius: 12px; border: 1px solid var(--line); padding: 6px 4px; text-align: center; transition: border-color .15s ease, background-color .15s ease;
+}
+.dgroup-item:hover, .dgroup-item:focus-visible { border-color: var(--dc, var(--accent)); background: var(--hover); }
+.dgroup-item .dtile-name { line-height: 1.25; }
+@media (prefers-reduced-motion: reduce) { .dgroup > *, .dgroup-menu { transition: none; } }
+.home-top .dtile { padding: 14px 8px 12px; gap: 6px; }
+/* home fits the window: top row and the stage bars share the height left under the page head */
+.page:has(> .home), .page:has(.home) { padding-bottom: 16px; }
+.home { height: calc(100dvh - var(--home-top, 160px) - 16px); min-height: 520px; display: flex; flex-direction: column; gap: 14px; }
+.home .home-top { flex: 1 1 50%; min-height: 0; }
+.home .tiles { height: 100%; }
+.home .dtile { min-height: 0; align-content: center; padding: 8px; }
+/* tile contents follow the tile's size (1 to 6 tiles, or half a group tile), within readable limits */
+.home .dtile, .home .dgroup-item { container-type: size; }
+.home .dtile-ic { width: clamp(44px, 30cqmin, 112px); height: clamp(44px, 30cqmin, 112px); border-radius: clamp(12px, 7cqmin, 26px); }
+.home .dtile-ic img { width: 60%; height: 60%; }
+.home .dtile-name { font-size: clamp(14px, 8cqmin, 26px); }
+.home .dtile-meta { font-size: clamp(12px, 5cqmin, 17px); }
+.home-card { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.home-card > :not(.card-head) { flex: 1; min-height: 0; }
+.home-card .card-head { padding: 10px 16px; }
+.home-card .vbars { height: auto; padding: 10px 16px 8px; }
+.home .home-bars { flex: 1 1 50%; }
+/* switching the top chart: fade the old one out (.out), the new one mounts and fades in; 130ms = CHART_FADE_MS */
+.chart-fade { display: flex; flex-direction: column; animation: chart-in 130ms var(--ease-out); transition: opacity 130ms var(--ease-out); }
+.chart-fade.out { opacity: 0; }
+span.chart-fade { flex-direction: row; align-items: center; gap: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* the title takes the free width and a fixed height, so a longer or shorter name never moves the hint or the head */
+.home-chart .card-head { height: 46px; }
+.home-chart .card-head h2 { flex: 1; min-width: 0; }
+.chart-fade > .vbars { flex: 1; min-height: 0; }
+@keyframes chart-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .chart-fade { animation: none; transition: none; } }
+.home-bars > div:not(.card-head):not(.legend) { display: flex; flex-direction: column; padding: 4px 0 !important; }
+.home-bars .hbar { flex: 1; padding-block: 0; min-height: 0; }
+.home-bars .legend { flex: none; padding-block: 6px 8px; }
+/* stacked: the page scrolls, so tiles get a fixed height (size containment would otherwise collapse them) */
+@media (max-width: 1000px) { .home-top { grid-template-columns: 1fr; } .home { height: auto; } .home .tiles { height: auto; } .home-top .tiles > .dtile { height: 160px; } }
 .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; }
 .dtile {
   all: unset; box-sizing: border-box; cursor: pointer; display: grid; justify-items: center; gap: 8px; padding: 20px 12px 16px; border-radius: 16px;
   background: var(--surface); border: 1px solid var(--line); box-shadow: 0 1px 2px rgba(43, 36, 51, .04); text-align: center;
-  transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+  transition: border-color .15s ease, box-shadow .15s ease, transform 160ms var(--ease-out);
 }
-.dtile:hover { border-color: var(--dc, var(--accent)); box-shadow: 0 10px 24px -14px rgba(43, 36, 51, .35); transform: translateY(-2px); }
+/* the lift is for a mouse only: on a phone a tap would leave the tile lifted */
+@media (hover: hover) and (pointer: fine) {
+  .dtile:hover { border-color: var(--dc, var(--accent)); box-shadow: 0 10px 24px -14px rgba(43, 36, 51, .35); transform: translateY(-2px); }
+}
+/* pressing gives way a little, on every device */
+.dtile:active { transform: scale(0.98); }
 .dtile:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .dtile-ic { width: 64px; height: 64px; border-radius: 16px; display: grid; place-items: center; background: #fff; border: 1px solid var(--line); box-shadow: 0 1px 3px rgba(43, 36, 51, .06); color: var(--dc); }
 .dtile-ic .ico { width: 30px; height: 30px; stroke-width: 1.6; }
@@ -103,7 +217,6 @@ svg.chart text { fill: var(--mute); font-size: 11px; font-family: var(--font); }
 .dtile-meta { font-size: 13px; color: var(--mute); }
 .dtile-meta b { color: var(--ink); }
 .bad-t { color: var(--bad); font-weight: 700; }
-@media (prefers-reduced-motion: reduce) { .dtile { transition: none; } .dtile:hover { transform: none; } }
 
 /* ---------- booking drawer */
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
@@ -218,12 +331,48 @@ svg.chart text { fill: var(--mute); font-size: 11px; font-family: var(--font); }
 @media (max-width: 560px) { .rf-dates { grid-column: auto; } .rf-dates > div { flex-wrap: wrap; } }
 
 /* ---------- login */
-.login-wrap { min-height: 100vh; display: grid; place-items: center; padding: 24px 16px; }
+.login-wrap { min-height: 100dvh; display: grid; place-items: center; padding: 24px 16px; }
 .login-card { width: min(420px, 100%); background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow-lg); padding: 28px 28px 24px; display: grid; gap: 18px; }
 .login-brand { display: flex; align-items: center; gap: 12px; }
-.login-brand svg { width: 42px; height: 42px; }
+.login-brand .system-logo { width: 42px; height: 42px; }
 .login-brand b { display: block; font-size: 20px; line-height: 1.15; }
 .login-brand span { color: var(--mute); font-size: 14px; }
 .login-card h1 { margin: 0; font-size: 18px; }
 .login-card .btn { padding: 10px 16px; }
 .login-hint { font-size: 13px; color: var(--mute); margin: 0; }
+
+
+/* Shared hour columns line up with the same fixed slots in every ticket. */
+.age-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 116px; text-align: center; align-items: center; font-variant-numeric: tabular-nums; }
+.ticket .side.with-actions { display: grid; grid-template-columns: 116px var(--ticket-actions-width, 192px); gap: 14px; }
+.ticket .acts { width: var(--ticket-actions-width, 192px); }
+.age-columns-header { flex: none; width: 116px; color: var(--mute); font-size: 12px; line-height: 1.25; position: absolute; left: calc(18px + var(--ticket-actions-width, 192px) + 14px); top: 50%; transform: translateY(-50%); }
+@media (max-width: 980px) {
+  .ticket .side.with-actions { grid-template-columns: 116px minmax(0, 192px); width: 100%; }
+  .ticket .side.with-actions .acts { width: 100%; }
+}
+
+.requester-hold-message { margin: 5px 0 0; color: var(--hold); font-size: 13px; font-weight: 600; }
+
+.ticket .side.closed-status { justify-content: end; }
+.ticket .side.closed-status > .chip { grid-column: 2; justify-self: center; max-width: 100%; text-align: center; }
+
+.toolbar:has(> .age-columns-header) { position: relative; min-height: 66px; }
+/* The sort label is part of its control, so it cannot be hidden by grid placement. */
+.toolbar:has(> .requests-sort-control) { display: grid; column-gap: 14px; grid-template-columns: auto auto auto 1fr 116px 192px; }
+.toolbar:has(> .requests-sort-control) > .grow { display: none; }
+.toolbar:has(> .requests-sort-control) > .age-columns-header { grid-column: 5; grid-row: 1; position: static; transform: none; }
+.requests-sort-control { grid-column: 6; grid-row: 1; display: flex; flex-direction: row; align-items: center; justify-content: flex-end; gap: 8px; min-width: 0; }
+.requests-sort-control > label { font-size: 14px; line-height: 1.4; flex: none; }
+.requests-filter-actions { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.requests-clear.btn { width: 32px; height: 32px; padding: 6px; justify-content: center; }
+
+.barber-status-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+
+
+/* Digital hatch (super admin): one card per operation, its last result under the button. */
+.hatch-section { font-size: 16px; margin: 24px 0 12px; }
+.hatch-grid { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); align-items: start; }
+.hatch-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 16px; }
+.hatch-form .field { min-width: 200px; }
+.hatch-result { display: grid; gap: 8px; margin-top: 14px; }

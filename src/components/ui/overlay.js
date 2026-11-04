@@ -1,0 +1,82 @@
+'use client';
+
+import { useEffect, useId, useRef } from 'react';
+
+/** Overlays stack; only the top-most handles Escape and traps Tab. */
+const stack = [];
+
+const FOCUSABLE = [
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled]):not([type="hidden"])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',');
+
+
+
+export function useOverlay(containerRef, { onEscape, initialFocus } = {}) {
+  const id = useId();
+  const escapeRef = useRef(onEscape);
+  useEffect(() => {
+    escapeRef.current = onEscape;
+  });
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const previouslyFocused = document.activeElement;
+    stack.push(id);
+
+    // Wait a frame so the content is mounted before focusing.
+    const frame = requestAnimationFrame(() => {
+      const target = initialFocus?.current ?? container.querySelector('textarea, input:not([type=checkbox]):not([type=radio]), select') ?? container.querySelector(FOCUSABLE) ?? container;
+      if (target === container && !container.hasAttribute('tabindex')) container.setAttribute('tabindex', '-1');
+      target.focus({ preventScroll: true });
+    });
+
+    const onKeyDown = (event) => {
+      if (stack[stack.length - 1] !== id) return;
+
+      if (event.key === 'Escape') {
+        if (escapeRef.current) {
+          event.stopPropagation();
+          event.preventDefault();
+          escapeRef.current();
+        }
+        return;
+      }
+
+      if (event.key === 'Tab') {
+        const items = Array.from(container.querySelectorAll(FOCUSABLE)).filter((el) => el.offsetParent !== null || el === document.activeElement);
+        if (!items.length) {
+          event.preventDefault();
+          return;
+        }
+        const first = items[0];
+        const last = items[items.length - 1];
+        const active = document.activeElement;
+        if (event.shiftKey && (active === first || !container.contains(active))) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && (active === last || !container.contains(active))) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', onKeyDown, true);
+    return () => {
+      cancelAnimationFrame(frame);
+      document.removeEventListener('keydown', onKeyDown, true);
+      const index = stack.lastIndexOf(id);
+      if (index >= 0) stack.splice(index, 1);
+      // Restore focus to the opener.
+      if (previouslyFocused && document.contains(previouslyFocused)) previouslyFocused.focus({ preventScroll: true });
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mounts once per open
+  }, [id]);
+}

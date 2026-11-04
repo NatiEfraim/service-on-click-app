@@ -1,22 +1,27 @@
 /* Service On Click - management console. Design system v3 (light only, floating top navigation), ported from the finished example UI.
-   Accent = the teal of the call card. Font: Assistant (OFL), self-hosted through @fontsource - nothing is loaded from the network. */
+   Accent = a deeper shade of the navigation blue. Font: Assistant (OFL), self-hosted through @fontsource - nothing is loaded from the network. */
 [hidden] { display: none !important; }
 
 :root {
-  /* client palette: Pine 307473, Vintage Grape 3D314A, Mauve Shadow 684756, Bone DDDBCB, Emerald Depths 12664F.
-     Every text/background pair used was checked at >= 4.5:1. */
-  --bg: #F4F3EE; --surface: #fff; --surface-2: #FAF9F5; --hover: #F3F2EC; --line: #E2E0D3; --line-2: #EEEDE5;
-  --ink: #2B2433; --ink-2: #4A4254; --mute: #5F566A;
-  --accent: #307473; --accent-hover: #245A59; --accent-ink: #245A59; --accent-wash: #E3EFEE; --accent-soft: #DDDBCB; --accent-mid: #307473; --accent-teal: #12664F;
-  /* grape navigation bar, bone pill for the active screen, light bone ground, white cards */
-  --nav: #3D314A; --nav-edge: #2E2538; --nav-ink: #FFFFFF; --nav-pill: #DDDBCB; --nav-pill-ink: #3D314A;
-  --th-bg: #F6F5F0; --sel-bg: #E3EFEE; --insight-bg: #FAF9F5; --chart-a: #684756; --chart-b: #12664F;
-  --s1: #EEEDE5; --s2: #DDDBCB; --s3: #5C9C8D; --s4: #307473; --s5: #12664F;
-  --ok: #12664F; --ok-w: #E4F1EC; --warn: #8A5A12; --warn-w: #FBF4E6; --bad: #A23B32; --bad-w: #FBEFEC; --hold: #684756; --hold-w: #F3ECEF; --info: #307473; --info-w: #E3EFEE;
+  /* grape (dark plum) navigation on a warm cream ground, plum-tinted ink, muted stage and status accents.
+     Text pairs kept at >= 4.5:1 (ink / ink-2 / mute on surface and on bg). */
+  --bg: #F3F1EC; --surface: #fff; --surface-2: #F8F7F3; --hover: #F1EEF2; --line: #E2E0D3; --line-2: #ECEAE2;
+  --ink: #2B2433; --ink-2: #463D52; --mute: #5F566A;
+  --accent: #3D314A; --accent-hover: #2F2639; --accent-ink: #3D314A; --accent-wash: #EFEBF2; --accent-soft: #DCD5E1; --accent-mid: #6E5F7D; --accent-teal: #2E7470;
+  /* grape navigation bar, a soft translucent pill for the active screen, beige chips (logo, avatar), white cards */
+  --nav: #3D314A; --nav-edge: #2F2639; --nav-ink: #FFFFFF; --nav-pill: #FFFFFF; --nav-pill-ink: #2B2433;
+  --nav-active: rgba(255, 255, 255, .14); --nav-active-ink: #FFFFFF; --nav-chip: #E9E4D4; --nav-chip-ink: #2B2433;
+  --th-bg: #F8F7F3; --sel-bg: #EFEBF2; --insight-bg: #F8F7F3; --chart-a: #6E5F7D; --chart-b: #2E7470;
+  --s1: #ECEAE2; --s2: #DCD5E1; --s3: #2E7470; --s4: #145E4A; --s5: #2B2433;
+  --ok: #127A38; --ok-w: #E7F6EC; --warn: #8A5A00; --warn-w: #FFFAF0; --bad: #C0392B; --bad-w: #FFF6F5; --hold: #6D3FD1; --hold-w: #F1ECFD; --info: #1D6FA5; --info-w: #E3F1FA;
   --r-sm: 8px; --r: 12px;
-  --shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 1px 3px rgba(16, 24, 40, .06);
-  --shadow-lg: 0 12px 32px -8px rgba(16, 24, 40, .18);
+  --shadow: 0 1px 2px rgba(43, 36, 51, .04), 0 1px 3px rgba(43, 36, 51, .06);
+  --shadow-lg: 0 12px 32px -8px rgba(43, 36, 51, .18);
   --font: "Assistant Variable", "Segoe UI", Arial, sans-serif;
+  /* motion: strong ease-out for anything entering or answering a press */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  /* side panel sliding in / out (iOS-like); same as EASE_DRAWER in lib/motion.js */
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
   color-scheme: light;
 }
 
@@ -40,6 +45,39 @@ h1, h2, h3, p { overflow-wrap: anywhere; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .ltr { direction: ltr; unicode-bidi: isolate; }
 
+/* ---------- scroll bars: one look everywhere, and on the right even though the page is rtl.
+   An rtl box puts its bar on the left; a scroller is made ltr (bar on the right) and its children rtl again, so the
+   content is laid out exactly as before. The page's own bar: html ltr, body rtl. */
+html { direction: ltr; }
+body { direction: rtl; }
+.scroll-y, .queue-scroll, .drawer .scroll, .modal, .st-form-preview, .st-opt-nav, .st-serials { direction: ltr; }
+.scroll-y > *, .queue-scroll > *, .drawer .scroll > *, .modal > *, .st-form-preview > *, .st-opt-nav > *, .st-serials > * { direction: rtl; }
+/* a wrapping row keeps its right-to-left order inside an ltr scroller */
+.st-serials { flex-direction: row-reverse; }
+
+/* Chromium / WebKit: a slim rounded thumb in the accent family that darkens under the pointer */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; margin: 6px; }
+/* half-strength accent: visible on white cards and on the grey page / drawer background alike */
+::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--accent-mid) 50%, transparent); border-radius: 999px; border: 3px solid transparent; background-clip: padding-box; }
+:hover::-webkit-scrollbar-thumb { background-color: var(--accent-mid); }
+::-webkit-scrollbar-thumb:active { background-color: var(--accent); }
+::-webkit-scrollbar-corner { background: transparent; }
+/* Firefox only: in Chromium, scrollbar-color would switch off the styled thumb above */
+@supports (-moz-appearance: none) {
+  * { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--accent-mid) 50%, transparent) transparent; }
+  *:hover { scrollbar-color: var(--accent-mid) transparent; }
+}
+
+/* Reduced motion = fewer and gentler, not none: nothing moves, slides, grows or lifts, but fades that explain
+   a change (a dialog, a menu, loaded content, a decided row) stay. Script-driven motion checks prefersReducedMotion(). */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation: none !important; transition: none !important; }
+  /* transitions keep only colour and opacity, never position or size */
+  *, *::before, *::after { transition-property: opacity, color, background-color, border-color, box-shadow, outline-color !important; }
+  /* entrances that slide, scale or rise become plain fades */
+  .modal, .drawer, .menu, .dcard, .chart-fade, .ticket-stamp .ico, .toast-rise-in, .stagger > * { animation-name: fade !important; }
+  .menu[data-closing] { animation-name: toast-fade-out !important; }
+  /* pressing, lifting and the loading shimmer stand still */
+  .btn:hover, .btn:active, .dtile:hover, .dtile:active { transform: none !important; }
+  .skel { animation: none !important; }
 }
