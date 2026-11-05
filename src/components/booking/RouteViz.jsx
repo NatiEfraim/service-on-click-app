@@ -50,20 +50,28 @@ export function AgeColumnsHeader() {
     </div>
   );
 }
-/** Age against the handling target; red when over, amber when close. */
+/** Age against the handling target: green under half of it, yellow from half, red in the last fifth and over it. */
 export function AgeBar({ booking }) {
   if (booking.stage === 'closed') return <span className="muted small">סגורה</span>;
 
   const age = booking.total_age_hours ?? booking.stage_age_hours ?? 0;
   const target = booking.target_hours;
   const ratio = target ? Math.min(1, age / target) : null;
-  const tone = booking.overdue ? 'over' : target && ratio !== null && ratio > 0.8 ? 'near' : '';
+  // green while under half the target, yellow from half, red from 80% (the last fifth before the target) and over it
+  const tone = booking.overdue ? 'over' : ratio !== null && ratio >= 0.8 ? 'late' : ratio !== null && ratio >= 0.5 ? 'near' : '';
 
   return (
-    <div className={`age ${tone}`.trim()} title={`זמן בשלב הנוכחי${target ? ' · הפס מציג את הזמן הכולל מול יעד הטיפול של התחום' : ''}`}>
+    <div className={`age ${tone}`.trim()} title={`שעות בשלב הנוכחי ושעות מאז שהקריאה נפתחה${target ? `. הפס: הזמן הכולל מול יעד הטיפול של התחום (${target} ש׳)` : ''}`}>
       <span className="age-columns" aria-label={`${Math.round(booking.stage_age_hours ?? 0)} שעות בשלב הנוכחי, ${booking.total_age_hours != null ? Math.round(booking.total_age_hours) : 'לא ידוע'} שעות בסך הכול`}>
-        <span className="v">{Math.round(booking.stage_age_hours ?? 0)}</span>
-        <span className="small muted">{booking.total_age_hours != null ? Math.round(booking.total_age_hours) : '—'}</span>
+        {/* each number says what it is under it, so the row reads without the column heading */}
+        <span className="age-cell">
+          <span className="v">{Math.round(booking.stage_age_hours ?? 0)} ש׳</span>
+          <span className="cap">בשלב</span>
+        </span>
+        <span className="age-cell">
+          <span className="small muted">{booking.total_age_hours != null ? `${Math.round(booking.total_age_hours)} ש׳` : '—'}</span>
+          <span className="cap">סה״כ</span>
+        </span>
       </span>
       {target && ratio !== null ? (
         <span className="bar">

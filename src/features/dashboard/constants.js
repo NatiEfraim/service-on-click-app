@@ -6,11 +6,16 @@ export const SEVERITY = {
   no_target: { label: 'ללא יעד', tone: '' },
 };
 
+/** The longest window the API serves (DashboardService caps days at 365). */
+export const ALL_WINDOW_DAYS = 365;
+
 /** The dashboard's time windows, in days. */
 export const WINDOWS = [
   { value: '7', label: 'שבוע' },
   { value: '30', label: '30 ימים' },
   { value: '90', label: 'רבעון' },
+  // "all": the API's longest window (it caps days at 365), which holds every booking the system has today
+  { value: String(ALL_WINDOW_DAYS), label: 'הכל' },
 ];
 
 export const DEFAULT_WINDOW_DAYS = 30;

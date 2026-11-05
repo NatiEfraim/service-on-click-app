@@ -27,7 +27,7 @@ import { useHeldHeight } from '@/lib/useHeldHeight';
 import { useSetSearchParams } from '@/lib/useSetSearchParams';
 import { useSession } from '@/providers/SessionProvider';import { BottlenecksPanel } from './BottlenecksPanel';
 import { indexStages, Pipeline, TrendChart, worstStage } from './charts';
-import { APPROVAL_STAGES, DEFAULT_WINDOW_DAYS, pipelineStagesFor, SEVERITY, STAT_COLOR, WINDOWS } from './constants';
+import { ALL_WINDOW_DAYS, APPROVAL_STAGES, DEFAULT_WINDOW_DAYS, pipelineStagesFor, SEVERITY, STAT_COLOR, WINDOWS } from './constants';
 import { BarberStatusSummary } from './BarberStatusSummary';
 import { StageBars } from './StageBars';
 
@@ -220,7 +220,7 @@ export function DomainDashboard() {
         </Card>
 
         {/* 6. opened vs closed */}
-        <Card title="נפתחו מול נסגרו" hint={`${data.window_days} ימים אחרונים`}>
+        <Card title="נפתחו מול נסגרו" hint={data.window_days >= ALL_WINDOW_DAYS ? 'כל התקופה' : `${data.window_days} ימים אחרונים`}>
           <CardBody>
             <p style={{ margin: '0 0 10px' }}>
               נפתחו <b>{opened}</b> ונסגרו <b>{closed}</b> קריאות.{' '}

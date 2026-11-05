@@ -86,8 +86,10 @@ img.dico { width: 18px; height: 18px; object-fit: contain; flex: none; vertical-
 .mr i.hold { background: var(--hold); } .mr i.stop { background: var(--bad); } .mr i.fin { background: var(--ok); }
 .age { display: grid; gap: 4px; min-width: 116px; }
 .age .bar { height: 4px; border-radius: 2px; background: var(--line-2); overflow: hidden; }
-.age .bar span { display: block; height: 100%; background: var(--s3); }
-.age.near .bar span { background: var(--warn); } .age.over .bar span { background: var(--bad); }
+.age .bar span { display: block; height: 100%; background: var(--ok); }
+.age .bar span { transition: background-color var(--dur-base) var(--ease-out); }
+/* the bar: green under half the target, yellow from half, red in the last fifth (late) and over it; only "over" also reddens the number */
+.age.near .bar span { background: #D9A21B; } .age.late .bar span, .age.over .bar span { background: var(--bad); }
 .age .v { font-size: 13px; color: var(--ink-2); }
 .age.over .v { color: var(--bad); font-weight: 700; }
 .clip { display: inline-flex; align-items: center; gap: 2px; font-size: 12px; font-weight: 600; color: var(--accent); }
@@ -344,6 +346,9 @@ span.chart-fade { flex-direction: row; align-items: center; gap: 8px; white-spac
 
 /* Shared hour columns line up with the same fixed slots in every ticket. */
 .age-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 116px; text-align: center; align-items: center; font-variant-numeric: tabular-nums; }
+/* a number with what it measures under it ("26 ש׳" / "בשלב") */
+.age-cell { display: grid; justify-items: center; line-height: 1.2; }
+.age-cell .cap { font-size: 12px; color: var(--mute); }
 .ticket .side.with-actions { display: grid; grid-template-columns: 116px var(--ticket-actions-width, 192px); gap: 14px; }
 .ticket .acts { width: var(--ticket-actions-width, 192px); }
 .age-columns-header { flex: none; width: 116px; color: var(--mute); font-size: 12px; line-height: 1.25; position: absolute; left: calc(18px + var(--ticket-actions-width, 192px) + 14px); top: 50%; transform: translateY(-50%); }

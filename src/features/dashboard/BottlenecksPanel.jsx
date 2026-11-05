@@ -6,7 +6,7 @@ import { EmptyState, ErrorNotice, Loading } from '@/components/ui/Feedback';
 import { insightsApi } from '@/lib/api/endpoints';
 import { keys } from '@/lib/api/keys';
 import { fmtHours } from '@/lib/format';
-import { BOTTLENECK_ROWS } from './constants';
+import { ALL_WINDOW_DAYS, BOTTLENECK_ROWS } from './constants';
 
 /** Load per role holder and handler performance, from `GET /bottlenecks`. */
 export function BottlenecksPanel({ types, days }) {
@@ -79,7 +79,7 @@ export function BottlenecksPanel({ types, days }) {
         )}
       </Card>
 
-      <Card title="מי טיפל בקריאות" hint={`${query.data.window_days} הימים האחרונים`}>
+      <Card title="מי טיפל בקריאות" hint={query.data.window_days >= ALL_WINDOW_DAYS ? 'כל התקופה' : `${query.data.window_days} הימים האחרונים`}>
         {handlers.length ? (
           <div className="tbl-wrap">
             <table className="t">
