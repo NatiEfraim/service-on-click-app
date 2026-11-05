@@ -1,19 +1,12 @@
 # ---------- Build stage: install deps and build the Next.js app ----------
 FROM node:24-alpine AS builder
 
-<<<<<<< HEAD
-# All of these are fixed by `next build` (rewrites and NEXT_PUBLIC_* are baked in), so each environment is its own image.
-# API_ORIGIN: where service-on-click-api (DEV) is; origin only - the app adds the API's /api prefix itself.
-ENV API_ORIGIN=http://denver.idf
-# Login: false = ADFS (this image); true = personal-number form, local development only (see .env.example).
-=======
 
 # Client-side axios baseURL (ADFS mode): baked into the bundle at build time.
 ENV NEXT_PUBLIC_API_URL=https://denverdev.idf/api
 # Server-side proxy origin: next.config.mjs rewrites /api/* → API_ORIGIN/api/*.
 ENV API_ORIGIN=http://denverdev.idf
 
->>>>>>> 83588c272566e42fdeb6893230118899b294b504
 ENV NEXT_PUBLIC_DEV_LOGIN=false
 
 ENV NEXT_PUBLIC_ADFS_URL=https://vm0099adfs.army.secret
