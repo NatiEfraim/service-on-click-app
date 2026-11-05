@@ -54,21 +54,17 @@ export function OrgScreen() {
 
   return (
     <div>
-      <PageHead
-        title="יחידות ומחלקות"
-        sub={
-          <>
-            כאן ממפים כל אות לשם היחידה, למשל <bdi dir="ltr">N = NASA</bdi>. במערכת הפנימית מוצגים השמות. באפליקציה מוצגת רק האות, והשמות לא נשלחים אליה.
-          </>
-        }
-        actions={
-          <Button variant="primary" icon="plus" onClick={() => setUnitDialog({ unit: null })}>
+      <PageHead hideTitle title="יחידות ומחלקות" />
+
+      <Card
+        title="יחידות"
+        hint="לחיצה על יחידה מציגה את המחלקות שלה"
+        tools={
+          <Button size="sm" variant="primary" icon="plus" onClick={() => setUnitDialog({ unit: null })}>
             יחידה חדשה
           </Button>
         }
-      />
-
-      <Card title="יחידות" hint="לחיצה על יחידה מציגה את המחלקות שלה">
+      >
         {org.isPending ? (
           <CardBody>
             <Loading rows={4} />

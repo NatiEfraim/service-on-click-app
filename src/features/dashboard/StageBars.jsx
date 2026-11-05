@@ -8,6 +8,7 @@ import { Modal } from '@/components/ui/Modal';
 import { useChartTooltip } from '@/components/ui/ChartTooltip';
 
 import { STAGE_COLOR, STAGE_ORDER, STAGE_SHORT } from '@/lib/labels';
+import { workflowColumns } from './constants';
 import { useSession } from '@/providers/SessionProvider';
 
 /** A bar per domain, split by the stage its open bookings are in (longest first); a segment opens those bookings. */
@@ -78,6 +79,7 @@ export function StageBars({ byTypeStage, onlyTypes, onPickType, pickedType }) {
         <Modal title={`${typeName(chartRow.type)}: ${chartRow.total} קריאות פתוחות לפי שלב`} onClose={() => setChartType(null)} wide>
           <StageColumns
             stages={chartRow.stages}
+            bookingTypeId={chartRow.type}
             onPick={(id) => router.push(`/requests?view=open&types=${chartRow.type}&stage=${id}`)}
           />
         </Modal>
@@ -87,12 +89,16 @@ export function StageBars({ byTypeStage, onlyTypes, onPickType, pickedType }) {
 }
 
 /** A column per stage with its count above it; a column opens those bookings. */
-export function StageColumns({ stages, onPick }) {
-  const tallest = Math.max(1, ...STAGE_ORDER.map((id) => stages[id] ?? 0));
+export function StageColumns({ stages, onPick, bookingTypeId }) {
+  const { catalog } = useSession();
+  // only the stages of this domain's workflow (the barber has one, a shipment has the control officer and the suppliers);
+  // a stage that still holds bookings always shows, so nothing open is hidden
+  const shown = workflowColumns(bookingTypeId, catalog, stages, STAGE_ORDER);
+  const tallest = Math.max(1, ...shown.map((id) => stages[id] ?? 0));
 
   return (
     <div className="vbars">
-      {STAGE_ORDER.map((id) => {
+      {shown.map((id) => {
         const count = stages[id] ?? 0;
         return (
           <button

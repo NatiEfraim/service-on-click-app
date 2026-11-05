@@ -100,7 +100,7 @@ function DomainCard({ unitId, bookingTypeId, index }) {
 export function DomainsScreen() {
   const search = useSearchParams();
   const setParams = useSetSearchParams();
-  const { me, catalog, unitName } = useSession();
+  const { me, catalog } = useSession();
 
   const requested = Number(search.get('unit'));
   const unitId = me.is_super_admin && catalog.units.some((unit) => unit.id === requested) ? requested : (me.user.unit_id ?? catalog.units[0]?.id ?? 0);
@@ -129,10 +129,8 @@ export function DomainsScreen() {
   return (
     <>
       <PageHead
+        hideTitle
         title="תחומי שירות"
-        sub={`${typeIds.length} תחומים ב${unitName(unitId)}. לכל תחום מוצגים שלבי האישור ומי מאייש כל שלב. ${
-          me.is_super_admin ? 'ההגדרות ומבנה הטופס של כל תחום נפתחים מהכרטיס שלו.' : 'ההגדרות של כל תחום נפתחות מהכרטיס שלו.'
-        }`}
         actions={
           me.is_super_admin ? (
             <label className="st-unit">

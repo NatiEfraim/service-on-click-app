@@ -29,7 +29,7 @@ const DETAIL_EXIT_MS = 200;
 /** The table never gets shorter than this when the window is small. */
 const MIN_TABLE_HEIGHT = 320;
 
-const EMPTY ={ serial: '', actor: '', action: '', type: '', result: '', from: '', to: '' };
+const EMPTY = { q: '', action: '', type: '', result: '', from: '', to: '' };
 
 /** The chain check, run on demand (it walks the whole log). */
 function VerifyButton() {
@@ -277,30 +277,57 @@ function useShowValue() {
 }
 
 /** Super admin: who changed what and when, newest first; a row opens its before / after. */
+/** One filtered audit list, page by page (`enabled` off: an idle query that returns nothing). */
+function useAuditPages(params, enabled) {
+  return useInfiniteQuery({
+    queryKey: keys.audit(params),
+    queryFn: ({ pageParam, signal }) => auditApi.list({ ...params, page: pageParam }, signal),
+    initialPageParam: 1,
+    getNextPageParam: (last) => (last.meta.page < last.meta.last_page ? last.meta.page + 1 : undefined),
+    placeholderData: (previous) => previous,
+    enabled,
+  });
+}
+
 export function AuditScreen() {
   const { catalog } = useSession();
   const show = useShowValue();
   const [filters, setFilters] = useState(EMPTY);
-  const [serialText, setSerialText] = useState('');
-  const [actorText, setActorText] = useState('');
+  const [searchText, setSearchText] = useState('');
   const [open, setOpen] = useState(null);
   const update = (patch) => setFilters((current) => ({ ...current, ...patch }));
 
-  // typed filters wait a moment so every key press is not a request
+  // the search waits a moment so every key press is not a request
   useEffect(() => {
-    const timer = window.setTimeout(() => update({ serial: serialText.replace(/\D/g, ''), actor: actorText.replace(/\D/g, '') }), 350);
+    const timer = window.setTimeout(() => update({ q: searchText.replace(/\D/g, '') }), 350);
     return () => window.clearTimeout(timer);
-  }, [serialText, actorText]);
+  }, [searchText]);
 
-  const query = useInfiniteQuery({
-    queryKey: keys.audit(filters),
-    queryFn: ({ pageParam, signal }) => auditApi.list({ ...filters, page: pageParam }, signal),
-    initialPageParam: 1,
-    getNextPageParam: (last) => (last.meta.page < last.meta.last_page ? last.meta.page + 1 : undefined),
-    placeholderData: (previous) => previous,
-  });
-  const rows = mergeOneSave(query.data?.pages.flatMap((page) => page.data) ?? []);
-  const total = query.data?.pages[0]?.meta.total ?? 0;
+  // One search box for a booking number or a person's number. Both can be 7 digits and the API filters them apart, so a
+  // search asks both ways (as a booking, as the person who acted) and shows the two answers as one list, newest first.
+  const { q, ...base } = filters;
+  const bySerial = useAuditPages(q ? { ...base, serial: q } : base, true);
+  const byActor = useAuditPages({ ...base, actor: q }, Boolean(q));
+  const lists = q ? [bySerial, byActor] : [bySerial];
+  const query = {
+    isPending: lists.some((list) => list.isPending),
+    isError: lists.every((list) => list.isError),
+    error: bySerial.error ?? byActor.error,
+    isSuccess: lists.some((list) => list.isSuccess),
+    isPlaceholderData: lists.some((list) => list.isPlaceholderData),
+    refetch: () => Promise.all(lists.map((list) => list.refetch())),
+    hasNextPage: lists.some((list) => list.hasNextPage),
+    isFetchingNextPage: lists.some((list) => list.isFetchingNextPage),
+    fetchNextPage: () => Promise.all(lists.filter((list) => list.hasNextPage && !list.isFetchingNextPage).map((list) => list.fetchNextPage())),
+  };
+  const seen = new Set();
+  const rows = mergeOneSave(
+    lists
+      .flatMap((list) => list.data?.pages.flatMap((page) => page.data) ?? [])
+      .filter((row) => (seen.has(row.id) ? false : seen.add(row.id)))
+      .sort((a, b) => b.id - a.id),
+  );
+  const total = lists.reduce((sum, list) => sum + (list.data?.pages[0]?.meta.total ?? 0), 0);
 
   // the card ends at the window's bottom and only the table scrolls inside it
   const card = useRef(null);
@@ -324,11 +351,10 @@ export function AuditScreen() {
 
   return (
     <div>
-      <PageHead title="היסטוריית שינויים" sub="כל פעולה שבוצעה במערכת: מי, מה, מתי, ומה השתנה. ההיסטוריה אינה ניתנת לעריכה." actions={<VerifyButton />} />
+      <PageHead title="היסטוריית שינויים" hideTitle />
       <section ref={card} className="card fit-card">
         <div className="toolbar">
-          <SearchField id="audit-serial" width={170} value={serialText} placeholder="מספר קריאה" aria-label="סינון לפי מספר קריאה" onChange={setSerialText} />
-          <SearchField id="audit-actor" width={170} value={actorText} placeholder="מספר אישי של המבצע" aria-label="סינון לפי מספר אישי של המבצע" onChange={setActorText} />
+          <SearchField id="audit-search" width={220} value={searchText} placeholder="חיפוש" aria-label="חיפוש לפי מספר קריאה או מספר אישי" inputMode="numeric" onChange={setSearchText} />
           <Select autoWidth value={filters.action} aria-label="סוג פעולה" onChange={(event) => update({ action: event.target.value })}>
             <option value="">כל הפעולות</option>
             {ACTION_GROUPS.map((group) => (
@@ -355,11 +381,15 @@ export function AuditScreen() {
           </Select>
           <DateRangePicker value={{ from: filters.from, to: filters.to }} onChange={(range) => update(range)} />
           {filtered ? (
-            <Button size="sm" variant="ghost" icon="x" onClick={() => { setFilters(EMPTY); setSerialText(''); setActorText(''); }}>
+            <Button size="sm" variant="ghost" icon="x" onClick={() => { setFilters(EMPTY); setSearchText(''); }}>
               ניקוי
             </Button>
           ) : null}
-          {query.isSuccess ? <span className="hint" style={{ marginInlineStart: 'auto' }}>{total} רשומות</span> : null}
+          {/* the count and the integrity check close the bar */}
+          <span className="report-export">
+            {query.isSuccess ? <span className="hint">{total} רשומות</span> : null}
+            <VerifyButton />
+          </span>
         </div>
 
         {query.isPending ? (

@@ -13,6 +13,7 @@ import { invalidateWork, keys } from '@/lib/api/keys';
 
 import { useSession } from '@/providers/SessionProvider';
 import { useToast } from '@/providers/UiProvider';
+import { DEFAULT_TARGET_HOURS, DEFAULT_WARN_RATIO } from '@/lib/targets';
 import { validateTargetInput, acceptsWarningInput, warningExplanation } from './validation';
 
 
@@ -22,11 +23,12 @@ export function TargetDialog({ bookingTypeId, current, onClose }) {
   const toast = useToast();
   const { typeName } = useSession();
 
-  const hours = current?.target_hours ?? null;
+  // no target yet: the form starts from the default (48h), so saving makes it this domain's own
+  const hours = current?.target_hours ?? DEFAULT_TARGET_HOURS;
   const inDays = hours !== null && hours % 24 === 0;
   const [value, setValue] = useState(hours === null ? '' : String(inDays ? hours / 24 : hours));
   const [unit, setUnit] = useState(hours === null || inDays ? 'd' : 'h');
-  const [warnPercent, setWarnPercent] = useState(String(Math.round((current?.warn_ratio ?? 0.8) * 10000) / 100));
+  const [warnPercent, setWarnPercent] = useState(String(Math.round((current?.warn_ratio ?? DEFAULT_WARN_RATIO) * 10000) / 100));
   const [error, setError] = useState('');
 
   const mutation = useMutation({

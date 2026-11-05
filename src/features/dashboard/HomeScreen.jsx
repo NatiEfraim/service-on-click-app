@@ -100,8 +100,6 @@ export function HomeScreen() {
   if (query.isError) return <ErrorNotice error={query.error} onRetry={() => void query.refetch()} />;
 
   const { domains, by_type_stage: byTypeStage } = query.data;
-  const open = domains.reduce((sum, d) => sum + d.open, 0);
-  const over = domains.reduce((sum, d) => sum + (d.overdue ?? 0), 0);
 
   // Until a domain name is clicked, show a random domain that has open bookings.
   const withOpen = Object.keys(byTypeStage).map(Number).filter((type) => Object.values(byTypeStage[type] ?? {}).some((n) => n));
@@ -140,8 +138,8 @@ export function HomeScreen() {
   return (
     <FadeIn duration={HOME_FADE_MS}>
       <PageHead
+        hideTitle
         title="מסך ראשי"
-        sub={`${domains.length} תחומי שירות, ${open} קריאות פתוחות${over ? `, ${over} מהן חורגות מיעד הטיפול` : ''}. בחרו תחום כדי לפתוח את הדשבורד שלו.`}
       />
       <div className="home" ref={fitRef}>
       <div className="home-top">
@@ -185,7 +183,7 @@ export function HomeScreen() {
             {chartType === null ? (
               <EmptyState title="אין קריאות פתוחות" />
             ) : (
-              <StageColumns stages={shownStages} onPick={(id) => router.push(`/requests?view=open&types=${chartType}&stage=${id}`)} />
+              <StageColumns stages={shownStages} bookingTypeId={chartType} onPick={(id) => router.push(`/requests?view=open&types=${chartType}&stage=${id}`)} />
             )}
           </div>
         </Card>

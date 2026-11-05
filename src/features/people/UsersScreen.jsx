@@ -63,23 +63,11 @@ export function UsersScreen() {
 
   const openPermissions = (row) => setPermissionsFor({ uuid: row.uuid, name: row.name, personalNumber: row.personalNumber, personalId: row.personalId });
 
-  const sub = me.is_super_admin
-    ? 'שיבוץ תפקידים לפי תחום בכל היחידות, כולל מפקד מחנה. כל שינוי מחייב סיבה ונרשם בהיסטוריית השינויים.'
-    : 'שיבוץ מפקד תחום וגורם מטפל בתחומים שאתה מפקד המחנה שלהם, למשתמשי היחידה שלך. כל שינוי מחייב סיבה ונרשם בהיסטוריית השינויים.';
-
   const count = tab === 'holders' ? (holders.isSuccess ? `${holderRows.length} ${holderRows.length === 1 ? 'בעל תפקיד' : 'בעלי תפקידים'}` : '') : everyone.isSuccess ? `${allRows.length}${hasNextPage ? '+' : ''} משתמשים` : '';
 
   return (
     <div>
-      <PageHead
-        title="משתמשים והרשאות"
-        sub={sub}
-        actions={
-          <Button variant="primary" icon="plus" onClick={() => setCreating(true)}>
-            משתמש חדש
-          </Button>
-        }
-      />
+      <PageHead hideTitle title="משתמשים והרשאות" />
 
       <section ref={card} className="card fit-card">
         <div className="toolbar">
@@ -97,6 +85,10 @@ export function UsersScreen() {
           <span className="ppl-count" aria-live="polite">
             {count}
           </span>
+          {/* a new user is added from the bar of the list it joins */}
+          <Button size="sm" variant="primary" icon="plus" onClick={() => setCreating(true)}>
+            משתמש חדש
+          </Button>
         </div>
 
         {/* the body fades in afresh on every tab switch (key) while the card glides to its new height */}

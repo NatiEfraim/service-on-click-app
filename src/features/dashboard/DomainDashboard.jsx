@@ -20,6 +20,7 @@ import { insightsApi } from '@/lib/api/endpoints';
 import { keys } from '@/lib/api/keys';
 
 import { fmtHours, fmtLongHours } from '@/lib/format';
+import { DEFAULT_TARGET_HOURS } from '@/lib/targets';
 import { STAGE_ORDER, STAGE_SHORT, statusTone, WAIT_LABEL } from '@/lib/labels';
 import { homeKind } from '@/lib/nav';
 import { useArrivals } from '@/lib/useArrivals';
@@ -73,7 +74,7 @@ export function DomainDashboard() {
 
   const canGoBack = homeKind(me) === 'tiles';
   const canSetTarget = single !== null && me.capabilities['targets.manage'] && (me.is_super_admin || me.permissions.includes(`admin_${single}`));
-  const targetText = data.target ? `יעד טיפול: ${fmtLongHours(data.target.target_hours)} מפתיחה ועד סגירה` : 'לא הוגדר יעד טיפול לתחום';
+  const targetText = data.target ? `יעד טיפול: ${fmtLongHours(data.target.target_hours)} מפתיחה ועד סגירה` : `יעד טיפול: ${fmtLongHours(DEFAULT_TARGET_HOURS)} מפתיחה ועד סגירה (ברירת מחדל)`;
 
   const goStage = (stage) => router.push(`/requests?view=open&stage=${stage}${typesParam}`);
   const goIds = (ids) => ids.length && router.push(`/requests?view=all&ids=${ids.join(',')}`);
@@ -129,7 +130,7 @@ export function DomainDashboard() {
           bad={data.totals.overdue > 0}
           label="חורגות מיעד"
           value={data.totals.overdue}
-          foot={data.target ? `מעל ${fmtLongHours(data.target.target_hours)} מפתיחה` : 'לא הוגדר יעד'}
+          foot={data.target ? `מעל ${fmtLongHours(data.target.target_hours)} מפתיחה` : 'נספרות רק לפי יעד שהוגדר'}
           onClick={() => router.push(`/requests?view=overdue${typesParam}`)}
         />
         <Stat index={3} icon="pulse" color={STAT_COLOR.stale} label="ללא התקדמות" value={data.totals.stale} foot="יותר משבוע באותו שלב" />
@@ -290,7 +291,7 @@ function FullAnalysis({ data, ordered, pct, goIds }) {
             <dt>90% מהקריאות</dt>
             <dd>תוך {fmtLongHours(data.handling.p90_hours)}</dd>
             <dt>יעד התחום</dt>
-            <dd>{data.target ? fmtLongHours(data.target.target_hours) : 'לא הוגדר'}</dd>
+            <dd>{data.target ? fmtLongHours(data.target.target_hours) : `${fmtLongHours(DEFAULT_TARGET_HOURS)} (ברירת מחדל)`}</dd>
           </dl>
           {data.rates.closed ? (
             (

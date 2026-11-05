@@ -91,7 +91,7 @@ export function SettingsScreen() {
         sub={
           <>
             {unitName(unitId)} ·{' '}
-            <Link href={`/requests?view=open&types=${bookingTypeId}${me.is_super_admin ? `&units=${unitId}` : ''}`}>{settings.open_count} קריאות פתוחות</Link>. כל שינוי נשמר מיד, נרשם בהיסטוריית השינויים ומוחל גם באפליקציה.
+            <Link href={`/requests?view=open&types=${bookingTypeId}${me.is_super_admin ? `&units=${unitId}` : ''}`}>{settings.open_count} קריאות פתוחות</Link>.
           </>
         }
       />

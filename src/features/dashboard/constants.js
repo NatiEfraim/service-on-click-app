@@ -52,3 +52,12 @@ export const BOTTLENECK_ROWS = 8;
 
 /** Headline tile colours. */
 export const STAT_COLOR = { open: '#3D314A', awaiting: '#2E7470', overdue: '#B4423A', stale: '#B08A3E' };
+
+/**
+ * The stage columns of one domain's chart, in route order: the stages of its workflow (the barber has only "barber";
+ * "supplier_files" goes with the supplier stages), plus any other stage that still holds open bookings.
+ */
+export function workflowColumns(bookingTypeId, catalog, stages, order) {
+  const workflow = bookingTypeId == null ? order : pipelineStagesFor([bookingTypeId], catalog);
+  return order.filter((id) => workflow.includes(id) || (id === 'supplier_files' && workflow.includes('supplier_approval')) || (stages[id] ?? 0) > 0);
+}

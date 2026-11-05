@@ -85,15 +85,7 @@ export function BookingsReportScreen() {
 
   return (
     <div>
-      <PageHead
-        title={'דו"ח קריאות'}
-        sub="סינון הקריאות בתחומים שבאחריותך וייצוא לאקסל. הקובץ כולל את כל הקריאות שמתאימות לסינון, בדיוק כמו בטבלה."
-        actions={
-          <Button variant="primary" icon="download" loading={exporting.isPending} disabled={!meta || meta.total === 0} onClick={() => exporting.mutate()}>
-            {exporting.isPending ? 'מכין את הקובץ...' : `ייצוא לאקסל${meta ? ` (${meta.total})` : ''}`}
-          </Button>
-        }
-      />
+      <PageHead title={'דו"ח קריאות'} hideTitle />
       {exporting.isError ? (
         <Notice tone="bad" style={{ marginBottom: 14 }}>
           {exportMessage(exporting.error)}
@@ -128,6 +120,13 @@ export function BookingsReportScreen() {
               ניקוי
             </Button>
           ) : null}
+          {/* the export sits with the filters it applies: the count of what will be exported, then the button */}
+          <span className="report-export">
+            {meta ? <span className="hint">{meta.total} קריאות</span> : null}
+            <Button size="sm" variant="primary" icon="download" loading={exporting.isPending} disabled={!meta || meta.total === 0} onClick={() => exporting.mutate()}>
+              {exporting.isPending ? 'מכין את הקובץ...' : 'ייצוא לאקסל'}
+            </Button>
+          </span>
         </div>
 
         {query.isPending ? (

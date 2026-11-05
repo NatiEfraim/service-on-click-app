@@ -93,7 +93,7 @@ export function HatchScreen() {
 
   return (
     <div>
-      <PageHead title="צוהר דיגיטלי" sub="הפעלה ידנית של הייצוא והייבוא שהשרת מריץ אוטומטית מדי יום." />
+      <PageHead title="צוהר דיגיטלי" hideTitle />
 
       {/* sending on one side, importing on the other, each a column of compact cards, so the page fits the window */}
       <div className="hatch-cols">

@@ -95,26 +95,22 @@ export function SyncScreen() {
 
   return (
     <div>
-      <PageHead
-        title="סנכרון עם האפליקציה"
-        sub="מצב העברת ההחלטות מהמערכת לאפליקציה, ותקלות שדורשות טיפול."
-        actions={
-          <>
-            <Link className="btn ghost" href="/manage/hatch">צוהר דיגיטלי</Link>
-            {canOperate ? (
-              <Button variant="primary" icon="sync" loading={run.isPending} onClick={() => run.mutate()}>
-                סנכרון עכשיו
-              </Button>
-            ) : null}
-          </>
-        }
-      />
+      <PageHead hideTitle title="סנכרון עם האפליקציה" />
 
       {/* 1. the status strip */}
       <section className="card sync-strip">
         <div className={`sync-light ${overall}`}>
           <span className="sync-dot" aria-hidden="true" />
           <b>{OVERALL[overall]}</b>
+          {/* the actions sit with the state they act on */}
+          <span className="report-export">
+            <Link className="btn sm ghost" href="/manage/hatch">צוהר דיגיטלי</Link>
+            {canOperate ? (
+              <Button size="sm" variant="primary" icon="sync" loading={run.isPending} onClick={() => run.mutate()}>
+                סנכרון עכשיו
+              </Button>
+            ) : null}
+          </span>
         </div>
         <div className="sync-tiles">
           <Tile label="שליחה אחרונה" value={health.last_sent_at ? fmtAgo(health.last_sent_at) : 'עדיין לא'} sub={health.last_sent_at ? fmtDateTime(health.last_sent_at) : null} />

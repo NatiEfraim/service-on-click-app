@@ -9,6 +9,7 @@ import { TargetDialog } from '@/features/targets/TargetDialog';
 import { insightsApi } from '@/lib/api/endpoints';
 import { keys } from '@/lib/api/keys';
 import { fmtLongHours } from '@/lib/format';
+import { DEFAULT_TARGET_HOURS } from '@/lib/targets';
 import { useSession } from '@/providers/SessionProvider';
 
 /** Handling target (opening to closing), edited with the dashboard's dialog. */
@@ -37,7 +38,7 @@ export function TargetTab({ bookingTypeId }) {
   if (query.isError) return <div className="st-panel-body st-readable-settings"><ErrorNotice error={query.error} onRetry={() => void query.refetch()} /></div>;
 
   const target = query.data.find((item) => item.booking_type_id === bookingTypeId) ?? null;
-  const text = target ? fmtLongHours(target.target_hours) : 'לא הוגדר';
+  const text = target ? fmtLongHours(target.target_hours) : `${fmtLongHours(DEFAULT_TARGET_HOURS)} (ברירת מחדל)`;
 
   return (
     <div className="st-panel-body st-readable-settings">

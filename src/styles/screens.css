@@ -452,3 +452,4 @@ span.chart-fade { flex-direction: row; align-items: center; gap: 8px; white-spac
 .hatch-stack .btn { padding-block: 9px; }
 .hatch-stack .hatch-result { gap: 8px; padding-top: 12px; }
 .hatch-stack .hatch-result .notice { padding: 9px 12px; font-size: 14px; }
+.report-export { display: inline-flex; align-items: center; gap: 12px; margin-inline-start: auto; }

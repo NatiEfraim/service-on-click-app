@@ -150,7 +150,7 @@ export function RequestsScreen() {
 
   return (
     <div>
-      <PageHead title="קריאות" center={me.is_handler_only ? <DomainFilter picked={filters.types && !filters.types.includes(',') ? Number(filters.types) : null} /> : null} sub={filters.view === 'mine' ? 'קריאות שממתינות לטיפולך לפי ההרשאות והשלב שלהן.' : 'כל הקריאות בתחומים שבאחריותך. קריאות נפתחות באפליקציה בלבד.'} />
+      <PageHead title="קריאות" hideTitle center={me.is_handler_only ? <DomainFilter picked={filters.types && !filters.types.includes(',') ? Number(filters.types) : null} /> : null} />
       <section ref={card} className="card fit-card">
         <div className="toolbar">
           <Seg label="תצוגה" value={filters.view} onChange={(view) => update({ view })} options={views.map((view) => ({ value: view.id, label: view.label, count: view.count }))} />

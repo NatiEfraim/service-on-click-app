@@ -14,6 +14,7 @@ import { bookingsApi } from '@/lib/api/endpoints';
 import { keys } from '@/lib/api/keys';
 
 import { fmtDateTime, fmtHours } from '@/lib/format';
+import { targetHoursOr } from '@/lib/targets';
 import { actionTone, STAGE_SHORT } from '@/lib/labels';
 import { useSession } from '@/providers/SessionProvider';
 import { bookingActions } from '@/lib/booking-actions';
@@ -71,7 +72,7 @@ function Body({ booking, onDecision }) {
           <h2>מסלול האישור</h2>
           <span className="hint">
             {booking.stage_label}
-            {booking.target_hours ? ` · פתוחה ${fmtHours(booking.total_age_hours)} מתוך יעד ${fmtHours(booking.target_hours)}` : ''}
+            {` · פתוחה ${fmtHours(booking.total_age_hours)} מתוך יעד ${fmtHours(targetHoursOr(booking.target_hours))}${booking.target_hours == null ? ' (ברירת מחדל)' : ''}`}
           </span>
         </header>
         <div className="body">
