@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useLayoutEffect, useRef } from 'react';
 import { Select } from '@/components/ui/Select';
 import { useSearchParams } from 'next/navigation';
 
@@ -16,6 +17,14 @@ import { useSession } from '@/providers/SessionProvider';
 import { campCommanders, stationsForType } from './stations';
 import { useSettingsQuery } from './useSettings';
 import './settings.css';
+
+/** Names shown on a stage's line before "+N". */
+const MAX_NAMES = 2;
+/** Below this the grid scrolls inside itself instead of squeezing the cards further. */
+const MIN_GRID_HEIGHT = 420;
+
+/** "a, b +3": the first names, then how many more. */
+const shortList = (names) => `${names.slice(0, MAX_NAMES).join(', ')}${names.length > MAX_NAMES ? ` +${names.length - MAX_NAMES}` : ''}`;
 
 /** One domain: its approval route with whoever holds each station, and the way into its settings. */
 function DomainCard({ unitId, bookingTypeId, index }) {
@@ -33,7 +42,12 @@ function DomainCard({ unitId, bookingTypeId, index }) {
         <DomainBadge bookingTypeId={bookingTypeId} />
         <div>
           <h2>{name}</h2>
-          {query.data ? <span className="hint">{admins.length ? `מפקד מחנה: ${admins.join(', ')}` : 'לא שובץ מפקד מחנה'}</span> : null}
+          {query.data ? (
+            // two names, then "+N" (the full list is the tooltip), so a long list never runs out of the card
+            <span className="hint" title={admins.join(', ') || undefined}>
+              {admins.length ? `מפקד מחנה: ${shortList(admins)}` : 'לא שובץ מפקד מחנה'}
+            </span>
+          ) : null}
         </div>
         {query.data ? (
           <span className="tools">
@@ -57,14 +71,15 @@ function DomainCard({ unitId, bookingTypeId, index }) {
             </Button>
           </div>
         ) : (
-          <ol className="steps" aria-label={`שלבי האישור ב${name}`}>
+          // one line a stage: "stage: names" (two names, then "+N"; the full list is the line's tooltip)
+          <ol className="st-lines" aria-label={`שלבי האישור ב${name}`}>
             {stations.map((station) => (
-              <li key={station.id} className={station.people.length ? '' : 'none'}>
-                <span className="pt" />
-                <div>
-                  <b>{station.label}</b>
-                  <span>{station.people.length ? station.people.join(', ') : 'לא שובץ בעל תפקיד'}</span>
-                </div>
+              <li key={station.id} className={station.people.length ? '' : 'none'} title={station.people.join(', ') || undefined}>
+                <span className="pt" aria-hidden="true" />
+                <b>{station.label}</b>
+                <span className="names">
+                  {station.people.length ? shortList(station.people) : 'לא שובץ בעל תפקיד'}
+                </span>
               </li>
             ))}
           </ol>
@@ -93,6 +108,22 @@ export function DomainsScreen() {
 
   const setUnit = (id) => setParams({ unit: String(id) });
 
+  // the grid takes exactly the room left above the footer, so the page itself never scrolls; the rows share it
+  const grid = useRef(null);
+  useLayoutEffect(() => {
+    const el = grid.current;
+    if (!el) return;
+    const fit = () => {
+      const page = el.closest('.page');
+      const footer = document.querySelector('.app-footer')?.offsetHeight ?? 0;
+      const below = (page ? parseFloat(getComputedStyle(page).paddingBottom) : 0) + footer;
+      el.style.height = `${Math.max(MIN_GRID_HEIGHT, window.innerHeight - el.getBoundingClientRect().top - window.scrollY - below)}px`;
+    };
+    fit();
+    window.addEventListener('resize', fit);
+    return () => window.removeEventListener('resize', fit);
+  }, [typeIds.length]);
+
   if (!unitId) return <EmptyState title="לא נמצאה יחידה" />;
 
   return (
@@ -120,7 +151,7 @@ export function DomainsScreen() {
       {typeIds.length === 0 ? (
         <EmptyState title="אין תחומים בניהולך" />
       ) : (
-        <div className="st-domains">
+        <div ref={grid} className="st-domains st-domains-fit">
           {typeIds.map((id, index) => (
             <DomainCard key={`${unitId}-${id}`} unitId={unitId} bookingTypeId={id} index={index} />
           ))}
