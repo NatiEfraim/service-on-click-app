@@ -3,6 +3,9 @@
 /** Strong ease-out: anything entering, leaving or answering a press. */
 export const EASE_OUT = 'cubic-bezier(0.23, 1, 0.32, 1)';
 
+/** Ease-in for anything leaving: it speeds up on its way out (`--ease-in` in tokens.css). */
+export const EASE_IN = 'cubic-bezier(0.4, 0, 1, 1)';
+
 /** Loaded content fading in where its loading skeleton was. */
 export const CONTENT_FADE_MS = 260;
 
@@ -29,9 +32,9 @@ export const MENU_EXIT_MS = 150;
  *   3. ROW_COLLAPSE_MS its room closes and the rows below glide up
  * The list reloads after all three (ROW_LEAVE_MS, computed - do not set it by hand).
  */
-export const ROW_STAMP_MS = 300;
-export const ROW_SLIDE_MS = 220;
-export const ROW_COLLAPSE_MS = 180;
+export const ROW_STAMP_MS = 280;
+export const ROW_SLIDE_MS = 200;
+export const ROW_COLLAPSE_MS = 200;
 export const ROW_LEAVE_MS = ROW_STAMP_MS + ROW_SLIDE_MS + ROW_COLLAPSE_MS;
 
 /**

@@ -70,7 +70,7 @@ export function UsersScreen() {
   const count = tab === 'holders' ? (holders.isSuccess ? `${holderRows.length} ${holderRows.length === 1 ? 'בעל תפקיד' : 'בעלי תפקידים'}` : '') : everyone.isSuccess ? `${allRows.length}${hasNextPage ? '+' : ''} משתמשים` : '';
 
   return (
-    <div className="narrow">
+    <div>
       <PageHead
         title="משתמשים והרשאות"
         sub={sub}
@@ -140,7 +140,7 @@ export function UsersScreen() {
           </div>
         ) : (
           // dimmed only while a new search replaces the list, not while the next 20 load at the bottom
-          <div className="fit-fill" style={{ opacity: everyone.isPlaceholderData ? 0.55 : 1, transition: 'opacity .15s' }}>
+          <div className={`fit-fill${everyone.isPlaceholderData ? ' is-stale' : ''}`}>
             {allRows.length ? (
               <div ref={scroller} className="queue-scroll">
                 <PeopleTable rows={allRows} onOpen={openPermissions} />

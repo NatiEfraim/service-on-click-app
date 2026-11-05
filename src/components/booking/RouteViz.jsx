@@ -45,7 +45,7 @@ export function MiniRoute({ booking, catalog }) {
 export function AgeColumnsHeader() {
   return (
     <div className="age-columns-header">
-      <span className="age-columns"><span style={{ gridColumn: '1 / -1', fontSize: 11 }}>בשעות</span><span>בשלב</span><span>סה״כ</span></span>
+      <span className="age-columns"><span style={{ gridColumn: '1 / -1', fontSize: 12 }}>בשעות</span><span>בשלב</span><span>סה״כ</span></span>
       <span className="sr">הזמנים מוצגים בשעות</span>
     </div>
   );

@@ -22,7 +22,7 @@ const STATE = {
   sent: { label: 'נשלח', tone: 'ok' },
   failed: { label: 'נכשל', tone: 'bad' },
   blocked: { label: 'נחסם', tone: 'bad' },
-  superseded: { label: 'הוחלף בקובץ חדש', tone: '' },
+  superseded: { label: 'הוחלף בשליחה חדשה', tone: '' },
   awaiting_external_support: { label: 'ממתין לתמיכה באפליקציה', tone: 'warn' },
 };
 const stateOf = (state) => STATE[state] ?? { label: state, tone: '' };
@@ -103,7 +103,7 @@ export function SyncScreen() {
             <Link className="btn ghost" href="/manage/hatch">צוהר דיגיטלי</Link>
             {canOperate ? (
               <Button variant="primary" icon="sync" loading={run.isPending} onClick={() => run.mutate()}>
-                סנכרן עכשיו
+                סנכרון עכשיו
               </Button>
             ) : null}
           </>
@@ -142,8 +142,8 @@ export function SyncScreen() {
                 </span>
                 {canOperate ? (
                   <span className="sync-actions">
-                    <Button size="sm" onClick={() => setResolving({ conflict, resolution: 'keep_internal' })}>השאר את ההחלטה כאן</Button>
-                    <Button size="sm" onClick={() => setResolving({ conflict, resolution: 'accept_external' })}>קבל את האפליקציה</Button>
+                    <Button size="sm" variant="primary" onClick={() => setResolving({ conflict, resolution: 'keep_internal' })}>השארת ההחלטה מהמערכת</Button>
+                    <Button size="sm" variant="ghost" onClick={() => setResolving({ conflict, resolution: 'accept_external' })}>עדכון לפי האפליקציה</Button>
                   </span>
                 ) : null}
               </div>
@@ -158,7 +158,7 @@ export function SyncScreen() {
                 </span>
                 {canOperate ? (
                   <span className="sync-actions">
-                    <Button size="sm" icon="sync" loading={retry.isPending && retry.variables === file.id} onClick={() => retry.mutate(file.id)}>נסה שוב</Button>
+                    <Button size="sm" icon="sync" loading={retry.isPending && retry.variables === file.id} onClick={() => retry.mutate(file.id)}>שליחה חוזרת</Button>
                   </span>
                 ) : null}
               </div>
@@ -206,7 +206,7 @@ export function SyncScreen() {
         {/* 4. decisions waiting for the next send */}
         <Card title="ממתינות לשליחה" hint="החלטות שהתקבלו כאן ועוד לא נשלחו לאפליקציה">
           {pending.length === 0 ? (
-            <div className="card-body sync-clear"><Icon name="check" /> הכל נשלח.</div>
+            <div className="card-body sync-clear"><Icon name="check" /> כל ההחלטות נשלחו.</div>
           ) : (
             <div className="tbl-wrap sync-files">
               <table className="t">

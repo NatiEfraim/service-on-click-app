@@ -1,6 +1,7 @@
 'use client';
 
 import { useLayoutEffect, useRef } from 'react';
+import { EASE_OUT, prefersReducedMotion } from '@/lib/motion';
 
 /** Measure the selected label so intrinsic width changes can animate in pixels. */
 export function SmoothSelect({ className = '', children, fadeOnChange = false, ...props }) {
@@ -9,8 +10,8 @@ export function SmoothSelect({ className = '', children, fadeOnChange = false, .
   useLayoutEffect(() => {
     const changed = previousValue.current !== props.value;
     previousValue.current = props.value;
-    if (!changed || !fadeOnChange || !ref.current || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const animation = ref.current.animate([{ opacity: 1 }, { opacity: 0.3, offset: 0.4 }, { opacity: 1 }], { duration: 280, easing: 'ease-in-out' });
+    if (!changed || !fadeOnChange || !ref.current || prefersReducedMotion()) return;
+    const animation = ref.current.animate([{ opacity: 0.6 }, { opacity: 1 }], { duration: 200, easing: EASE_OUT });
     return () => animation.cancel();
   }, [props.value, fadeOnChange]);
 

@@ -139,7 +139,7 @@ export function BookingsReportScreen() {
         ) : rows.length === 0 ? (
           <div className="card-body"><EmptyState title={filtered ? 'אין קריאות שמתאימות לסינון.' : 'אין קריאות להצגה.'} /></div>
         ) : (
-          <div className="fit-fill" style={{ opacity: query.isPlaceholderData ? 0.55 : 1, transition: 'opacity 180ms ease' }}>
+          <div className={`fit-fill${query.isPlaceholderData ? ' is-stale' : ''}`}>
             <div ref={scroller} className="queue-scroll audit-scroll">
               <table className="t">
                 <thead>

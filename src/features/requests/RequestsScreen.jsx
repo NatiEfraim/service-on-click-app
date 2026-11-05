@@ -79,23 +79,12 @@ export function RequestsScreen() {
     getNextPageParam: (last) => (last.meta.page < last.meta.last_page ? last.meta.page + 1 : undefined),
     placeholderData: (previous) => previous,
   });
-  // Keep the previous results mounted until their exit finishes, including an empty result.
-  // Only a change of filters (tab, search, filter, sort) fades the list out and the new results in. Anything else for the
-  // same filters - a reload after a decision (the decided row already slid out), a next page (only its rows fade in) -
-  // replaces the rows in place. `shown` is what is on screen and which filters it belongs to.
+  // While new filters load, the old rows stay on screen, dimmed (placeholder data). When the new results arrive they fade
+  // in once - the list never blinks out first. A reload for the same filters (after a decision) or a next page replaces
+  // the rows in place: only a change of filters fades.
   const filtersKey = JSON.stringify(apiParams);
-  const [shown, setShown] = useState({ key: filtersKey, data: query.data });
   const settled = !query.isPlaceholderData && query.data !== undefined;
-  if (shown.key === filtersKey && settled && shown.data !== query.data) setShown({ key: filtersKey, data: query.data });
-  const resultsExiting = settled && shown.key !== filtersKey;
-  useEffect(() => {
-    if (!resultsExiting) return;
-    const timer = window.setTimeout(() => setShown({ key: filtersKey, data: query.data }), prefersReducedMotion() ? 0 : 180);
-    return () => window.clearTimeout(timer);
-  }, [resultsExiting, filtersKey, query.data]);
-  // while the new filters load, the old rows stay (dimmed); then they fade out and the new ones in
-  const visibleData = shown.key === filtersKey || !settled ? (query.data ?? shown.data) : shown.data;
-  const rows = visibleData?.pages.flatMap((page) => page.data) ?? [];
+  const rows = query.data?.pages.flatMap((page) => page.data) ?? [];
   const total = query.data?.pages[0]?.meta.total ?? 0;
 
   // The card ends at the bottom of the window and the list takes what the toolbar and filters leave, so only the list
@@ -108,20 +97,22 @@ export function RequestsScreen() {
   useFitToWindow(card, MIN_LIST_HEIGHT);
   // the card glides from the skeleton's height to the list's (or the empty state's) instead of jumping
   useSmoothHeight(card, query.isPending ? 'loading' : hasRows ? 'rows' : 'empty');
-  // the list fades in where the loading skeleton was (started from script so nothing in the cascade can skip it)
+  // the list fades in where the skeleton was, and again whenever the results of new filters arrive (script-started, so
+  // nothing in the cascade can skip it); keyed on the settled filters, so a reload of the same ones never fades
+  const shownKey = settled && hasRows ? filtersKey : null;
   useLayoutEffect(() => {
     const el = scroller.current;
-    if (!hasRows || !el || prefersReducedMotion()) return;
+    if (!shownKey || !el || prefersReducedMotion()) return;
     const fade = el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: CONTENT_FADE_MS, easing: EASE_OUT });
     return () => fade.cancel();
-  }, [hasRows]);
-  // rows added by a next page fade in; the rows already shown stay as they are
-  const shownCount = useRef(0);
+  }, [shownKey]);
+  // rows added by a next page fade in; the rows already shown stay as they are (new filters fade as a whole, above)
+  const shownCount = useRef({ key: null, count: 0 });
   useLayoutEffect(() => {
-    const before = shownCount.current;
-    shownCount.current = rows.length;
+    const { key, count: before } = shownCount.current;
+    shownCount.current = { key: filtersKey, count: rows.length };
     const list = scroller.current?.querySelector('.tickets');
-    if (!list || before === 0 || rows.length <= before || prefersReducedMotion()) return;
+    if (!list || key !== filtersKey || before === 0 || rows.length <= before || prefersReducedMotion()) return;
     const fades = [...list.children].slice(before).map((el) => el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: CONTENT_FADE_MS, easing: EASE_OUT }));
     return () => fades.forEach((fade) => fade.cancel());
   }, [rows.length]);
@@ -204,7 +195,7 @@ export function RequestsScreen() {
           <div className="adv requests-filters">
             <Field label="תחום">
               <Select autoWidth className="input" value={filters.types} onChange={(event) => update({ types: event.target.value })}>
-                <option value="">הכל</option>
+                <option value="">כל התחומים</option>
                 {managedTypes.map((type) => (
                   <option key={type.id} value={type.id}>
                     {type.display_name}
@@ -214,7 +205,7 @@ export function RequestsScreen() {
             </Field>
             <Field label="שלב">
               <Select autoWidth className="input" value={filters.stage} onChange={(event) => update({ stage: event.target.value })}>
-                <option value="">הכל</option>
+                <option value="">כל השלבים</option>
                 {filterOptions.stages.map((id) => (
                   <option key={id} value={id}>
                     {STAGE_SHORT[id]}
@@ -225,7 +216,7 @@ export function RequestsScreen() {
             </Field>
             <Field label="סטטוס">
               <Select autoWidth className="input requests-status-select" value={filters.statuses} onChange={(event) => update({ statuses: event.target.value })}>
-                <option value="">הכל</option>
+                <option value="">כל הסטטוסים</option>
                 {filterOptions.statuses.map((status) => (
                   <option key={status.id} value={status.id}>
                     {status.display_name}
@@ -236,7 +227,7 @@ export function RequestsScreen() {
             {handlers.data?.length ? (
               <Field label="גורם מטפל">
                 <Select autoWidth className="input" value={filters.handler} onChange={(event) => update({ handler: event.target.value })}>
-                  <option value="">הכל</option>
+                  <option value="">כל הגורמים המטפלים</option>
                   {handlers.data.map((person) => (
                     <option key={person.uuid} value={person.uuid}>
                       {person.full_name}
@@ -248,7 +239,7 @@ export function RequestsScreen() {
             {me.is_super_admin ? (
               <Field label="יחידה">
                 <Select autoWidth className="input" value={filters.units} onChange={(event) => update({ units: event.target.value })}>
-                  <option value="">הכל</option>
+                  <option value="">כל היחידות</option>
                   {catalog.units.map((unit) => (
                     <option key={unit.id} value={unit.id}>
                       {unit.name}
@@ -274,7 +265,7 @@ export function RequestsScreen() {
           </div>
         ) : null}
 
-        <div className="fit-fill" style={{ opacity: resultsExiting ? 0 : query.isPlaceholderData ? 0.55 : 1, transition: prefersReducedMotion() ? 'none' : 'opacity 180ms ease', pointerEvents: resultsExiting ? 'none' : undefined }}>
+        <div className={`fit-fill${query.isPlaceholderData ? ' is-stale' : ''}`}>
           {query.isPending ? (
             <div className="card-body">
               <Loading rows={8} />
@@ -304,7 +295,7 @@ export function RequestsScreen() {
             </div>
           ) : (
             <div className="fade-in">
-              <EmptyState title="אין קריאות שמתאימות">אפשר לבחור תצוגה אחרת או לנקות את הסינון.</EmptyState>
+              <EmptyState title="אין קריאות שמתאימות לסינון.">אפשר לבחור תצוגה אחרת או לנקות את הסינון.</EmptyState>
             </div>
           )}
         </div>

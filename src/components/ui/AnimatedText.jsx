@@ -1,5 +1,6 @@
 'use client';
 import { useLayoutEffect, useRef } from 'react';
+import { EASE_IN, EASE_OUT, prefersReducedMotion } from '@/lib/motion';
 export function AnimatedText({ children }) {
   const box = useRef(null), label = useRef(null), previous = useRef(null);
   useLayoutEffect(() => {
@@ -7,12 +8,12 @@ export function AnimatedText({ children }) {
     const text = current.textContent, old = previous.current;
     outer.style.width = current.getBoundingClientRect().width + 'px';
     previous.current = text;
-    if (old === null || old === text || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (old === null || old === text || prefersReducedMotion()) return;
     const ghost = document.createElement('span');
     ghost.className = 'animated-text-old'; ghost.textContent = old;
     ghost.setAttribute('aria-hidden', 'true'); outer.appendChild(ghost);
-    const exit = ghost.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120, fill: 'forwards' });
-    const enter = current.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160, delay: 80, fill: 'backwards' });
+    const exit = ghost.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120, easing: EASE_IN, fill: 'forwards' });
+    const enter = current.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160, delay: 80, easing: EASE_OUT, fill: 'backwards' });
     exit.onfinish = () => ghost.remove();
     return () => { exit.cancel(); enter.cancel(); ghost.remove(); };
   }, [children]);

@@ -16,7 +16,7 @@ import { auditApi, peopleApi } from '@/lib/api/endpoints';
 import { keys } from '@/lib/api/keys';
 import { fmtDateTime } from '@/lib/format';
 import { sourceTag } from '@/lib/labels';
-import { EASE_OUT, prefersReducedMotion } from '@/lib/motion';
+import { EASE_IN, EASE_OUT, prefersReducedMotion } from '@/lib/motion';
 import { useFitToWindow } from '@/lib/useFitToWindow';
 import { useBookingDrawer } from '@/features/bookings/useBookingDrawer';
 import { useSession } from '@/providers/SessionProvider';
@@ -25,7 +25,7 @@ import { ACTION_GROUPS, actionLabel, changedFields, ENTITY_LABEL, fieldLabel, li
 
 /** How long an opened row's details take to fold open and to fold away. */
 const DETAIL_ENTER_MS = 260;
-const DETAIL_EXIT_MS = 220;
+const DETAIL_EXIT_MS = 200;
 /** The table never gets shorter than this when the window is small. */
 const MIN_TABLE_HEIGHT = 320;
 
@@ -39,32 +39,45 @@ function VerifyButton() {
     return verify.data.valid ? (
       <span className="chip ok">ההיסטוריה תקינה ({verify.data.checked} רשומות נבדקו)</span>
     ) : (
-      <span className="chip bad">נמצאה אי-התאמה ברשומה {verify.data.broken_at}</span>
+      <span className="chip bad">נמצא שינוי חשוד ברשומה {verify.data.broken_at}</span>
     );
   }
   return (
     <Button size="sm" icon="check" loading={verify.isFetching} onClick={() => (asked ? void verify.refetch() : setAsked(true))}>
-      {verify.isError ? 'הבדיקה נכשלה - נסו שוב' : 'בדיקת שלמות'}
+      {verify.isError ? 'הבדיקה נכשלה - נסו שוב' : 'אימות ההיסטוריה'}
     </Button>
   );
 }
 
 /** The opened row's details: they glide open and fade in, and stay on screen while they fade and fold away. */
 function AuditDetail({ open, children }) {
-  const presence = usePresence(open, DETAIL_EXIT_MS);
+  // kept mounted for the text fade (60ms head start) plus the fold
+  const presence = usePresence(open, DETAIL_EXIT_MS + 60);
   const fold = useRef(null);
 
   // the height glides between 0 and the content's (measured in pixels: a table row cannot animate to `auto`)
   useLayoutEffect(() => {
     const el = fold.current;
     if (!el || prefersReducedMotion()) return;
+    const body = el.firstElementChild;
+    // measured from where it is now (a close during the open starts from the current height, not the full one)
+    const from = `${el.getBoundingClientRect().height}px`;
     const full = `${el.scrollHeight}px`;
-    const frames = presence.closing
-      ? [{ height: full, opacity: 1, overflow: 'hidden' }, { height: '0px', opacity: 0, overflow: 'hidden' }]
-      : [{ height: '0px', opacity: 0, overflow: 'hidden' }, { height: full, opacity: 1, overflow: 'hidden' }];
-    const animation = el.animate(frames, { duration: presence.closing ? DETAIL_EXIT_MS : DETAIL_ENTER_MS, easing: presence.closing ? 'ease-in' : EASE_OUT, fill: 'forwards' });
-    if (!presence.closing) animation.onfinish = () => animation.cancel();
-    return () => animation.cancel();
+    let height;
+    let fade;
+    if (presence.closing) {
+      // the text fades first, quickly, then the room closes - so it never shows squashed
+      fade = body?.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120, easing: EASE_IN, fill: 'forwards' });
+      height = el.animate([{ height: from, overflow: 'hidden' }, { height: '0px', overflow: 'hidden' }], { duration: DETAIL_EXIT_MS, delay: 60, easing: EASE_IN, fill: 'forwards' });
+    } else {
+      // the room opens, and the text fades in a moment later into it
+      height = el.animate([{ height: '0px', overflow: 'hidden' }, { height: full, overflow: 'hidden' }], { duration: DETAIL_ENTER_MS, easing: EASE_OUT });
+      fade = body?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200, delay: 60, easing: EASE_OUT, fill: 'backwards' });
+    }
+    return () => {
+      height.cancel();
+      fade?.cancel();
+    };
   }, [presence.mounted, presence.closing]);
 
   if (!presence.mounted) return null;
@@ -356,7 +369,7 @@ export function AuditScreen() {
         ) : rows.length === 0 ? (
           <div className="card-body"><EmptyState title={filtered ? 'אין רשומות שמתאימות לסינון.' : 'עדיין אין רשומות בהיסטוריה.'} /></div>
         ) : (
-          <div className="fit-fill" style={{ opacity: query.isPlaceholderData ? 0.55 : 1, transition: 'opacity 180ms ease' }}>
+          <div className={`fit-fill${query.isPlaceholderData ? ' is-stale' : ''}`}>
           <div ref={scroller} className="queue-scroll audit-scroll">
             <table className="t">
               <thead>

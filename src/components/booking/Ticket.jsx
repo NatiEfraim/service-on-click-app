@@ -7,7 +7,7 @@ import { Icon } from '@/components/ui/Icon';
 import { useBookingDrawer } from '@/features/bookings/useBookingDrawer';
 
 import { actionTone, domainColor, STAGE_SHORT } from '@/lib/labels';
-import { EASE_OUT, prefersReducedMotion, ROW_ARRIVE_MS, ROW_COLLAPSE_MS, ROW_SLIDE_MS, ROW_STAMP_MS } from '@/lib/motion';
+import { EASE_IN, EASE_OUT, prefersReducedMotion, ROW_ARRIVE_MS, ROW_COLLAPSE_MS, ROW_SLIDE_MS, ROW_STAMP_MS } from '@/lib/motion';
 import { useSession } from '@/providers/SessionProvider';
 import { bookingActions } from '@/lib/booking-actions';
 import { isHoldStatus } from '@/lib/booking-workflow';
@@ -25,11 +25,12 @@ function useLeave(ref, outcome) {
     let cancelled = false;
     const running = [];
     // approved leaves to the right, rejected / cancelled to the left
-    const away = outcome === 'ok' ? '100%' : '-100%';
+    // a short push (not the row's full width, which reads long and fast on a wide screen)
+    const away = outcome === 'ok' ? '48px' : '-48px';
     const timer = window.setTimeout(async () => {
       const slide = el.animate(
         reduce ? [{ opacity: 1 }, { opacity: 0 }] : [{ opacity: 1, transform: 'translateX(0)' }, { opacity: 0, transform: `translateX(${away})` }],
-        { duration: ROW_SLIDE_MS, easing: EASE_OUT, fill: 'forwards' },
+        { duration: ROW_SLIDE_MS, easing: EASE_IN, fill: 'forwards' },
       );
       running.push(slide);
       await slide.finished.catch(() => {});

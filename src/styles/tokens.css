@@ -20,6 +20,11 @@
   --font: "Assistant Variable", "Segoe UI", Arial, sans-serif;
   /* motion: strong ease-out for anything entering or answering a press */
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  /* durations, the same as lib/motion.js: quick exits and dims, content fades, height glides */
+  --dur-fast: 150ms;
+  --dur-base: 200ms;
+  --dur-resize: 260ms;
   /* side panel sliding in / out (iOS-like); same as EASE_DRAWER in lib/motion.js */
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
   color-scheme: light;

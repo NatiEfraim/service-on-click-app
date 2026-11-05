@@ -32,7 +32,7 @@
 
 /* ----- the switch */
 .st-switch-wrap { display: grid; gap: 3px; }
-.st-switch { position: relative; display: inline-flex; align-items: center; gap: 10px; cursor: pointer; font-size: 14.5px; width: fit-content; }
+.st-switch { position: relative; display: inline-flex; align-items: center; gap: 10px; cursor: pointer; font-size: 14px; width: fit-content; }
 .st-switch .track { position: relative; flex: none; width: 40px; height: 22px; border-radius: 999px; background: #7A8799; transition: background-color .15s ease; }
 .st-switch .track::after {
   content: ""; position: absolute; top: 3px; inset-inline-start: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff;
@@ -60,14 +60,14 @@
 .frow.child .t1 { font-weight: 600; }
 .frow .st-link { font-size: 13px; }
 .st-empty-cell { display: block; width: 1px; }
-.st-fields-end { padding: 12px 18px; font-size: 13.5px; color: var(--mute); }
+.st-fields-end { padding: 12px 18px; font-size: 13px; color: var(--mute); }
 
 /* the form as the requester sees it */
 .st-form-preview .preview-form { padding: 16px; }
 .st-form-preview .preview-form .field > span { display: block; }
 .st-pv-group { display: grid; gap: 12px; padding-inline-start: 12px; border-inline-start: 3px solid var(--line); }
-.st-pv-note { font-size: 12.5px; color: var(--mute); }
-.st-pv-more { font-size: 12.5px; color: var(--mute); align-self: center; }
+.st-pv-note { font-size: 13px; color: var(--mute); }
+.st-pv-more { font-size: 13px; color: var(--mute); align-self: center; }
 .st-pv-box { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--mute); }
 
 /* ----- dialogs */
@@ -143,7 +143,7 @@
 
 /* Readable operating settings and handling targets. */
 .st-readable-settings { font-size: 16px; line-height: 1.6; }
-.st-readable-settings .setting .what b { font-size: 17px; }
+.st-readable-settings .setting .what b { font-size: 16px; }
 .st-readable-settings .setting .what span,
 .st-readable-settings .field > span,
 .st-readable-settings .small { font-size: 15px; line-height: 1.6; }
@@ -168,11 +168,11 @@
 .st-domains-fit .dcard { min-height: 0; overflow: hidden; }
 .st-domains-fit .card-head { padding: 10px 14px; gap: 10px; }
 .st-domains-fit .card-head h2 { font-size: 15px; }
-.st-domains-fit .card-head .hint { font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.st-domains-fit .card-head .hint { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .st-domains-fit .st-card-body { min-height: 0; overflow-y: auto; align-self: stretch; }
 .st-domains-fit .card-foot { padding: 7px 14px; }
 .st-lines { list-style: none; margin: 0; padding: 8px 14px; display: grid; gap: 6px; }
-.st-lines li { display: grid; grid-template-columns: 10px auto minmax(0, 1fr); align-items: center; gap: 8px; font-size: 13.5px; }
+.st-lines li { display: grid; grid-template-columns: 10px auto minmax(0, 1fr); align-items: center; gap: 8px; font-size: 13px; }
 .st-lines .pt { width: 8px; height: 8px; border-radius: 50%; background: var(--s3); }
 .st-lines li.none .pt { background: var(--warn); }
 .st-lines b { font-weight: 700; white-space: nowrap; }

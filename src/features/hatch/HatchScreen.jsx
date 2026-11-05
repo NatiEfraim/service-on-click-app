@@ -98,7 +98,7 @@ export function HatchScreen() {
       {/* sending on one side, importing on the other, each a column of compact cards, so the page fits the window */}
       <div className="hatch-cols">
       <section>
-      <h2 className="hatch-section">ייצוא לאפליקציה (r2b)</h2>
+      <h2 className="hatch-section">שליחה לאפליקציה</h2>
       <div className="hatch-stack">
         <HatchCard
           title="קובץ סטטוס הזמנות"
@@ -140,7 +140,7 @@ export function HatchScreen() {
       </section>
 
       <section>
-      <h2 className="hatch-section">ייבוא מהאפליקציה (b2r)</h2>
+      <h2 className="hatch-section">קבלה מהאפליקציה</h2>
       <div className="hatch-stack">
         <HatchCard title="קובץ הזמנות" hint="ההזמנות שהמשתמשים שלחו באפליקציה" button="ייבא קובץ הזמנות" run={hatchApi.importBookingJson} read={(data) => importJsonLines(data)} />
         <HatchCard title="קובץ לוג פעולות" hint="יש לייבא את קובץ ההזמנות לפני ייבוא לוג הפעולות" button="ייבא קובץ לוג פעולות" run={hatchApi.importApplicationLogJson} read={(data) => importJsonLines(data, true)} />

@@ -5,7 +5,7 @@
 .ppl-user b { display: block; overflow-wrap: anywhere; }
 .ppl-user b.nameless { color: var(--mute); font-weight: 600; }
 .ppl-ids { display: flex; flex-wrap: wrap; gap: 0 12px; font-size: 13px; color: var(--mute); }
-.ppl-ids .serial { font-size: 12.5px; }
+.ppl-ids .serial { font-size: 13px; }
 .ppl-roles { display: flex; gap: 6px; flex-wrap: wrap; }
 .ppl-roles .chip { white-space: normal; }
 .ppl-act { text-align: end; white-space: nowrap; }
@@ -15,14 +15,14 @@
 .ppl-head { display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; }
 .ppl-head .who { flex: 1 1 220px; min-width: 0; }
 .ppl-head .who b { display: block; font-size: 15px; }
-.ppl-head .who span { font-size: 13.5px; color: var(--mute); }
+.ppl-head .who span { font-size: 13px; color: var(--mute); }
 .ppl-head .field { min-width: 200px; }
 
 .ppl-matrix-wrap { border: 1px solid var(--line); border-radius: var(--r-sm); overflow-x: auto; }
 .ppl-matrix { margin: 0; }
 .ppl-matrix .ppl-c { text-align: center; }
 .ppl-matrix thead th.ppl-c { min-width: 96px; }
-.ppl-matrix tbody th { text-align: start; font-weight: 600; font-size: 14.5px; color: var(--ink); background: none; padding: 6px 14px; border-bottom: 1px solid var(--line-2); white-space: normal; }
+.ppl-matrix tbody th { text-align: start; font-weight: 600; font-size: 14px; color: var(--ink); background: none; padding: 6px 14px; border-bottom: 1px solid var(--line-2); white-space: normal; }
 .ppl-matrix tbody tr:last-child th { border-bottom: 0; }
 .ppl-matrix tbody td { padding: 3px 8px; }
 .ppl-matrix tbody tr:hover > * { background: var(--hover); }
@@ -32,7 +32,7 @@
 .ppl-cell.locked { cursor: not-allowed; }
 .ppl-cell.locked input { opacity: .5; }
 .ppl-na { color: var(--mute); }
-.ppl-summary { margin: 0; font-size: 13.5px; color: var(--mute); }
+.ppl-summary { margin: 0; font-size: 13px; color: var(--mute); }
 .ppl-summary.has { color: var(--accent-ink); font-weight: 600; }
 
 @media (max-width: 760px) {

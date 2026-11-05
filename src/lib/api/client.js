@@ -112,8 +112,17 @@ export function setUnauthorizedHandler(handler) {
 
 http.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     if (axios.isCancel(error)) return Promise.reject(error);
+    // a file download (responseType blob) gets its error body as a Blob: read the JSON so the server's message survives
+    const body = axios.isAxiosError(error) ? error.response?.data : undefined;
+    if (typeof Blob !== 'undefined' && body instanceof Blob) {
+      try {
+        error.response.data = JSON.parse(await body.text());
+      } catch {
+        // not JSON: the status decides the message
+      }
+    }
     const apiError = toApiError(error);
     const url = axios.isAxiosError(error) ? (error.config?.url ?? '') : '';
     // a failed login is not an expired session

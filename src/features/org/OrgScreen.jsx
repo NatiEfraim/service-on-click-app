@@ -53,7 +53,7 @@ export function OrgScreen() {
   };
 
   return (
-    <div className="narrow">
+    <div>
       <PageHead
         title="יחידות ומחלקות"
         sub={

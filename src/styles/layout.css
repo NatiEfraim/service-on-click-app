@@ -12,8 +12,8 @@
 }
 .brand { display: flex; align-items: center; gap: 10px; white-space: nowrap; padding-inline-end: 6px; }
 .brand .system-logo { width: 40px; height: 40px; box-sizing: border-box; padding: 5px; background: #EDEBE6; border-radius: 11px; }
-.brand b { display: block; font-size: 16.5px; font-weight: 700; line-height: 1.15; color: var(--nav-ink); }
-.brand span { font-size: 12.5px; font-weight: 400; color: var(--nav-ink); }
+.brand b { display: block; font-size: 16px; font-weight: 700; line-height: 1.15; color: var(--nav-ink); }
+.brand span { font-size: 13px; font-weight: 400; color: var(--nav-ink); }
 
 .tabs-nav { display: flex; align-items: center; height: 100%; gap: 4px; position: relative; }
 /* the active-screen pill: one element that glides (and resizes) to the current item (TopBar places it) */
@@ -65,7 +65,7 @@
 }
 .menu a:hover, .menu button.mi:hover { background: var(--hover); }
 .menu a[aria-current="page"] { background: var(--accent-wash); color: var(--accent); }
-.menu small { display: block; font-weight: 400; color: var(--mute); font-size: 12.5px; }
+.menu small { display: block; font-weight: 400; color: var(--mute); font-size: 13px; }
 
 .top-tools { margin-inline-start: auto; display: flex; align-items: center; gap: 12px; }
 /* a handler's domains (QueueScreen head): icon + name each, the picked one filled */
@@ -110,16 +110,17 @@
 .topbar .menu :focus-visible, .topbar .search :focus-visible { outline-color: var(--accent); }
 
 /* ---------- page */
-.page { max-width: 1680px; width: 100%; box-sizing: border-box; margin: 0 auto; padding: 28px clamp(16px, 2.5vw, 40px) 24px; }
+/* the content lines up with the top bar: the bar's 1600px plus the same side padding */
+.page { max-width: calc(1600px + 2 * clamp(16px, 2.5vw, 40px)); width: 100%; box-sizing: border-box; margin: 0 auto; padding: 28px clamp(16px, 2.5vw, 40px) 24px; }
 .page:focus { outline: none; }
 /* the page is a column: the screen takes the room, the credit line closes it at the very bottom */
 body { min-height: 100dvh; display: flex; flex-direction: column; }
 .app-body { flex: 1 0 auto; display: flex; flex-direction: column; }
 :root { --footer-h: 22px; }
-.app-footer { flex: none; box-sizing: border-box; height: var(--footer-h); display: grid; place-items: center; padding: 0 16px; text-align: center; font-size: 11.5px; line-height: 1; color: var(--mute); border-top: 1px solid var(--line-2); }
+.app-footer { flex: none; box-sizing: border-box; height: var(--footer-h); display: grid; place-items: center; padding: 0 16px; text-align: center; font-size: 12px; line-height: 1; color: var(--mute); border-top: 1px solid var(--line-2); }
 .page-head { display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 22px; }
 .page-head h1 { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -.01em; line-height: 1.2; }
-.page-head p { margin: 6px 0 0; color: var(--ink-2); font-size: 15.5px; max-width: 76ch; }
+.page-head p { margin: 6px 0 0; color: var(--ink-2); font-size: 16px; max-width: 76ch; }
 .page-head .actions { margin-inline-start: auto; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 /* something centred in the head (e.g. the handler's domain filter): it takes the room beside the title, in one row */
 .page-head.has-center { flex-wrap: nowrap; align-items: center; }
@@ -140,7 +141,7 @@ body { min-height: 100dvh; display: flex; flex-direction: column; }
 .card-head .tools { margin-inline-start: auto; display: flex; gap: 6px; align-items: center; }
 .hint, .card-head .hint { color: var(--mute); font-size: 13px; font-weight: 400; }
 .card-body { padding: 16px 18px; }
-.card-foot { padding: 10px 18px; border-top: 1px solid var(--line-2); display: flex; align-items: center; gap: 10px; font-size: 13.5px; color: var(--mute); }
+.card-foot { padding: 10px 18px; border-top: 1px solid var(--line-2); display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--mute); }
 .dcard { border-top: 4px solid var(--dc, var(--accent)); display: grid; }
 
 @media (max-width: 1180px) {
@@ -168,6 +169,6 @@ body { min-height: 100dvh; display: flex; flex-direction: column; }
   .search { width: auto; flex: 1; }
   .userbtn .nm { display: none; }
   .g-2 { grid-template-columns: 1fr; }
-  .page-head h1 { font-size: 22px; }
+  .page-head h1 { font-size: 26px; }
 }
 @media (max-width: 760px) { .cols2 { grid-template-columns: 1fr; } }

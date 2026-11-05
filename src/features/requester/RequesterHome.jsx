@@ -117,7 +117,7 @@ export function RequesterHome({ onSignOut, fallback }) {
               <span className="grow" />
               {bookings.isSuccess ? <span className="small muted">{countLabel}</span> : null}
             </div>
-            <FadeIn key={`${view}:${query}`} className="fit-fill" style={{ opacity: bookings.isPlaceholderData ? 0.55 : 1, transition: 'opacity .15s' }}>
+            <FadeIn key={view} className={`fit-fill${bookings.isPlaceholderData ? ' is-stale' : ''}`}>
               {bookings.isPending || (query && hasNextPage && !rows.length && !bookings.isError) ? (
                 <div className="card-body">
                   <Loading rows={6} />

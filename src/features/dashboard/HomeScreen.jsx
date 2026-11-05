@@ -20,7 +20,7 @@ import { StageBars, StageColumns } from './StageBars';
 const CHART_FADE_MS = 130;
 
 /** The whole screen fading in once its data arrives: a rare, whole-page moment, so a little longer than a list. */
-const HOME_FADE_MS = 420;
+const HOME_FADE_MS = 260;
 
 /** Domains shown as one tile on the home screen (booking type ids), with the mobile app's category icon (shirt, car, sandwich). */
 const TILE_GROUPS = [
@@ -191,7 +191,7 @@ export function HomeScreen() {
         </Card>
       </div>
 
-      <Card className="home-card home-bars" title="קריאות פתוחות לפי תחום ולפי השלב שבו הן נמצאות" hint="לחיצה על שם תחום מציגה את הגרף שלו למעלה, לחיצה על פס פותחת את הקריאות">
+      <Card className="home-card home-bars" title="קריאות פתוחות לפי תחום ושלב" hint="לחיצה על שם תחום מציגה את הגרף שלו למעלה, לחיצה על פס פותחת את הקריאות">
         <StageBars byTypeStage={byTypeStage} onPickType={setPickedType} pickedType={shownType} />
       </Card>
       </div>

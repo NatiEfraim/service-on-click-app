@@ -168,7 +168,8 @@ export const bookingsReportApi = {
       timeout: 120_000,
     });
     const disposition = response.headers['content-disposition'] ?? '';
-    const fileName = /filename="([^"]+)"/.exec(disposition)?.[1] ?? `bookings_${Date.now()}.xlsx`;
+    // quoted or not (Laravel quotes only names with special characters), or the RFC 5987 filename*= form
+    const fileName = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition)?.[1] ?? `bookings_${Date.now()}.xlsx`;
     return { blob: response.data, fileName };
   },
 };

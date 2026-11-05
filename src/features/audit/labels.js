@@ -88,8 +88,10 @@ export function mergeOneSave(rows) {
   const merged = [];
   for (const row of rows) {
     const newer = merged[merged.length - 1];
+    // one save is at most two requests, so a row already merged takes no third: separate saves seconds apart never chain
     const sameSave =
       newer &&
+      !newer.mergedSave &&
       row.action === 'user.permissions.change' &&
       newer.action === row.action &&
       newer.result === row.result &&
@@ -99,7 +101,8 @@ export function mergeOneSave(rows) {
       Math.abs(new Date(newer.occurred_at).getTime() - new Date(row.occurred_at).getTime()) <= ONE_SAVE_MS;
     if (sameSave) {
       // this row is older: its "before" is where the save started; the newer row's "after" is where it ended
-      merged[merged.length - 1] = { ...newer, occurred_at: row.occurred_at, before: { ...newer.before, ...row.before } };
+      // (both records hold the full permission list, so the newer "after" is the whole end state); the time stays the newer one
+      merged[merged.length - 1] = { ...newer, mergedSave: true, before: { ...newer.before, ...row.before }, after: { ...row.after, ...newer.after } };
     } else {
       merged.push(row);
     }
