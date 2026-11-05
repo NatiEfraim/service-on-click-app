@@ -11,14 +11,19 @@ import { authApi } from '@/lib/api/endpoints';
 import { APP_NAME, DEV_LOGIN, LOGIN_URL } from '@/lib/config';
 import { PERSONAL_NUMBER_PATTERN } from '@/lib/patterns';
 import { safeNext } from '@/lib/safe-next';
+import { useAdfsLogin } from './useAdfsLogin';
 
 
-/** Dev login by personal number (the API sets the HttpOnly cookie); production uses ADFS via NEXT_PUBLIC_LOGIN_URL. */
+/** Dev login by personal number (the API sets the HttpOnly cookie); production uses ADFS via iframe postMessage. */
 export function LoginForm() {
   const redirected = useSearchParams().get('expired') === '1';
   const [personalNumber, setPersonalNumber] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+
+  const { state: adfsState, error: adfsError } = useAdfsLogin(() => {
+    window.location.assign(safeNext(new URLSearchParams(window.location.search).get('next'), window.location.origin));
+  });
 
   async function submit(event) {
     event.preventDefault();
@@ -82,12 +87,23 @@ export function LoginForm() {
         ) : (
           <div style={{ display: 'grid', gap: 14 }}>
             <h1>התחברות</h1>
-            <p className="login-hint">ההתחברות למערכת מתבצעת דרך שירות הזיהוי הארגוני.</p>
-            {LOGIN_URL ? (
-              <Button variant="primary" onClick={() => window.location.assign(LOGIN_URL)}>
-                מעבר להתחברות
-              </Button>
-            ) : null}
+            {adfsState === 'waiting' && (
+              <p className="login-hint">ממתין לאימות ADFS...</p>
+            )}
+            {adfsState === 'signing-in' && (
+              <p className="login-hint">מתחבר...</p>
+            )}
+            {(adfsState === 'failed' || adfsError) && (
+              <Notice tone="warn">{adfsError || 'ההתחברות נכשלה. נסו שוב.'}</Notice>
+            )}
+            {adfsState === 'off' && LOGIN_URL && (
+              <>
+                <p className="login-hint">ההתחברות למערכת מתבצעת דרך שירות הזיהוי הארגוני.</p>
+                <Button variant="primary" onClick={() => window.location.assign(LOGIN_URL)}>
+                  מעבר להתחברות
+                </Button>
+              </>
+            )}
           </div>
         )}
       </main>
