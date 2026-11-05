@@ -213,11 +213,15 @@ export function DomainDashboard() {
         </Card>
       </div>
 
-      <div className="grid g-7-5 mt">
-        {/* 5. open bookings by domain and stage */}
+      {/* one domain: the stage cards above already give its count per stage, so the by-domain bars would repeat them with
+          a single bar - the chart takes the whole row instead; several domains: the bars compare them, beside the chart */}
+      <div className={single ? 'mt' : 'grid g-7-5 mt'}>
+        {/* 5. open bookings by domain and stage (several domains only) */}
+        {single ? null : (
         <Card title="קריאות פתוחות לפי תחום" hint="ולפי השלב שבו הן נמצאות">
           <SmoothSize>{overview.isPending ? <CardBody><Loading rows={4} /></CardBody> : <StageBars byTypeStage={overview.data?.by_type_stage ?? {}} onlyTypes={data.booking_type_ids} />}</SmoothSize>
         </Card>
+        )}
 
         {/* 6. opened vs closed */}
         <Card title="נפתחו מול נסגרו" hint={data.window_days >= ALL_WINDOW_DAYS ? 'כל התקופה' : `${data.window_days} ימים אחרונים`}>

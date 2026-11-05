@@ -116,8 +116,12 @@ export function ActionDialog({ booking, action, onClose, onDone, onDecided }) {
           aria-invalid={fieldError ? true : undefined}
           aria-describedby="action-comment-error"
           onChange={(event) => {
-            setComment(event.target.value);
-            if (fieldError) setFieldError('');
+            // only Hebrew letters and spaces get in (the server's rule): digits, English, symbols and line breaks are dropped
+            // as they are typed or pasted, and a short note says why nothing appeared
+            const typed = event.target.value;
+            const clean = typed.replace(/[^א-ת ]/gu, '');
+            setComment(clean);
+            setFieldError(clean === typed ? '' : 'ניתן להקליד אותיות בעברית ורווחים בלבד');
           }}
         />
       </label>

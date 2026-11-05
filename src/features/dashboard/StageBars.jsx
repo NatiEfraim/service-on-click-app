@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { DomainIcon } from '@/components/booking/DomainBadge';
 import { EmptyState } from '@/components/ui/Feedback';
 import { Modal } from '@/components/ui/Modal';
+import { useChartTooltip } from '@/components/ui/ChartTooltip';
 
 import { STAGE_COLOR, STAGE_ORDER, STAGE_SHORT } from '@/lib/labels';
 import { useSession } from '@/providers/SessionProvider';
@@ -14,6 +15,7 @@ export function StageBars({ byTypeStage, onlyTypes, onPickType, pickedType }) {
   const router = useRouter();
   const { typeName } = useSession();
   const [chartType, setChartType] = useState(null);
+  const tip = useChartTooltip();
 
   const rows = Object.entries(byTypeStage)
     .map(([type, stages]) => ({ type: Number(type), stages, total: Object.values(stages).reduce((sum, n) => sum + (n ?? 0), 0) }))
@@ -47,7 +49,13 @@ export function StageBars({ byTypeStage, onlyTypes, onPickType, pickedType }) {
                   key={id}
                   type="button"
                   style={{ flex: row.stages[id], background: STAGE_COLOR[id] }}
-                  title={`${STAGE_SHORT[id]}: ${row.stages[id]}`}
+                  {...tip.bind({
+                    color: STAGE_COLOR[id],
+                    title: STAGE_SHORT[id],
+                    value: row.stages[id],
+                    unit: 'קריאות',
+                    sub: `${typeName(row.type)} · ${Math.round((row.stages[id] / row.total) * 100)}% מהפתוחות · לחיצה פותחת אותן`,
+                  })}
                   aria-label={`${typeName(row.type)} - ${STAGE_SHORT[id]}: ${row.stages[id]}`}
                   onClick={() => router.push(`/requests?view=open&types=${row.type}&stage=${id}`)}
                 />
@@ -57,6 +65,7 @@ export function StageBars({ byTypeStage, onlyTypes, onPickType, pickedType }) {
           </div>
         ))}
       </div>
+      {tip.node}
       <div className="legend">
         {usedStages.map((id) => (
           <span key={id}>
