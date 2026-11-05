@@ -2,7 +2,7 @@
 
 import { useMutation } from '@tanstack/react-query';
 import { Select } from '@/components/ui/Select';
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Card, CardBody } from '@/components/ui/Card';
 import { Notice } from '@/components/ui/Feedback';
@@ -10,6 +10,7 @@ import { Field } from '@/components/ui/Field';
 import { PageHead } from '@/components/ui/PageHead';
 import { ApiError } from '@/lib/api/client';
 import { hatchApi } from '@/lib/api/endpoints';
+import { EASE_OUT, prefersReducedMotion } from '@/lib/motion';
 import { useSession } from '@/providers/SessionProvider';
 import { exportLines, importFilesLines, importJsonLines } from './results';
 
@@ -22,9 +23,33 @@ const NOTICE_TONE = { bad: 'bad', warn: 'warn', ok: '', info: '' };
  */
 function HatchCard({ title, hint, button, run, read, withForce = true, children, filters = {} }) {
   const [force, setForce] = useState(false);
-  const mutation = useMutation({ mutationFn: () => run({ ...filters, ...(withForce ? { force: force ? 1 : 0 } : {}) }) });
-  const lines = mutation.isSuccess ? read(mutation.data) : null;
-  const failure = mutation.isError ? (mutation.error instanceof ApiError ? mutation.error.message : 'הפעולה נכשלה. נסו שוב.') : null;
+  // the last answer stays on screen (dimmed) while the next press runs, so the card does not jump empty and back;
+  // `seq` gives each answer its own key, so a new one fades in
+  const [shown, setShown] = useState(null);
+  const mutation = useMutation({
+    mutationFn: () => run({ ...filters, ...(withForce ? { force: force ? 1 : 0 } : {}) }),
+    onSuccess: (data) => setShown((prev) => ({ seq: (prev?.seq ?? 0) + 1, lines: read(data), failure: null })),
+    onError: (error) => setShown((prev) => ({ seq: (prev?.seq ?? 0) + 1, lines: [], failure: error instanceof ApiError ? error.message : 'הפעולה נכשלה. נסו שוב.' })),
+  });
+
+  // each new answer: the area glides from the height it had (0 the first time) to the new one while the answer fades in
+  const resultBox = useRef(null);
+  const lastHeight = useRef(0);
+  useLayoutEffect(() => {
+    const box = resultBox.current;
+    if (!box || !shown) return;
+    const to = box.scrollHeight;
+    const from = lastHeight.current;
+    lastHeight.current = to;
+    if (prefersReducedMotion()) return;
+    // the same height (a repeated answer) needs no glide, but the new answer still fades in
+    const glide = Math.abs(to - from) < 1 ? null : box.animate([{ height: `${from}px`, overflow: 'hidden' }, { height: `${to}px`, overflow: 'hidden' }], { duration: 320, easing: EASE_OUT });
+    const fade = box.firstElementChild?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 320, delay: 80, easing: EASE_OUT, fill: 'backwards' });
+    return () => {
+      glide?.cancel();
+      fade?.cancel();
+    };
+  }, [shown]);
 
   return (
     <Card title={title} hint={hint}>
@@ -41,16 +66,19 @@ function HatchCard({ title, hint, button, run, read, withForce = true, children,
             {button}
           </Button>
         </div>
-        {lines || failure ? (
-          <div className="hatch-result" aria-live="polite">
-            {failure ? <Notice tone="bad">{failure}</Notice> : null}
-            {(lines ?? []).map((line, i) => (
-              <Notice key={i} tone={NOTICE_TONE[line.tone]}>
-                {line.text}
-              </Notice>
-            ))}
-          </div>
-        ) : null}
+        {/* the card's height glides to fit the result instead of jumping */}
+        <div ref={resultBox}>
+          {shown ? (
+            <div key={shown.seq} className="hatch-result" aria-live="polite" data-busy={mutation.isPending || undefined}>
+              {shown.failure ? <Notice tone="bad">{shown.failure}</Notice> : null}
+              {shown.lines.map((line, i) => (
+                <Notice key={i} tone={NOTICE_TONE[line.tone]}>
+                  {line.text}
+                </Notice>
+              ))}
+            </div>
+          ) : null}
+        </div>
       </CardBody>
     </Card>
   );
@@ -67,8 +95,11 @@ export function HatchScreen() {
     <div>
       <PageHead title="צוהר דיגיטלי" sub="הפעלה ידנית של הייצוא והייבוא שהשרת מריץ אוטומטית מדי יום." />
 
+      {/* sending on one side, importing on the other, each a column of compact cards, so the page fits the window */}
+      <div className="hatch-cols">
+      <section>
       <h2 className="hatch-section">ייצוא לאפליקציה (r2b)</h2>
-      <div className="grid hatch-grid">
+      <div className="hatch-stack">
         <HatchCard
           title="קובץ סטטוס הזמנות"
           hint="ההחלטות האחרונות שטרם אושרו על ידי האפליקציה"
@@ -106,12 +137,16 @@ export function HatchScreen() {
           read={(data) => exportLines(data, 'משתמשים', 'users')}
         />
       </div>
+      </section>
 
+      <section>
       <h2 className="hatch-section">ייבוא מהאפליקציה (b2r)</h2>
-      <div className="grid hatch-grid">
+      <div className="hatch-stack">
         <HatchCard title="קובץ הזמנות" hint="ההזמנות שהמשתמשים שלחו באפליקציה" button="ייבא קובץ הזמנות" run={hatchApi.importBookingJson} read={(data) => importJsonLines(data)} />
         <HatchCard title="קובץ לוג פעולות" hint="יש לייבא את קובץ ההזמנות לפני ייבוא לוג הפעולות" button="ייבא קובץ לוג פעולות" run={hatchApi.importApplicationLogJson} read={(data) => importJsonLines(data, true)} />
         <HatchCard title="קבצים מצורפים" hint="קבצים ותמונות שכבר נמצאים בבאקט" button="ייבא קבצים מצורפים" run={hatchApi.importFiles} read={importFilesLines} withForce={false} />
+      </div>
+      </section>
       </div>
     </div>
   );

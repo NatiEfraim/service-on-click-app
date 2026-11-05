@@ -14,7 +14,9 @@ export function useFitToWindow(ref, minHeight = 240, enabled = true) {
     const page = el.closest('.page');
     const fit = () => {
       const top = el.getBoundingClientRect().top + window.scrollY;
-      const below = page ? parseFloat(getComputedStyle(page).paddingBottom) : 0;
+      // the page's bottom padding and the footer that closes every page
+      const footer = document.querySelector('.app-footer')?.offsetHeight ?? 0;
+      const below = (page ? parseFloat(getComputedStyle(page).paddingBottom) : 0) + footer;
       el.style.maxHeight = `${Math.max(minHeight, window.innerHeight - top - below)}px`;
     };
     fit();

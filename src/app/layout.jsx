@@ -6,6 +6,7 @@ import '@/styles/layout.css';
 import '@/styles/components.css';
 import '@/styles/screens.css';
 import '@/styles/selects.css';
+import { Footer } from '@/components/layout/Footer';
 import { QueryProvider } from '@/providers/QueryProvider';
 import { UiProvider } from '@/providers/UiProvider';
 
@@ -31,7 +32,11 @@ export default function RootLayout({ children }) {
     <html lang="he" dir="rtl">
       <body>
         <QueryProvider>
-          <UiProvider>{children}</UiProvider>
+          <UiProvider>
+            {/* every page (the login too) fills the window above the footer, which closes the page */}
+            <div className="app-body">{children}</div>
+            <Footer />
+          </UiProvider>
         </QueryProvider>
       </body>
     </html>

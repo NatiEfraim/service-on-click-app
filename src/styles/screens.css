@@ -167,7 +167,7 @@ svg.chart text { fill: var(--mute); font-size: 13px; font-family: var(--font); }
 .home-top .dtile { padding: 14px 8px 12px; gap: 6px; }
 /* home fits the window: top row and the stage bars share the height left under the page head */
 .page:has(> .home), .page:has(.home) { padding-bottom: 16px; }
-.home { height: calc(100dvh - var(--home-top, 160px) - 16px); min-height: 520px; display: flex; flex-direction: column; gap: 14px; }
+.home { height: calc(100dvh - var(--home-top, 160px) - 16px - var(--footer-h)); min-height: 520px; display: flex; flex-direction: column; gap: 14px; }
 .home .home-top { flex: 1 1 50%; min-height: 0; }
 .home .tiles { height: 100%; }
 .home .dtile { min-height: 0; align-content: center; padding: 8px; }
@@ -331,7 +331,7 @@ span.chart-fade { flex-direction: row; align-items: center; gap: 8px; white-spac
 @media (max-width: 560px) { .rf-dates { grid-column: auto; } .rf-dates > div { flex-wrap: wrap; } }
 
 /* ---------- login */
-.login-wrap { min-height: 100dvh; display: grid; place-items: center; padding: 24px 16px; }
+.login-wrap { flex: 1 0 auto; display: grid; place-items: center; padding: 24px 16px; }
 .login-card { width: min(420px, 100%); background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow-lg); padding: 28px 28px 24px; display: grid; gap: 18px; }
 .login-brand { display: flex; align-items: center; gap: 12px; }
 .login-brand .system-logo { width: 42px; height: 42px; }
@@ -375,7 +375,8 @@ span.chart-fade { flex-direction: row; align-items: center; gap: 8px; white-spac
 .hatch-grid { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); align-items: start; }
 .hatch-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 16px; }
 .hatch-form .field { min-width: 200px; }
-.hatch-result { display: grid; gap: 8px; margin-top: 14px; }
+.hatch-result { display: grid; gap: 8px; padding-top: 14px; transition: opacity 200ms ease; }
+.hatch-result[data-busy] { opacity: .5; }
 
 /* Audit log: the opened row's before / after folds open and fades in under it, and folds away on close. */
 .t tbody tr.audit-open td { background: var(--hover); }
@@ -432,3 +433,17 @@ span.chart-fade { flex-direction: row; align-items: center; gap: 8px; white-spac
 .sync-records { display: flex; flex-wrap: wrap; gap: 6px; }
 .audit-items { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
 .audit-diff th:nth-child(2), .audit-diff th:nth-child(3), .audit-diff td:nth-child(2), .audit-diff td:nth-child(3) { width: 40%; }
+/* the hatch page: sending and importing side by side, compact, so it fits the window without a page scroll */
+.hatch-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; align-items: start; }
+.hatch-cols .hatch-section { margin: 0 0 10px; font-size: 16px; }
+.hatch-stack { display: grid; gap: 14px; }
+.hatch-stack .card-head { padding-block: 13px; }
+.hatch-stack .card-head h2 { font-size: 16px; }
+.hatch-stack .card-head .hint { font-size: 13px; }
+.hatch-stack .card-body { padding: 15px 18px; }
+.hatch-stack .hatch-form { gap: 10px 14px; }
+.hatch-stack .hatch-form .field { min-width: 170px; }
+.hatch-stack .hatch-form select.input { min-block-size: 40px; padding-block: 8px; }
+.hatch-stack .btn { padding-block: 9px; }
+.hatch-stack .hatch-result { gap: 8px; padding-top: 12px; }
+.hatch-stack .hatch-result .notice { padding: 9px 12px; font-size: 14.5px; }
