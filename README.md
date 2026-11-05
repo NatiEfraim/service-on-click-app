@@ -62,9 +62,18 @@ See [`.env.example`](.env.example). The defaults work for local development with
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `API_ORIGIN` | `http://localhost:8000` | where `/api/*` is forwarded. Read by `next dev` and **`next build`** (Next bakes rewrites at build time) |
-| `NEXT_PUBLIC_DEV_LOGIN` | `true` | show the personal-number login form; set `false` in production (ADFS) |
+| `API_ORIGIN` | `http://localhost:8000` | where `/api/*` is forwarded, as an origin with no `/api` (a trailing `/api` is dropped). Read by `next dev` and **`next build`** (Next bakes rewrites at build time) |
+| `NEXT_PUBLIC_DEV_LOGIN` | `true` | show the personal-number login form; set `false` on DEV and PROD (ADFS) |
+| `NEXT_PUBLIC_ADFS_URL` | empty | the ADFS service. The login page loads `${NEXT_PUBLIC_ADFS_URL}/api/token` in a hidden frame, takes the token it posts and sends `{ "token": ... }` to the API's `/login`. Empty = ADFS off |
 | `NEXT_PUBLIC_LOGIN_URL` | empty | where to send a user whose session ended when the form is off (e.g. the ADFS address) |
+
+Three ways to run, chosen by these variables (all `NEXT_PUBLIC_*` and `API_ORIGIN` are fixed at build time, so each image is built for one):
+
+| | `NEXT_PUBLIC_DEV_LOGIN` | `NEXT_PUBLIC_ADFS_URL` | `API_ORIGIN` | Set in |
+|---|---|---|---|---|
+| Local development | `true` (default) | empty | `http://localhost:8000` | no env file needed |
+| DEV | `false` | the ADFS service | the DEV API origin | `Dockerfile_dev` |
+| PROD | `false` | the ADFS service | the PROD API origin | `Dockerfile_prod` |
 
 ## Scripts
 

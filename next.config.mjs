@@ -3,10 +3,13 @@
  * Next.js server, which forwards it. One origin means no CORS, and the HttpOnly `ServOnClickAccessToken` cookie the API sets at login
  * just works (the app itself never sees or stores a token).
  */
-const API_ORIGIN = (process.env.API_ORIGIN ?? 'http://localhost:8000').replace(/\/+$/, '');
+// Origin only (`http://host:port`): the rewrite below adds the API's own `/api` prefix, so a trailing `/api` - how the API's address
+// is usually written - is dropped instead of turning every call into `/api/api/...`.
+const API_ORIGIN = (process.env.API_ORIGIN ?? 'http://localhost:8000').replace(/\/+$/, '').replace(/\/api$/, '');
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'standalone',
   reactStrictMode: true,
   poweredByHeader: false,
 

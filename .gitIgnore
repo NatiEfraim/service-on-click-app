@@ -3,6 +3,9 @@
 # Claude Code: local skills and settings, never committed
 /.claude/
 
+# VS Code: local editor settings
+/.vscode/
+
 # dependencies
 /node_modules
 
