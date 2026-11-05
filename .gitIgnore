@@ -3,6 +3,10 @@
 # Claude Code: local skills and settings, never committed
 /.claude/
 
+# Agent skills (installed per machine with `npx skills`) and the lock file that records where they came from
+/.agents/
+/skills-lock.json
+
 # VS Code: local editor settings
 /.vscode/
 
