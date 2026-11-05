@@ -409,3 +409,26 @@ span.chart-fade { flex-direction: row; align-items: center; gap: 8px; white-spac
 .audit-peek-domains { display: flex; flex-wrap: wrap; gap: 6px; }
 .audit-peek-domain { display: inline-flex; align-items: center; gap: 6px; padding-block: 3px; padding-inline-start: 4px; padding-inline-end: 16px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line-2); }
 .audit-booking { display: inline-flex; align-items: center; gap: 6px; }
+
+/* Sync with the app: a status strip, what needs attention, recent files and decisions waiting to be sent. */
+.sync-strip { display: grid; gap: 14px; padding: 16px 18px; }
+.sync-light { display: flex; align-items: center; gap: 10px; font-size: 15.5px; }
+.sync-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 4px var(--ok-w); }
+.sync-light.warn .sync-dot { background: var(--warn); box-shadow: 0 0 0 4px var(--warn-w); }
+.sync-light.bad .sync-dot { background: var(--bad); box-shadow: 0 0 0 4px var(--bad-w); }
+.sync-light.off .sync-dot { background: var(--mute); box-shadow: 0 0 0 4px var(--line-2); }
+.sync-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.sync-tile { display: grid; gap: 2px; padding: 12px 14px; border-radius: var(--r-sm); background: var(--surface-2); border: 1px solid var(--line-2); }
+.sync-tile b { font-size: 22px; }
+.sync-tile.warn b { color: var(--warn); }
+.sync-tile.bad b { color: var(--bad); }
+.sync-tile-label { font-size: 13px; color: var(--ink-2); }
+.sync-clear { display: flex; align-items: center; gap: 8px; color: var(--ok); }
+.sync-problems { display: grid; gap: 10px; }
+.sync-problem { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 12px; border-radius: var(--r-sm); background: var(--surface-2); }
+.sync-actions { display: flex; gap: 8px; margin-inline-start: auto; }
+.sync-files { max-height: 420px; overflow-y: auto; }
+.sync-files thead th { position: sticky; top: 0; z-index: 1; }
+.sync-records { display: flex; flex-wrap: wrap; gap: 6px; }
+.audit-items { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.audit-diff th:nth-child(2), .audit-diff th:nth-child(3), .audit-diff td:nth-child(2), .audit-diff td:nth-child(3) { width: 40%; }

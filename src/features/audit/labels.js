@@ -76,6 +76,37 @@ export function changedFields(before, after) {
     .filter((row) => JSON.stringify(row.before) !== JSON.stringify(row.after));
 }
 
+/** Records this close together, by the same person on the same person with the same reason, came from one save. */
+const ONE_SAVE_MS = 15_000;
+
+/**
+ * One save in the permissions dialog sends the domain roles and the camp-commander roles as two requests, so the log
+ * holds two records. Rows come newest first; neighbours from one save become one row, from the oldest "before" to the
+ * newest "after".
+ */
+export function mergeOneSave(rows) {
+  const merged = [];
+  for (const row of rows) {
+    const newer = merged[merged.length - 1];
+    const sameSave =
+      newer &&
+      row.action === 'user.permissions.change' &&
+      newer.action === row.action &&
+      newer.result === row.result &&
+      newer.actor_id === row.actor_id &&
+      newer.entity_id === row.entity_id &&
+      (newer.reason ?? '') === (row.reason ?? '') &&
+      Math.abs(new Date(newer.occurred_at).getTime() - new Date(row.occurred_at).getTime()) <= ONE_SAVE_MS;
+    if (sameSave) {
+      // this row is older: its "before" is where the save started; the newer row's "after" is where it ended
+      merged[merged.length - 1] = { ...newer, occurred_at: row.occurred_at, before: { ...newer.before, ...row.before } };
+    } else {
+      merged.push(row);
+    }
+  }
+  return merged;
+}
+
 /** What a row acted on, when it is not a booking or a person. */
 export const ENTITY_LABEL = {
   audit_log: 'היסטוריית השינויים',

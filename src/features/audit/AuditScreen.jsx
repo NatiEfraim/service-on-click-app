@@ -21,7 +21,7 @@ import { useFitToWindow } from '@/lib/useFitToWindow';
 import { useBookingDrawer } from '@/features/bookings/useBookingDrawer';
 import { useSession } from '@/providers/SessionProvider';
 import { grantsFromPermissionNames, parsePermissionName, roleLabel } from '@/features/people/permissions';
-import { ACTION_GROUPS, actionLabel, changedFields, ENTITY_LABEL, fieldLabel, listChange, RESULT } from './labels';
+import { ACTION_GROUPS, actionLabel, changedFields, ENTITY_LABEL, fieldLabel, listChange, mergeOneSave, RESULT } from './labels';
 
 /** How long an opened row's details take to fold open and to fold away. */
 const DETAIL_ENTER_MS = 260;
@@ -286,7 +286,7 @@ export function AuditScreen() {
     getNextPageParam: (last) => (last.meta.page < last.meta.last_page ? last.meta.page + 1 : undefined),
     placeholderData: (previous) => previous,
   });
-  const rows = query.data?.pages.flatMap((page) => page.data) ?? [];
+  const rows = mergeOneSave(query.data?.pages.flatMap((page) => page.data) ?? []);
   const total = query.data?.pages[0]?.meta.total ?? 0;
 
   // the card ends at the window's bottom and only the table scrolls inside it
@@ -401,9 +401,20 @@ export function AuditScreen() {
                                     return lists ? (
                                       <tr key={change.key}>
                                         <td>{fieldLabel(change.key)}</td>
-                                        <td colSpan={2}>
-                                          {lists.removed.length ? <div>הוסרו: <b>{show(change.key, lists.removed)}</b></div> : null}
-                                          {lists.added.length ? <div>נוספו: <b>{show(change.key, lists.added)}</b></div> : null}
+                                        {/* what was taken away under "before", what was given under "after", one item a line */}
+                                        <td>
+                                          <span className="audit-items">
+                                            {lists.removed.length
+                                              ? lists.removed.map((item) => <span key={item} className="chip bad">− {show(change.key, [item])}</span>)
+                                              : <span className="hint">—</span>}
+                                          </span>
+                                        </td>
+                                        <td>
+                                          <span className="audit-items">
+                                            {lists.added.length
+                                              ? lists.added.map((item) => <span key={item} className="chip ok">+ {show(change.key, [item])}</span>)
+                                              : <span className="hint">—</span>}
+                                          </span>
                                         </td>
                                       </tr>
                                     ) : (
