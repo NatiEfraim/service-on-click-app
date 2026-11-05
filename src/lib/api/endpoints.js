@@ -1,5 +1,6 @@
 /** Typed service-on-click-api calls. Reads return `data`; writes return the envelope (server `message`). */
 import { getData, getPage, http, send } from './client';
+import { validateVaticanPerson } from './vatican';
 
 
 const APPROVER = '/bookings-approver-management';
@@ -121,6 +122,8 @@ export const settingsApi = {
 
 
 export const peopleApi = {
+  lookupVatican: async (personalNumber, signal) =>
+    validateVaticanPerson(await getData('/users/lookup-vatican', { personal_number: personalNumber }, signal), personalNumber),
   /** 20 per page, no `meta`: a full page means there may be more. */
   users: async (identifier = '', page = 1, signal) => {
     const id = identifier.trim().replace(/\s+/g, '');
