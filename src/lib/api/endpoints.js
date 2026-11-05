@@ -14,11 +14,6 @@ export const authApi = {
     const response = await http.post('/login', { personal_number: personalNumber });
     return response.data;
   },
-  /** Production: logs in with the token ADFS handed the page; the API sets the same HttpOnly cookie. */
-  async loginWithToken(token) {
-    const response = await http.post('/login', { token });
-    return response.data;
-  },
   async logout() {
     await http.post('/logout');
   },
