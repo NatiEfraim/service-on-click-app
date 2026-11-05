@@ -19,7 +19,12 @@ RUN npm ci
 
 COPY . .
 
-RUN npm run build
+# Swap in the ADFS-specific files, then build
+RUN mv ADFS/axios.js app/lib/ && \
+    mv ADFS/useAuth.js app/hooks/ && \
+    mv ADFS/page.js app/ && \
+    rm -rf ADFS && \
+    npm run build
 
 # ---------- Runtime stage: only the standalone server output ----------
 FROM node:21.5-alpine
