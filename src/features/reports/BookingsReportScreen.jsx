@@ -1,9 +1,8 @@
 'use client';
 
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useInfiniteQuery, useMutation } from '@tanstack/react-query';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/Button';
-import { Pager } from '@/components/ui/Controls';
 import { DateRangePicker } from '@/components/ui/DateRangePicker';
 import { EmptyState, ErrorNotice, Loading, Notice } from '@/components/ui/Feedback';
 import { PageHead } from '@/components/ui/PageHead';
@@ -12,9 +11,12 @@ import { useBookingDrawer } from '@/features/bookings/useBookingDrawer';
 import { ApiError } from '@/lib/api/client';
 import { bookingsReportApi } from '@/lib/api/endpoints';
 import { fmtDateTime } from '@/lib/format';
+import { useFitToWindow } from '@/lib/useFitToWindow';
 import { useSession } from '@/providers/SessionProvider';
 
 const PER_PAGE = 25;
+/** The table never gets shorter than this when the window is small. */
+const MIN_TABLE_HEIGHT = 320;
 const EMPTY = { booking_type_id: '', status_id: '', from_created_at: '', to_created_at: '' };
 
 /** What an export failure means, in the words the guide asks for. */
@@ -43,21 +45,35 @@ export function BookingsReportScreen() {
   const { catalog } = useSession();
   const drawer = useBookingDrawer();
   const [filters, setFilters] = useState(EMPTY);
-  const [page, setPage] = useState(1);
-  const update = (patch) => {
-    setFilters((current) => ({ ...current, ...patch }));
-    setPage(1);
-  };
+  const update = (patch) => setFilters((current) => ({ ...current, ...patch }));
 
-  // only the filters that are set go to the server
+  // only the filters that are set go to the server; pages load as the table scrolls
   const sent = Object.fromEntries(Object.entries(filters).filter(([, value]) => value !== ''));
-  const query = useQuery({
-    queryKey: ['reports', 'bookings', sent, page],
-    queryFn: ({ signal }) => bookingsReportApi.list({ ...sent, page, per_page: PER_PAGE }, signal),
+  const query = useInfiniteQuery({
+    queryKey: ['reports', 'bookings', sent],
+    queryFn: ({ pageParam, signal }) => bookingsReportApi.list({ ...sent, page: pageParam, per_page: PER_PAGE }, signal),
+    initialPageParam: 1,
+    getNextPageParam: (last) => (last.meta.page < last.meta.last_page ? last.meta.page + 1 : undefined),
     placeholderData: (previous) => previous,
   });
-  const rows = query.data?.data ?? [];
-  const meta = query.data?.meta;
+  const rows = query.data?.pages.flatMap((page) => page.data) ?? [];
+  const meta = query.data?.pages[0]?.meta;
+
+  // the card ends at the window's bottom and only the table scrolls inside it
+  const card = useRef(null);
+  const scroller = useRef(null);
+  const sentinel = useRef(null);
+  useFitToWindow(card, MIN_TABLE_HEIGHT);
+  const { hasNextPage, isFetchingNextPage, fetchNextPage } = query;
+  useEffect(() => {
+    const el = sentinel.current;
+    if (!el || !hasNextPage) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && !isFetchingNextPage) void fetchNextPage();
+    }, { root: scroller.current, rootMargin: '0px 0px 400px 0px' });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, rows.length]);
 
   const exporting = useMutation({
     mutationFn: () => bookingsReportApi.exportExcel(sent),
@@ -84,7 +100,7 @@ export function BookingsReportScreen() {
         </Notice>
       ) : null}
 
-      <section className="card">
+      <section ref={card} className="card fit-card">
         <div className="toolbar">
           <Select autoWidth value={filters.booking_type_id} aria-label="תחום" onChange={(event) => update({ booking_type_id: event.target.value })}>
             <option value="">כל התחומים</option>
@@ -123,8 +139,8 @@ export function BookingsReportScreen() {
         ) : rows.length === 0 ? (
           <div className="card-body"><EmptyState title={filtered ? 'אין קריאות שמתאימות לסינון.' : 'אין קריאות להצגה.'} /></div>
         ) : (
-          <div style={{ opacity: query.isPlaceholderData ? 0.55 : 1, transition: 'opacity 180ms ease' }}>
-            <div className="tbl-wrap">
+          <div className="fit-fill" style={{ opacity: query.isPlaceholderData ? 0.55 : 1, transition: 'opacity 180ms ease' }}>
+            <div ref={scroller} className="queue-scroll audit-scroll">
               <table className="t">
                 <thead>
                   <tr>
@@ -132,7 +148,7 @@ export function BookingsReportScreen() {
                     <th>תחום</th>
                     <th>סטטוס</th>
                     <th>שם המבקש</th>
-                    <th>מספר אישי</th>
+                    <th style={{ textAlign: 'center' }}>מספר אישי</th>
                     <th>יחידה</th>
                     <th>נוצרה</th>
                     <th>סטטוס עודכן</th>
@@ -145,7 +161,7 @@ export function BookingsReportScreen() {
                       <td>{row.booking_type_label}</td>
                       <td>{row.status_label}</td>
                       <td>{row.owner_name ?? '—'}</td>
-                      <td className="ltr">{row.owner_personal_number ?? '—'}</td>
+                      <td style={{ textAlign: 'center' }}><span className="ltr">{row.owner_personal_number ?? '—'}</span></td>
                       <td>{row.unit_name ?? '—'}</td>
                       <td style={{ whiteSpace: 'nowrap' }}>{row.created_at ? fmtDateTime(row.created_at) : '—'}</td>
                       <td style={{ whiteSpace: 'nowrap' }}>{row.status_changed_at ? fmtDateTime(row.status_changed_at) : '—'}</td>
@@ -153,8 +169,9 @@ export function BookingsReportScreen() {
                   ))}
                 </tbody>
               </table>
+              <div ref={sentinel} />
+              {isFetchingNextPage ? <div className="card-body"><Loading rows={2} /></div> : null}
             </div>
-            {meta ? <Pager page={meta.page} lastPage={meta.last_page} total={meta.total} onPage={setPage} /> : null}
           </div>
         )}
       </section>
