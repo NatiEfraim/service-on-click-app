@@ -1,14 +1,12 @@
-
 import { Guard } from '@/components/layout/Guard';
-import { PageHead } from '@/components/ui/PageHead';
+import { BookingsReportScreen } from '@/features/reports/BookingsReportScreen';
 
 export const metadata = { title: 'דו"חות' };
 
-// placeholder - replaced by the real screen
 export default function Page() {
   return (
     <Guard capability="reports.view">
-      <PageHead title={'דו"חות'} sub="המסך בבנייה." />
+      <BookingsReportScreen />
     </Guard>
   );
 }

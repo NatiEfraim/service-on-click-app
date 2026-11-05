@@ -80,16 +80,21 @@ export function RequestsScreen() {
     placeholderData: (previous) => previous,
   });
   // Keep the previous results mounted until their exit finishes, including an empty result.
-  const [visibleData, setVisibleData] = useState(query.data);
-  // a next page keeps the earlier page objects: the same results, grown - no exit, only the new rows fade in
-  const appended = Boolean(visibleData && query.data && query.data.pages.length > visibleData.pages.length && visibleData.pages.every((page, i) => page === query.data.pages[i]));
-  if (appended) setVisibleData(query.data);
-  const resultsExiting = visibleData !== query.data && !query.isPlaceholderData && !appended;
+  // Only a change of filters (tab, search, filter, sort) fades the list out and the new results in. Anything else for the
+  // same filters - a reload after a decision (the decided row already slid out), a next page (only its rows fade in) -
+  // replaces the rows in place. `shown` is what is on screen and which filters it belongs to.
+  const filtersKey = JSON.stringify(apiParams);
+  const [shown, setShown] = useState({ key: filtersKey, data: query.data });
+  const settled = !query.isPlaceholderData && query.data !== undefined;
+  if (shown.key === filtersKey && settled && shown.data !== query.data) setShown({ key: filtersKey, data: query.data });
+  const resultsExiting = settled && shown.key !== filtersKey;
   useEffect(() => {
-    if (query.isPlaceholderData || visibleData === query.data) return;
-    const timer = window.setTimeout(() => setVisibleData(query.data), prefersReducedMotion() ? 0 : 180);
+    if (!resultsExiting) return;
+    const timer = window.setTimeout(() => setShown({ key: filtersKey, data: query.data }), prefersReducedMotion() ? 0 : 180);
     return () => window.clearTimeout(timer);
-  }, [query.data, query.isPlaceholderData, visibleData]);
+  }, [resultsExiting, filtersKey, query.data]);
+  // while the new filters load, the old rows stay (dimmed); then they fade out and the new ones in
+  const visibleData = shown.key === filtersKey || !settled ? (query.data ?? shown.data) : shown.data;
   const rows = visibleData?.pages.flatMap((page) => page.data) ?? [];
   const total = query.data?.pages[0]?.meta.total ?? 0;
 

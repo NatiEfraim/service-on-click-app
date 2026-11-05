@@ -14,11 +14,6 @@ export const authApi = {
     const response = await http.post('/login', { personal_number: personalNumber });
     return response.data;
   },
-  /** Production: logs in with the token ADFS handed the page; the API sets the same HttpOnly cookie. */
-  async loginWithToken(token) {
-    const response = await http.post('/login', { token });
-    return response.data;
-  },
   async logout() {
     await http.post('/logout');
   },
@@ -160,6 +155,22 @@ export const orgApi = {
 export const auditApi = {
   list: (params, signal) => getPage(`${SUPER}/audit`, params, signal),
   verify: (signal) => getData(`${SUPER}/audit/verify`, undefined, signal),
+};
+
+/** Bookings report (admin: their own booking types; super admin: all). The export answers with the .xlsx file itself. */
+export const bookingsReportApi = {
+  list: (params, signal) => getPage(`${ADMIN}/bookings-report`, params, signal),
+  /** Returns { blob, fileName }; the server names the file in Content-Disposition. */
+  async exportExcel(filters) {
+    const response = await http.post(`${ADMIN}/bookings-report/export`, filters, {
+      responseType: 'blob',
+      headers: { Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' },
+      timeout: 120_000,
+    });
+    const disposition = response.headers['content-disposition'] ?? '';
+    const fileName = /filename="([^"]+)"/.exec(disposition)?.[1] ?? `bookings_${Date.now()}.xlsx`;
+    return { blob: response.data, fileName };
+  },
 };
 
 /** Digital hatch: runs the scheduler's exports (r2b) and imports (b2r) now, inline (sync=1), and returns `data`. */
