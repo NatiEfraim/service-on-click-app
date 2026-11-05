@@ -29,8 +29,6 @@
 .ppl-domain { display: inline-flex; gap: 8px; align-items: center; }
 .ppl-cell { display: grid; place-items: center; min-height: 40px; border-radius: 6px; cursor: pointer; }
 .ppl-cell input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); cursor: inherit; }
-/* a cell changed but not saved yet: a soft tint, no frame */
-.ppl-cell.changed { background: var(--accent-wash); }
 .ppl-cell.locked { cursor: not-allowed; }
 .ppl-cell.locked input { opacity: .5; }
 .ppl-na { color: var(--mute); }

@@ -157,6 +157,22 @@ export const auditApi = {
   verify: (signal) => getData(`${SUPER}/audit/verify`, undefined, signal),
 };
 
+/** Bookings report (admin: their own booking types; super admin: all). The export answers with the .xlsx file itself. */
+export const bookingsReportApi = {
+  list: (params, signal) => getPage(`${ADMIN}/bookings-report`, params, signal),
+  /** Returns { blob, fileName }; the server names the file in Content-Disposition. */
+  async exportExcel(filters) {
+    const response = await http.post(`${ADMIN}/bookings-report/export`, filters, {
+      responseType: 'blob',
+      headers: { Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' },
+      timeout: 120_000,
+    });
+    const disposition = response.headers['content-disposition'] ?? '';
+    const fileName = /filename="([^"]+)"/.exec(disposition)?.[1] ?? `bookings_${Date.now()}.xlsx`;
+    return { blob: response.data, fileName };
+  },
+};
+
 /** Digital hatch: runs the scheduler's exports (r2b) and imports (b2r) now, inline (sync=1), and returns `data`. */
 const HATCH = `${SUPER}/digital-hatch`;
 const hatchRun = async (path, body) => (await send('post', `${HATCH}/${path}`, { ...body, sync: 1 })).data;

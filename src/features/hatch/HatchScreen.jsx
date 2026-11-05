@@ -108,10 +108,9 @@ export function HatchScreen() {
       </div>
 
       <h2 className="hatch-section">ייבוא מהאפליקציה (b2r)</h2>
-      <Notice>יש לייבא את קובץ ההזמנות לפני קובץ לוג הפעולות: לוג של הזמנה שעוד לא קיימת ימתין לה.</Notice>
-      <div className="grid hatch-grid mt">
+      <div className="grid hatch-grid">
         <HatchCard title="קובץ הזמנות" hint="ההזמנות שהמשתמשים שלחו באפליקציה" button="ייבא קובץ הזמנות" run={hatchApi.importBookingJson} read={(data) => importJsonLines(data)} />
-        <HatchCard title="קובץ לוג פעולות" hint="היסטוריית הסטטוסים של ההזמנות" button="ייבא קובץ לוג פעולות" run={hatchApi.importApplicationLogJson} read={(data) => importJsonLines(data, true)} />
+        <HatchCard title="קובץ לוג פעולות" hint="יש לייבא את קובץ ההזמנות לפני ייבוא לוג הפעולות" button="ייבא קובץ לוג פעולות" run={hatchApi.importApplicationLogJson} read={(data) => importJsonLines(data, true)} />
         <HatchCard title="קבצים מצורפים" hint="קבצים ותמונות שכבר נמצאים בבאקט" button="ייבא קבצים מצורפים" run={hatchApi.importFiles} read={importFilesLines} withForce={false} />
       </div>
     </div>

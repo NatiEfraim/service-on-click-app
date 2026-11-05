@@ -19,6 +19,7 @@ import {
   buildMatrix,
   callerFrom,
   cellKey,
+  controlOfficerTypesOf,
   pendingChanges,
   reasonError,
   REASON_MAX,
@@ -39,6 +40,8 @@ class SaveFailure extends Error {
     saved,
   ) {
     super(apiError.message);
+    this.apiError = apiError;
+    this.saved = saved;
   }
 }
 
@@ -92,8 +95,9 @@ export function PermissionsDialog({ target, onClose }) {
       permissionNames: personData.permissions.map((permission) => permission.name),
       caller,
       targetUuid: target.uuid,
+      controlOfficerTypes: controlOfficerTypesOf(catalog),
     });
-  }, [personData, approver.data, admin.data, me.is_super_admin, caller, target.uuid]);
+  }, [personData, approver.data, admin.data, me.is_super_admin, caller, target.uuid, catalog]);
 
   const changes = matrix ? pendingChanges(matrix, edits) : [];
   const changed = new Set(changes.map((change) => cellKey(change.role, change.bookingTypeId)));

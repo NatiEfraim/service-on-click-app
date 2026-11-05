@@ -97,15 +97,27 @@ export function lockReason(caller, targetUuid, bookingTypeId) {
 const FLAG = /^is_(.+)$/;
 const isApproverSide = (role) => role !== 'admin' && !NOT_A_GRANT.has(role);
 
+/** Statuses only a control officer sets; a type reaching them has the control officer step. */
+const CONTROL_OFFICER_STATUSES = [14, 17, 18];
+
+/** The booking types with a control officer step, from `catalog.booking_type_statuses`. */
+export function controlOfficerTypesOf(catalog) {
+  return Object.entries(catalog?.booking_type_statuses ?? {})
+    .filter(([, statuses]) => statuses.some((status) => CONTROL_OFFICER_STATUSES.includes(status)))
+    .map(([id]) => Number(id));
+}
+
 /**
  * Rows are booking types, columns the `is_<role>` flags. Approver rows derive from the caller's `admin_*`
  * permissions, so they are empty for the super admin; the grid then uses the admin answer and permission names.
  */
-export function buildMatrix({ approver, admin, permissionNames, caller, targetUuid }) {
+export function buildMatrix({ approver, admin, permissionNames, caller, targetUuid, controlOfficerTypes }) {
   const rows = new Map();
   const put = (bookingTypeId, role, value) => {
     // The barber answers as the approver; stale permission names must not revive a handler role.
     if (Number(bookingTypeId) === 5 && role === 'vice_approver') return;
+    // The control officer (רמ"ד תו"ב) exists only on the types with that step (shipments).
+    if (role === 'transportation_control_officer' && controlOfficerTypes && !controlOfficerTypes.includes(Number(bookingTypeId))) return;
     const row = rows.get(bookingTypeId) ?? { bookingTypeId, cells: {} };
     row.cells[role] = { value, lock: lockReason(caller, targetUuid, bookingTypeId) };
     rows.set(bookingTypeId, row);
