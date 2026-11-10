@@ -12,6 +12,7 @@ import { useFitToWindow } from '@/lib/useFitToWindow';
 import { useSetSearchParams } from '@/lib/useSetSearchParams';
 import { useSession } from '@/providers/SessionProvider';
 import { TABS } from './constants';
+import { BarberDaysTab } from './BarberDaysTab';
 import { DatesTab } from './DatesTab';
 import { OperationsTab } from './OperationsTab';
 import { OptionsTab } from './OptionsTab';
@@ -21,6 +22,9 @@ import { StatementTab } from './StatementTab';
 import { TargetTab } from './TargetTab';
 import { useSettingsQuery } from './useSettings';
 import './settings.css';
+
+/** The barber domain (booking_types.id). */
+const BARBER_BOOKING_TYPE_ID = 5;
 
 const toId = (raw) => {
   const value = Number(raw);
@@ -44,6 +48,8 @@ export function SettingsScreen() {
   // Keep the statement tab hidden until it is needed again.
   const showStatement = false;
   const hidden = new Set(showStatement && (me.is_super_admin || me.is_admin) ? [] : ['statement']);
+  // Choice options stay hidden until mobile synchronization is available.
+  hidden.add('options');
   // as in the mobile app, a domain shows only the settings it has: no blocked dates (equipment, construction),
   // no choice fields (barber) or no operations settings means no tab for them
   if (query.data) {
@@ -54,13 +60,15 @@ export function SettingsScreen() {
     if (!references.some((reference) => !isDatesReference(reference))) hidden.add('refs');
     if (!choiceFields(query.data.form_fields ?? []).length) hidden.add('options');
   }
+  // the barber's days and appointments (view only), as in the app's barber screens
+  if (bookingTypeId !== BARBER_BOOKING_TYPE_ID) hidden.add('barber');
   const tabs = TABS.filter((candidate) => !hidden.has(candidate.id));
   const requested = search.get('tab');
   const tab = tabs.find((candidate) => candidate.id === requested)?.id ?? tabs[0].id;
 
   if (!unitId || !bookingTypeId) return <Denied>הכתובת אינה תקינה.</Denied>;
 
-  const setTab = (id) => setParams({ tab: id, field: null });
+  const setTab = (id) => setParams({ tab: id, field: null, day: null });
 
   const name = typeName(bookingTypeId);
   const back = (
@@ -114,6 +122,7 @@ export function SettingsScreen() {
           {tab === 'target' ? <TargetTab bookingTypeId={bookingTypeId} /> : null}
           {tab === 'refs' ? <OperationsTab unitId={unitId} bookingTypeId={bookingTypeId} settings={settings} ownUnit={ownUnit} /> : null}
           {tab === 'dates' ? <DatesTab unitId={unitId} bookingTypeId={bookingTypeId} settings={settings} ownUnit={ownUnit} ownUnitId={me.user.unit_id} typeName={name} /> : null}
+          {tab === 'barber' ? <BarberDaysTab /> : null}
           {tab === 'options' ? <OptionsTab unitId={unitId} bookingTypeId={bookingTypeId} settings={settings} /> : null}
           {tab === 'statement' ? <StatementTab unitId={unitId} bookingTypeId={bookingTypeId} settings={settings} /> : null}
         </div></div>

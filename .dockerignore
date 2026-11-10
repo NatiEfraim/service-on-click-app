@@ -27,3 +27,6 @@ README.md
 .env*
 *.pem
 *.tar
+
+# Claude Code: personal local instructions
+CLAUDE.local.md

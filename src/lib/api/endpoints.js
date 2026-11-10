@@ -83,6 +83,10 @@ export const insightsApi = {
 
 
 export const settingsApi = {
+  /** Barber service days ahead: date, day_name, taken (booked slots), service_hours, break_hour. Read-only. */
+  barberDays: (signal) => getData(`${APPROVER}/barber-bookings/dates`, undefined, signal),
+  /** One day's barber appointments: time, user, booking (serial, status). Read-only. */
+  barberDayBookings: (date, signal) => getData(`${APPROVER}/barber-bookings/order-bookings`, { date }, signal),
   get: (unitId, bookingTypeId, signal) =>
     getData(`${APPROVER}/settings/${unitId}/${bookingTypeId}`, undefined, signal),
   /** Previews which bookings the blocked dates would cancel; saves nothing. */

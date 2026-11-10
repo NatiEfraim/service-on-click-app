@@ -31,3 +31,6 @@ npm-debug.log*
 *.tsbuildinfo
 .DS_Store
 coverage/
+
+# Claude Code: personal local instructions, never committed
+CLAUDE.local.md
