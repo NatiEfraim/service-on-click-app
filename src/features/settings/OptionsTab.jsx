@@ -1,21 +1,23 @@
 'use client';
 
-import { useMutation } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chips';
 import { EmptyState } from '@/components/ui/Feedback';
+import { Icon } from '@/components/ui/Icon';
+import { SideNav } from '@/components/ui/SideNav';
 import { settingsApi } from '@/lib/api/endpoints';
+import { useSaveMutation } from '@/lib/useSaveMutation';
 
 import { OPTION_FIELD_TYPES } from '@/lib/labels';
 import { useSetSearchParams } from '@/lib/useSetSearchParams';
-import { useConfirm, useToast } from '@/providers/UiProvider';
+import { useConfirm } from '@/providers/UiProvider';
 import { fieldTypeName } from './fieldRules';
 import { FIELD_TYPE_TEXT } from './constants';
 import { OptionDialog } from './OptionDialog';
-import { buildOptionTree, choiceFields, countOptions, fieldPath } from './options';
-import { handleWriteError, useReloadSettings } from './useSettings';
+import { buildOptionTree, choiceFields, countOptions } from './options';
+import { useReloadSettings } from './useSettings';
 
 /** Sub-options hang under a list-type option; a typed value or closed text has none (as in the mobile app). */
 function canHoldChildren(option) {
@@ -64,7 +66,6 @@ function OptionRows({ nodes, depth, canEdit, fieldTypes, onEdit, onAddChild, onR
 
 /** Choice options at any depth (super admin only), as in the mobile app. A removed option bookings used is archived, otherwise deleted. */
 export function OptionsTab({ unitId, bookingTypeId, settings }) {
-  const toast = useToast();
   const confirm = useConfirm();
   const reload = useReloadSettings(unitId, bookingTypeId);
   const search = useSearchParams();
@@ -74,25 +75,48 @@ export function OptionsTab({ unitId, bookingTypeId, settings }) {
 
   const fields = useMemo(() => choiceFields(settings.form_fields).sort((a, b) => a.position - b.position || a.id - b.id), [settings.form_fields]);
   const wanted = Number(search.get('field'));
-  const current = fields.find((field) => field.id === wanted) ?? fields[0];
+  // as in the mobile app: the side list holds the top-level fields; a field with sub-fields opens them, a field without opens its options
+  const roots = useMemo(() => fields.filter((field) => !fields.some((other) => other.id === field.parent_id)), [fields]);
+  const subFields = (id) => fields.filter((field) => field.parent_id === id);
+  const current = fields.find((field) => field.id === wanted) ?? roots[0];
+  const trail = (field) => {
+    const chain = [];
+    for (let node = field; node; node = fields.find((other) => other.id === node.parent_id)) chain.unshift(node);
+    return chain;
+  };
+  const rootId = current ? trail(current)[0].id : null;
 
-  const tree = useMemo(() => (current ? buildOptionTree(settings.options, current.id) : []), [settings.options, current]);
+  // The panel keeps showing the previous field while it fades out, then swaps and fades in.
+  const [shownId, setShownId] = useState(current?.id);
+  const [leaving, setLeaving] = useState(false);
+  useEffect(() => {
+    if (!current || current.id === shownId) return undefined;
+    setLeaving(true);
+    const timer = setTimeout(() => {
+      setShownId(current.id);
+      setLeaving(false);
+    }, 140);
+    return () => clearTimeout(timer);
+  }, [current?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const shown = fields.find((field) => field.id === shownId) ?? current;
 
-  const removal = useMutation({
+
+  const tree = useMemo(() => (shown ? buildOptionTree(settings.options, shown.id) : []), [settings.options, shown]);
+
+  const removal = useSaveMutation({
     mutationFn: (option) => settingsApi.removeOption(option.form_field_id, option.id),
-    onSuccess: async () => {
-      toast('האפשרות הוסרה מהטופס. אם נבחרה בקריאות קיימות, היא נשמרת בהן.', 'ok');
-      await reload();
-    },
-    onError: async (e) => {
-      const shown = await handleWriteError(e, toast, reload);
-      if (shown) toast(shown.message, 'bad');
-    },
+    success: 'האפשרות הוסרה מהטופס. אם נבחרה בקריאות קיימות, היא נשמרת בהן.',
+    reload,
   });
 
   if (!current) return <EmptyState title="אין שדות בחירה בטופס זה" />;
 
   const select = (id) => setParams({ field: String(id) });
+  const shownSubs = subFields(shown.id);
+  const countLabel = (field) => {
+    const subs = subFields(field.id).length;
+    return subs ? `${subs} שדות` : countOptions(buildOptionTree(settings.options, field.id));
+  };
 
   async function askRemove(node) {
     const ok = await confirm({
@@ -107,34 +131,54 @@ export function OptionsTab({ unitId, bookingTypeId, settings }) {
   // names already used at the level the dialog writes to
   const siblingsFor = ({ option, parent }) => {
     const parentId = parent?.id ?? option?.parent_id ?? null;
-    return settings.options.filter((other) => other.form_field_id === current.id && other.parent_id === parentId && other.id !== option?.id).map((other) => other.name);
+    return settings.options.filter((other) => other.form_field_id === shown.id && other.parent_id === parentId && other.id !== option?.id).map((other) => other.name);
   };
 
   return (
     <div className="st-opt-split">
-      <nav className="st-opt-nav" aria-label="שדות בחירה">
-        {fields.map((field) => (
-          <button key={field.id} type="button" aria-current={field.id === current.id ? 'true' : undefined} onClick={() => select(field.id)}>
-            <span className="path">{fieldPath(field, settings.form_fields)}</span>
-            <span className="n">{countOptions(buildOptionTree(settings.options, field.id))}</span>
-          </button>
-        ))}
-      </nav>
-      <div className="st-opt-main">
+      <SideNav
+        className="st-opt-nav"
+        label="שדות בחירה"
+        items={roots.map((field) => ({ id: field.id, label: field.field_display_name, meta: countLabel(field) }))}
+        currentId={rootId}
+        onSelect={select}
+      />
+      <div key={shown.id} className={`st-opt-main st-opt-fade${leaving ? ' out' : ''}`}>
         <div className="st-opt-head">
           <div className="st-opt-title">
-            <h3>{fieldPath(current, settings.form_fields)}</h3>
-            {canEdit ? (
+            <h3 className="st-crumbs">
+              {trail(shown).map((node, index, chain) =>
+                index < chain.length - 1 ? (
+                  <span key={node.id}>
+                    <button type="button" className="st-crumb" onClick={() => select(node.id)}>{node.field_display_name}</button>
+                    <span className="sep" aria-hidden>›</span>
+                  </span>
+                ) : (
+                  <span key={node.id}>{node.field_display_name}</span>
+                ),
+              )}
+            </h3>
+            {canEdit && !shownSubs.length ? (
               <Button size="sm" variant="primary" icon="plus" onClick={() => setTarget({ parent: null })}>
                 הוספת אפשרות
               </Button>
             ) : null}
           </div>
           <span className="small muted">
-            {canEdit ? 'לכל אפשרות יש סוג: בחירה, רשימה עם תתי-אפשרויות, או הזנת ערך. אפשרות שכבר נבחרה בקריאות מועברת לארכיון ולא נמחקת.' : 'עריכת אפשרויות בחירה שמורה למנהל מערכת.'}
+            {shownSubs.length ? 'בחרו שדה כדי לערוך את אפשרויות הבחירה שלו.' : canEdit ? 'לכל אפשרות יש סוג: בחירה, רשימה עם תתי-אפשרויות, או הזנת ערך. אפשרות שכבר נבחרה בקריאות מועברת לארכיון ולא נמחקת.' : 'עריכת אפשרויות בחירה שמורה למנהל מערכת.'}
           </span>
         </div>
-        {tree.length ? (
+        {shownSubs.length ? (
+          <div className="st-subs">
+            {shownSubs.map((field) => (
+              <button key={field.id} type="button" onClick={() => select(field.id)}>
+                <span className="name">{field.field_display_name}</span>
+                <span className="n">{countLabel(field)}</span>
+                <Icon name="left" />
+              </button>
+            ))}
+          </div>
+        ) : tree.length ? (
           <OptionRows
             nodes={tree}
             depth={0}
@@ -155,7 +199,7 @@ export function OptionsTab({ unitId, bookingTypeId, settings }) {
           unitId={unitId}
           bookingTypeId={bookingTypeId}
           settings={settings}
-          field={current}
+          field={shown}
           target={target}
           siblings={siblingsFor(target)}
           onClose={() => setTarget(null)}

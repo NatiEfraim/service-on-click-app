@@ -1,5 +1,6 @@
 'use client';
 
+import { SHOW_DEPARTMENTS } from '@/lib/labels';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
@@ -54,11 +55,11 @@ export function OrgScreen() {
 
   return (
     <div>
-      <PageHead hideTitle title="יחידות ומחלקות" />
+      <PageHead hideTitle title={SHOW_DEPARTMENTS ? 'יחידות ומחלקות' : 'יחידות'} />
 
       <Card
         title="יחידות"
-        hint="לחיצה על יחידה מציגה את המחלקות שלה"
+        hint={SHOW_DEPARTMENTS ? 'לחיצה על יחידה מציגה את המחלקות שלה' : undefined}
         tools={
           <Button size="sm" variant="primary" icon="plus" onClick={() => setUnitDialog({ unit: null })}>
             יחידה חדשה
@@ -80,9 +81,11 @@ export function OrgScreen() {
                 <tr>
                   <th scope="col">אות (מוצגת באפליקציה)</th>
                   <th scope="col">שם היחידה (פנימי)</th>
-                  <th scope="col" className="num">
-                    מחלקות
-                  </th>
+                  {SHOW_DEPARTMENTS ? (
+                    <th scope="col" className="num">
+                      מחלקות
+                    </th>
+                  ) : null}
                   <th scope="col" className="num">
                     משתמשים
                   </th>
@@ -108,7 +111,7 @@ export function OrgScreen() {
                           {isUnnamed(unit) ? <Chip tone="warn">טרם הוגדר שם</Chip> : null}
                         </span>
                       </td>
-                      <td className="num">{unit.departments.filter((department) => department.is_active).length}</td>
+                      {SHOW_DEPARTMENTS ? <td className="num">{unit.departments.filter((department) => department.is_active).length}</td> : null}
                       <td className="num">{unit.users}</td>
                       <td className="org-act">
                         <Button
@@ -134,7 +137,7 @@ export function OrgScreen() {
         )}
       </Card>
 
-      {selected ? (
+      {SHOW_DEPARTMENTS && selected ? (
         <Card
           spaced
           aria-label={`מחלקות ביחידה ${selected.name}`}

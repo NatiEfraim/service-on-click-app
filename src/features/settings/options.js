@@ -22,9 +22,26 @@ export function countOptions(nodes) {
   return nodes.reduce((sum, node) => sum + 1 + countOptions(node.children), 0);
 }
 
-/** The fields that carry a list of options (select, radio, checkbox, multi-select), in the form's order. */
+const FIELD_TYPE_FILE = 13;
+
+/**
+ * The fields whose options can be edited, exactly as the mobile app lists them (index-selects):
+ * a top-level choice field, and choice fields nested under one. A field with a file child is an upload, not a choice, so it is left out.
+ */
 export function choiceFields(fields) {
-  return fields.filter((field) => OPTION_FIELD_TYPES.includes(field.field_type_id));
+  const isChoice = (field) => OPTION_FIELD_TYPES.includes(field.field_type_id);
+  const childrenOf = (id) => fields.filter((field) => field.parent_id === id);
+  const hasFileChild = (field) => childrenOf(field.id).some((child) => child.field_type_id === FIELD_TYPE_FILE);
+  const result = [];
+  const visit = (level) => {
+    for (const field of level) {
+      if (!isChoice(field) || hasFileChild(field)) continue;
+      result.push(field);
+      visit(childrenOf(field.id));
+    }
+  };
+  visit(fields.filter((field) => field.parent_id === null));
+  return result;
 }
 
 /** "ציוד › ביגוד › חולצת בנים" - a field inside another is named with the fields around it. */

@@ -5,9 +5,11 @@ import Link from 'next/link';
 import { Fragment, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { ExpandRow } from '@/components/ui/ExpandRow';
 import { EmptyState, ErrorNotice, Loading, Notice } from '@/components/ui/Feedback';
 import { Icon } from '@/components/ui/Icon';
 import { PageHead } from '@/components/ui/PageHead';
+import { StatTile } from '@/components/ui/Stat';
 import { ResolveConflictDialog } from '@/features/bookings/ResolveConflictDialog';
 import { useBookingDrawer } from '@/features/bookings/useBookingDrawer';
 import { ApiError } from '@/lib/api/client';
@@ -39,16 +41,6 @@ function BookingLink({ serial }) {
 }
 
 /** One headline number of the status strip. */
-function Tile({ label, value, sub, tone = '' }) {
-  return (
-    <div className={`sync-tile ${tone}`}>
-      <span className="sync-tile-label">{label}</span>
-      <b>{value}</b>
-      {sub ? <span className="hint">{sub}</span> : null}
-    </div>
-  );
-}
-
 /** Super admin: is the channel to the mobile app flowing, and if not, what is stuck and how to free it. */
 export function SyncScreen() {
   const client = useQueryClient();
@@ -112,11 +104,11 @@ export function SyncScreen() {
             ) : null}
           </span>
         </div>
-        <div className="sync-tiles">
-          <Tile label="שליחה אחרונה" value={health.last_sent_at ? fmtAgo(health.last_sent_at) : 'עדיין לא'} sub={health.last_sent_at ? fmtDateTime(health.last_sent_at) : null} />
-          <Tile label="החלטות ממתינות" value={health.pending_decisions} tone={health.pending_decisions ? 'warn' : ''} />
-          <Tile label="קבצים שנכשלו" value={health.failed_files + health.blocked_files} tone={health.failed_files + health.blocked_files ? 'bad' : ''} />
-          <Tile label="התנגשויות פתוחות" value={health.open_conflicts} tone={health.open_conflicts ? 'bad' : ''} />
+        <div className="stat-tiles">
+          <StatTile label="שליחה אחרונה" value={health.last_sent_at ? fmtAgo(health.last_sent_at) : 'עדיין לא'} sub={health.last_sent_at ? fmtDateTime(health.last_sent_at) : null} />
+          <StatTile label="החלטות ממתינות" value={health.pending_decisions} tone={health.pending_decisions ? 'warn' : ''} />
+          <StatTile label="קבצים שנכשלו" value={health.failed_files + health.blocked_files} tone={health.failed_files + health.blocked_files ? 'bad' : ''} />
+          <StatTile label="התנגשויות פתוחות" value={health.open_conflicts} tone={health.open_conflicts ? 'bad' : ''} />
         </div>
       </section>
 
@@ -163,7 +155,7 @@ export function SyncScreen() {
         )}
       </Card>
 
-      <div className="grid g-7-5 mt">
+      <div className="grid g-7-5 mt sync-grid">
         {/* 3. the files sent */}
         <Card title="קבצים אחרונים" hint="לחיצה על קובץ מציגה את הקריאות שבו">
           {files.length === 0 ? (
@@ -185,11 +177,9 @@ export function SyncScreen() {
                           <td className="num">{file.record_count ?? '—'}</td>
                           <td><span className={`chip ${stateOf(file.state).tone}`}>{stateOf(file.state).label}</span></td>
                         </tr>
-                        {isOpen ? (
-                          <tr className="audit-detail">
-                            <td colSpan={4}><FileRecords file={file} /></td>
-                          </tr>
-                        ) : null}
+                        <ExpandRow open={isOpen} colSpan={4}>
+                          <FileRecords file={file} />
+                        </ExpandRow>
                       </Fragment>
                     );
                   })}

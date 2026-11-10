@@ -1,3 +1,4 @@
+import { SHOW_DEPARTMENTS } from '@/lib/labels';
 
 
 /** Menu visibility is a convenience built from `GET /me`; the server enforces every call. */
@@ -36,7 +37,7 @@ export function buildNav(me) {
     const items = [];
     if (me.is_super_admin) items.push({ id: 'domains', href: '/manage/domains', label: 'תחומי שירות', description: 'מסלולי אישור, הגדרות, טופס ויעד טיפול', also: ['/manage/settings'] });
     if (can(me, 'users.manage')) items.push({ id: 'users', href: '/manage/users', label: 'משתמשים והרשאות', description: 'שיבוץ תפקידים ומחלקות' });
-    if (can(me, 'config.global')) items.push({ id: 'org', href: '/manage/org', label: 'יחידות ומחלקות', description: 'שמות פנימיים ומיפוי לאותיות' });
+    if (can(me, 'config.global')) items.push({ id: 'org', href: '/manage/org', label: SHOW_DEPARTMENTS ? 'יחידות ומחלקות' : 'יחידות', description: 'שמות פנימיים ומיפוי לאותיות' });
     if (me.is_super_admin) items.push({ id: 'hatch', href: '/manage/hatch', label: 'צוהר דיגיטלי', description: 'ייצוא וייבוא ידני מול האפליקציה' });
     if (items.length > 0) entries.push({ kind: 'group', id: 'manage', label: 'ניהול', items });
   }

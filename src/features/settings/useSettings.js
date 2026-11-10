@@ -2,7 +2,6 @@
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
-import { ApiError, toApiError } from '@/lib/api/client';
 import { settingsApi } from '@/lib/api/endpoints';
 import { keys } from '@/lib/api/keys';
 
@@ -33,15 +32,4 @@ export async function reloadSettings(client, unitId, bookingTypeId) {
 export function useReloadSettings(unitId, bookingTypeId) {
   const client = useQueryClient();
   return useCallback(() => reloadSettings(client, unitId, bookingTypeId), [client, unitId, bookingTypeId]);
-}
-
-/** Write-error handling: returns errors the dialog shows (422, network); null once handled (409/403/404). */
-export async function handleWriteError(error, toast, reload) {
-  const apiError = toApiError(error);
-  if (apiError.stale || apiError.denied) {
-    toast(apiError.message, 'bad');
-    await reload();
-    return null;
-  }
-  return apiError;
 }

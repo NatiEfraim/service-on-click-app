@@ -13,7 +13,6 @@ import { useSetSearchParams } from '@/lib/useSetSearchParams';
 import { useSession } from '@/providers/SessionProvider';
 import { TABS } from './constants';
 import { DatesTab } from './DatesTab';
-import { FormTab } from './FormTab';
 import { OperationsTab } from './OperationsTab';
 import { OptionsTab } from './OptionsTab';
 import { StatementTab } from './StatementTab';
@@ -40,8 +39,8 @@ export function SettingsScreen() {
   const card = useRef(null);
   useFitToWindow(card, 180, query.isSuccess);
 
-  // the form structure is for the system admin only; a domain commander (approver) does not see the statement either
-  const hidden = new Set([...(me.is_super_admin ? [] : ['form']), ...(me.is_super_admin || me.is_admin ? [] : ['statement'])]);
+  // a domain commander (approver) does not see the statement
+  const hidden = new Set(me.is_super_admin || me.is_admin ? [] : ['statement']);
   const tabs = TABS.filter((candidate) => !hidden.has(candidate.id));
   const requested = search.get('tab');
   const tab = tabs.find((candidate) => candidate.id === requested)?.id ?? tabs[0].id;
@@ -99,7 +98,6 @@ export function SettingsScreen() {
         <Tabs tabs={tabs} value={tab} onChange={setTab} label="הגדרות התחום" />
         <div className="st-panel st-panel-scroll" role="tabpanel" aria-label={tabs.find((candidate) => candidate.id === tab)?.label}>
           <div dir="rtl">
-          {tab === 'form' && me.is_super_admin ? <FormTab unitId={unitId} bookingTypeId={bookingTypeId} settings={settings} /> : null}
           {tab === 'target' ? <TargetTab bookingTypeId={bookingTypeId} /> : null}
           {tab === 'refs' ? <OperationsTab unitId={unitId} bookingTypeId={bookingTypeId} settings={settings} ownUnit={ownUnit} /> : null}
           {tab === 'dates' ? <DatesTab unitId={unitId} bookingTypeId={bookingTypeId} settings={settings} ownUnit={ownUnit} ownUnitId={me.user.unit_id} typeName={name} /> : null}

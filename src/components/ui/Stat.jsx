@@ -23,3 +23,14 @@ export function Stat({ icon, color, label, value, foot, bad, onClick, index = 0 
     </div>
   );
 }
+
+/** A small number box inside a card (a row of them in `.stat-tiles`); `tone` 'warn' or 'bad' colours the number. */
+export function StatTile({ label, value, sub, tone = '' }) {
+  return (
+    <div className={`stat-tile${tone ? ` ${tone}` : ''}`}>
+      <span className="stat-tile-label">{label}</span>
+      <b>{value}</b>
+      {sub ? <span className="hint">{sub}</span> : null}
+    </div>
+  );
+}

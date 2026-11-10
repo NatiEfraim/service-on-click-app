@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
 import { DomainBadge } from '@/components/booking/DomainBadge';
 import { DateRangePicker } from '@/components/ui/DateRangePicker';
+import { ExpandRow } from '@/components/ui/ExpandRow';
 import { EmptyState, ErrorNotice, Loading } from '@/components/ui/Feedback';
 import { PageHead } from '@/components/ui/PageHead';
 import { SearchField } from '@/components/ui/SearchField';
@@ -16,16 +17,12 @@ import { auditApi, peopleApi } from '@/lib/api/endpoints';
 import { keys } from '@/lib/api/keys';
 import { fmtDateTime } from '@/lib/format';
 import { sourceTag } from '@/lib/labels';
-import { EASE_IN, EASE_OUT, prefersReducedMotion } from '@/lib/motion';
 import { useFitToWindow } from '@/lib/useFitToWindow';
 import { useBookingDrawer } from '@/features/bookings/useBookingDrawer';
 import { useSession } from '@/providers/SessionProvider';
 import { grantsFromPermissionNames, parsePermissionName, roleLabel } from '@/features/people/permissions';
 import { ACTION_GROUPS, actionLabel, changedFields, ENTITY_LABEL, fieldLabel, listChange, mergeOneSave, RESULT } from './labels';
 
-/** How long an opened row's details take to fold open and to fold away. */
-const DETAIL_ENTER_MS = 260;
-const DETAIL_EXIT_MS = 200;
 /** The table never gets shorter than this when the window is small. */
 const MIN_TABLE_HEIGHT = 320;
 
@@ -46,49 +43,6 @@ function VerifyButton() {
     <Button size="sm" icon="check" loading={verify.isFetching} onClick={() => (asked ? void verify.refetch() : setAsked(true))}>
       {verify.isError ? 'הבדיקה נכשלה - נסו שוב' : 'אימות ההיסטוריה'}
     </Button>
-  );
-}
-
-/** The opened row's details: they glide open and fade in, and stay on screen while they fade and fold away. */
-function AuditDetail({ open, children }) {
-  // kept mounted for the text fade (60ms head start) plus the fold
-  const presence = usePresence(open, DETAIL_EXIT_MS + 60);
-  const fold = useRef(null);
-
-  // the height glides between 0 and the content's (measured in pixels: a table row cannot animate to `auto`)
-  useLayoutEffect(() => {
-    const el = fold.current;
-    if (!el || prefersReducedMotion()) return;
-    const body = el.firstElementChild;
-    // measured from where it is now (a close during the open starts from the current height, not the full one)
-    const from = `${el.getBoundingClientRect().height}px`;
-    const full = `${el.scrollHeight}px`;
-    let height;
-    let fade;
-    if (presence.closing) {
-      // the text fades first, quickly, then the room closes - so it never shows squashed
-      fade = body?.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120, easing: EASE_IN, fill: 'forwards' });
-      height = el.animate([{ height: from, overflow: 'hidden' }, { height: '0px', overflow: 'hidden' }], { duration: DETAIL_EXIT_MS, delay: 60, easing: EASE_IN, fill: 'forwards' });
-    } else {
-      // the room opens, and the text fades in a moment later into it
-      height = el.animate([{ height: '0px', overflow: 'hidden' }, { height: full, overflow: 'hidden' }], { duration: DETAIL_ENTER_MS, easing: EASE_OUT });
-      fade = body?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200, delay: 60, easing: EASE_OUT, fill: 'backwards' });
-    }
-    return () => {
-      height.cancel();
-      fade?.cancel();
-    };
-  }, [presence.mounted, presence.closing]);
-
-  if (!presence.mounted) return null;
-  return (
-    <tr className="audit-detail">
-      <td colSpan={6}>
-        <div ref={fold} className="audit-fold">
-          <div className="audit-detail-body">{children}</div>
-        </div>
-      </td>
-    </tr>
   );
 }
 
@@ -430,7 +384,8 @@ export function AuditScreen() {
                         <td>{source ? <span className={`tag ${source.tone}`}>{source.label}</span> : '—'}</td>
                         <td><span className={`chip ${result.tone}`}>{result.label}</span></td>
                       </tr>
-                      <AuditDetail open={isOpen}>
+                      <ExpandRow open={isOpen} colSpan={6}>
+                        <div className="audit-detail-body">
                             <AuditPeople row={row} />
                             {row.reason ? <p><b>{row.result === 'success' ? 'הערה' : 'סיבה'}:</b> {row.reason}</p> : null}
                             {changes.length ? (
@@ -471,7 +426,8 @@ export function AuditScreen() {
                                 </tbody>
                               </table>
                             ) : !row.reason ? <p className="hint">אין פרטים נוספים לפעולה זו.</p> : null}
-                      </AuditDetail>
+                        </div>
+                      </ExpandRow>
                     </Fragment>
                   );
                 })}

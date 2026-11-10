@@ -10,7 +10,7 @@ import { useIsClient } from './useIsClient';
 
 const FADE_OUT = [{ opacity: 1 }, { opacity: 0 }];
 /** Back out the way it came in: to the left edge it sits on. */
-const SLIDE_OUT = [{ transform: 'translateX(0)' }, { transform: 'translateX(-100%)' }];
+const SLIDE_OUT = [{ transform: 'translateX(0)' }, { transform: 'translateX(100%)' }];
 
 function DrawerInner({ title, label, onClose, children }) {
   const ref = useRef(null);
@@ -37,7 +37,7 @@ function DrawerInner({ title, label, onClose, children }) {
   );
 }
 
-/** Side panel the booking opens in; slides in from the left edge and back out to it. */
+/** Side panel the booking opens in; slides in from the right edge and back out to it. */
 export function Drawer(props) {
   const isClient = useIsClient();
   if (!isClient) return null;

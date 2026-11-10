@@ -1,5 +1,6 @@
 'use client';
 
+import { SHOW_DEPARTMENTS } from '@/lib/labels';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Select } from '@/components/ui/Select';
 import { useId, useState } from 'react';
@@ -212,6 +213,7 @@ export function NewUserDialog({ onClose, onCreated }) {
               </Select>
             </Field>
           ) : null}
+          {SHOW_DEPARTMENTS ? (
           <Field label="מחלקה (רשות)">
             <Select className="input" value={departmentId} onChange={(event) => setDepartmentId(event.target.value)}>
               <option value="">ללא מחלקה</option>
@@ -222,6 +224,7 @@ export function NewUserDialog({ onClose, onCreated }) {
               ))}
             </Select>
           </Field>
+          ) : null}
         </div>
 
         </fieldset>

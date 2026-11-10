@@ -2,7 +2,7 @@
 import { Guard } from '@/components/layout/Guard';
 import { OrgScreen } from '@/features/org/OrgScreen';
 
-export const metadata = { title: 'יחידות ומחלקות' };
+export const metadata = { title: 'יחידות' };
 
 export default function OrgPage() {
   return (

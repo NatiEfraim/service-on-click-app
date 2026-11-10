@@ -1,5 +1,6 @@
 'use client';
 
+import { SHOW_DEPARTMENTS } from '@/lib/labels';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Select } from '@/components/ui/Select';
 import { useId, useMemo, useState } from 'react';
@@ -235,6 +236,7 @@ export function PermissionsDialog({ target, onClose }) {
                 ) : null}
               </span>
             </div>
+            {SHOW_DEPARTMENTS ? (
             <Field label="מחלקה">
               <Select
                 className="input"
@@ -253,6 +255,7 @@ export function PermissionsDialog({ target, onClose }) {
                 ))}
               </Select>
             </Field>
+            ) : null}
           </div>
 
           {ownRowClosed ? <Notice tone="warn">לא ניתן לשנות את ההרשאות של עצמך.</Notice> : null}

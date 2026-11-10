@@ -3,6 +3,7 @@
 import { Button } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chips';
 import { initials } from '@/lib/format';
+import { SHOW_DEPARTMENTS } from '@/lib/labels';
 import { useSession } from '@/providers/SessionProvider';
 import { grantChip } from './permissions';
 
@@ -59,7 +60,7 @@ export function PeopleTable({ rows, onOpen }) {
                     {row.affiliation ? (
                       <>
                         {row.affiliation.unitName ?? 'ללא שיוך ליחידה'}
-                        <div className="small muted">{row.affiliation.departmentName ?? 'ללא מחלקה'}</div>
+                        {SHOW_DEPARTMENTS ? <div className="small muted">{row.affiliation.departmentName ?? 'ללא מחלקה'}</div> : null}
                       </>
                     ) : null}
                   </td>
