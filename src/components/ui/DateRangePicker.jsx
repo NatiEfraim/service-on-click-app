@@ -18,13 +18,19 @@ export function DatePicker({ value, onChange, label = 'תאריך', placeholder 
   return <DateRangePicker single value={{ from: value, to: value }} onChange={(range) => onChange(range.from)} label={label} placeholder={placeholder} clearable={clearable} min={min} max={max} isDateDisabled={isDateDisabled} />;
 }
 
+/** Select independent dates in the same calendar, keeping it open between clicks. */
+export function MultiDatePicker({ value, onChange, ...props }) {
+  return <DateRangePicker {...props} value={{ from: value[0], to: '' }} selectedDays={value} onChange={onChange} />;
+}
+
 /**
  * A from-to date picker: a button showing the range opens a Hebrew month calendar (pick the start, then the end) with
  * quick ranges. `value` / `onChange` use { from, to } as 'YYYY-MM-DD' strings ('' = open-ended).
  * `single` (use DatePicker) picks one day instead; `min` / `max` ('YYYY-MM-DD') disable the days outside them.
  */
-export function DateRangePicker({ value, onChange, label = 'תאריך', placeholder = 'כל התאריכים', single = false, clearable = true, min, max, isDateDisabled }) {
+export function DateRangePicker({ value, onChange, label = 'תאריך', placeholder = 'כל התאריכים', single = false, clearable = true, min, max, isDateDisabled, selectedDays }) {
   const { from, to } = value;
+  const multiple = Boolean(selectedDays);
   const [open, setOpen] = useState(false);
   const presence = usePresence(open);
   // while picking: the first click sets the start, the second the end
@@ -80,6 +86,10 @@ export function DateRangePicker({ value, onChange, label = 'תאריך', placeho
 
   const pickDay = (iso) => {
     if (isDateDisabled?.(iso)) return;
+    if (multiple) {
+      onChange(selectedDays.includes(iso) ? selectedDays.filter((day) => day !== iso) : [...selectedDays, iso]);
+      return;
+    }
     if (single) {
       onChange({ from: iso, to: iso });
       setOpen(false);
@@ -102,7 +112,7 @@ export function DateRangePicker({ value, onChange, label = 'תאריך', placeho
   const todayIso = toIso(new Date());
 
   const clearPresence = usePresence(Boolean(clearable && (from || to)), 220);
-  const text = from && to ? (from === to ? show(from) : `${show(from)} – ${show(to)}`) : from ? `מ-${show(from)}` : to ? `עד ${show(to)}` : placeholder;
+  const text = multiple ? (selectedDays.length ? `נבחרו ${selectedDays.length} תאריכים` : placeholder) : from && to ? (from === to ? show(from) : `${show(from)} – ${show(to)}`) : from ? `מ-${show(from)}` : to ? `עד ${show(to)}` : placeholder;
   const outside = (iso) => (min && iso < min) || (max && iso > max);
 
   return (
@@ -113,7 +123,7 @@ export function DateRangePicker({ value, onChange, label = 'תאריך', placeho
         <AnimatedText>{text}</AnimatedText>
       </button>
       {clearPresence.mounted ? (
-        <button type="button" className="drp-clear" data-closing={clearPresence.closing || undefined} disabled={clearPresence.closing} aria-label="ניקוי התאריכים" data-tip="ניקוי" onClick={() => onChange({ from: '', to: '' })}>
+        <button type="button" className="drp-clear" data-closing={clearPresence.closing || undefined} disabled={clearPresence.closing} aria-label="ניקוי התאריכים" data-tip="ניקוי" onClick={() => onChange(multiple ? [] : { from: '', to: '' })}>
           <Icon name="x" />
         </button>
       ) : null}
@@ -127,7 +137,7 @@ export function DateRangePicker({ value, onChange, label = 'תאריך', placeho
           data-closing={presence.closing || undefined}
           style={{ position: 'fixed', top: place.top, right: place.right, left: 'auto' }}
         >
-          {single ? null : (
+          {single || multiple ? null : (
           <div className="drp-presets">
             {presets().map((preset) => (
               <button
@@ -161,15 +171,15 @@ export function DateRangePicker({ value, onChange, label = 'תאריך', placeho
             ))}
             {monthGrid(month).map((date) => {
               const iso = toIso(date);
-              const inRange = rangeFrom && rangeTo && iso >= rangeFrom && iso <= rangeTo;
-              const edge = iso === rangeFrom || iso === rangeTo;
+              const inRange = !multiple && rangeFrom && rangeTo && iso >= rangeFrom && iso <= rangeTo;
+              const edge = multiple ? selectedDays.includes(iso) : iso === rangeFrom || iso === rangeTo;
               return (
                 <button
                   key={iso}
                   type="button"
                   className={['drp-day', date.getMonth() !== month.getMonth() ? 'out' : '', inRange ? 'in' : '', edge ? 'edge' : '', iso === todayIso ? 'today' : ''].filter(Boolean).join(' ')}
                   aria-label={show(iso)}
-                  aria-pressed={edge || undefined}
+                  aria-pressed={multiple ? edge : edge || undefined}
                   disabled={outside(iso) || isDateDisabled?.(iso) || undefined}
                   onMouseEnter={() => setHover(iso)}
                   onClick={() => pickDay(iso)}
@@ -179,7 +189,7 @@ export function DateRangePicker({ value, onChange, label = 'תאריך', placeho
               );
             })}
           </div>
-          {single ? null : <p className="drp-hint">{draftStart ? `מ-${show(draftStart)}: בחרו את תאריך הסיום` : 'בחרו תאריך התחלה ואז תאריך סיום'}</p>}
+          {multiple ? <p className="drp-hint">לחצו על ימים כדי לסמן או לבטל סימון</p> : single ? null : <p className="drp-hint">{draftStart ? `מ-${show(draftStart)}: בחרו את תאריך הסיום` : 'בחרו תאריך התחלה ואז תאריך סיום'}</p>}
         </div>,
         document.body,
       ) : null}

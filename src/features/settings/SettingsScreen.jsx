@@ -47,7 +47,9 @@ export function SettingsScreen() {
   // no choice fields (barber) or no operations settings means no tab for them
   if (query.data) {
     const references = query.data.system_references ?? [];
-    if (!references.some(isDatesReference)) hidden.add('dates');
+    // the server says so (has_blocking_dates); a server without the flag yet: whether a blocked-dates setting exists
+    const hasBlockingDates = typeof query.data.has_blocking_dates === 'boolean' ? query.data.has_blocking_dates : references.some(isDatesReference);
+    if (!hasBlockingDates) hidden.add('dates');
     if (!references.some((reference) => !isDatesReference(reference))) hidden.add('refs');
     if (!choiceFields(query.data.form_fields ?? []).length) hidden.add('options');
   }

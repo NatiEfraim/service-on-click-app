@@ -26,13 +26,13 @@ export const STAGE_SHORT = {
 
 /** One colour per stage for the dashboard charts. */
 export const STAGE_COLOR = {
-  control_officer: '#6D4C88',
-  vice_approver: '#A85834',
-  approver: '#3B6397',
+  control_officer: '#8C3F68',
+  vice_approver: '#C46A9B',
+  approver: '#1F8E8B',
   supplier_files: '#AD903F',
-  supplier_approval: '#934662',
-  supplier_number: '#5C6D83',
-  realization: '#376F51',
+  supplier_approval: '#D9962F',
+  supplier_number: '#C0782A',
+  realization: '#14915F',
   barber: '#39828C',
   closed: '#8A8296',
 };

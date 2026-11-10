@@ -7,7 +7,7 @@ import { useIsClient } from './useIsClient';
 /** Hover / focus this long before a hint shows; moving on to the next hinted control within GRACE_MS shows it at once. */
 const SHOW_DELAY_MS = 300;
 const GRACE_MS = 400;
-/** Space kept between the hint and the control, and from the window's edges. */
+/** Space kept between the hint and its target, and from the window's edges. */
 const GAP = 8;
 const EDGE = 8;
 
@@ -17,15 +17,17 @@ function hintedFrom(target) {
   return el && el.getAttribute('data-tip') ? el : null;
 }
 
-/** Above the control, or below it when there is no room; kept inside the window sideways. */
-function place(anchor, tip) {
+/** Place above the pointer on hover or above the control on keyboard focus. */
+function place(anchor, tip, point) {
   const a = anchor.getBoundingClientRect();
   const t = tip.getBoundingClientRect();
-  const above = a.top - GAP - t.height >= EDGE;
-  const top = above ? a.top - GAP - t.height : a.bottom + GAP;
-  const centre = a.left + a.width / 2;
+  const targetTop = point?.y ?? a.top;
+  const targetBottom = point?.y ?? a.bottom;
+  const above = targetTop - GAP - t.height >= EDGE;
+  const top = above ? targetTop - GAP - t.height : targetBottom + GAP;
+  const centre = point?.x ?? (a.left + a.width / 2);
   const left = Math.min(Math.max(centre - t.width / 2, EDGE), window.innerWidth - EDGE - t.width);
-  // the arrow keeps pointing at the control even when the hint is pushed in from an edge
+  // the arrow keeps pointing at the target even when the hint is pushed in from an edge
   const arrow = Math.min(Math.max(centre - left, 10), t.width - 10);
   return { top, left, above, arrow };
 }
@@ -40,6 +42,7 @@ export function TooltipHost() {
   const [hint, setHint] = useState(null); // { anchor, text, keyboard }
   const [spot, setSpot] = useState(null);
   const tipRef = useRef(null);
+  const pointer = useRef(null);
   const timer = useRef(0);
   const lastHidden = useRef(0);
 
@@ -62,7 +65,12 @@ export function TooltipHost() {
     const onOver = (event) => {
       if (event.pointerType === 'touch') return;
       const anchor = hintedFrom(event.target);
-      if (anchor) show(anchor, false);
+      if (!anchor || anchor === hintedFrom(event.relatedTarget)) return;
+      pointer.current = { x: event.clientX, y: event.clientY };
+      show(anchor, false);
+    };
+    const onMove = (event) => {
+      if (event.pointerType !== 'touch') pointer.current = { x: event.clientX, y: event.clientY };
     };
     const onOut = (event) => {
       const anchor = hintedFrom(event.target);
@@ -78,6 +86,7 @@ export function TooltipHost() {
     };
 
     document.addEventListener('pointerover', onOver);
+    document.addEventListener('pointermove', onMove);
     document.addEventListener('pointerout', onOut);
     document.addEventListener('focusin', onFocus);
     document.addEventListener('focusout', hide);
@@ -88,6 +97,7 @@ export function TooltipHost() {
     return () => {
       window.clearTimeout(timer.current);
       document.removeEventListener('pointerover', onOver);
+      document.removeEventListener('pointermove', onMove);
       document.removeEventListener('pointerout', onOut);
       document.removeEventListener('focusin', onFocus);
       document.removeEventListener('focusout', hide);
@@ -108,7 +118,11 @@ export function TooltipHost() {
       setHint(null);
       return undefined;
     }
-    setSpot(place(hint.anchor, tipRef.current));
+    const reposition = () => {
+      if (tipRef.current) setSpot(place(hint.anchor, tipRef.current, hint.keyboard ? null : pointer.current));
+    };
+    reposition();
+    if (!hint.keyboard) document.addEventListener('pointermove', reposition);
     // screen readers hear the hint with the control while it shows
     const anchor = hint.anchor;
     const before = anchor.getAttribute('aria-describedby');
@@ -116,6 +130,7 @@ export function TooltipHost() {
       anchor.setAttribute('aria-describedby', [before, id].filter(Boolean).join(' '));
     }
     return () => {
+      if (!hint.keyboard) document.removeEventListener('pointermove', reposition);
       if (before === null) anchor.removeAttribute('aria-describedby');
       else anchor.setAttribute('aria-describedby', before);
     };

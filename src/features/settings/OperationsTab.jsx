@@ -107,18 +107,25 @@ function RefRow({ reference, bookingTypeId, unitId, readOnly }) {
   );
 }
 
-/** Operating settings. The server saves only the user's own unit, so other units are read-only. */
+/**
+ * Operating settings. They are global, so only a system admin edits them (`can_edit_global`); everyone else reads them.
+ * The server also saves only the user's own unit, so other units stay read-only even for a system admin.
+ */
 export function OperationsTab({ unitId, bookingTypeId, settings, ownUnit }) {
   const references = settings.system_references.filter((reference) => !isDatesReference(reference));
+  const canEdit = Boolean(settings.can_edit_global) && ownUnit;
+  const why = !settings.can_edit_global
+    ? 'עריכת הגדרות התפעול שמורה למנהל מערכת. כאן מוצגים הערכים לצפייה בלבד.'
+    : 'ניתן לערוך הגדרות תפעול ליחידה שלך בלבד. כאן מוצגים הערכים של היחידה שנבחרה.';
   return (
     <div className="st-readable-settings">
-      {!ownUnit ? (
+      {!canEdit ? (
         <div className="st-readonly-bar">
-          <Notice>ניתן לערוך הגדרות תפעול ליחידה שלך בלבד. כאן מוצגים הערכים של היחידה שנבחרה.</Notice>
+          <Notice>{why}</Notice>
         </div>
       ) : null}
       {references.length ? (
-        references.map((reference) => <RefRow key={reference.id} reference={reference} bookingTypeId={bookingTypeId} unitId={unitId} readOnly={!ownUnit} />)
+        references.map((reference) => <RefRow key={reference.id} reference={reference} bookingTypeId={bookingTypeId} unitId={unitId} readOnly={!canEdit} />)
       ) : (
         <EmptyState title="אין הגדרות תפעול לתחום זה" />
       )}

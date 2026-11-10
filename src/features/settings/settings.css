@@ -86,8 +86,17 @@
 /* ----- blocked dates */
 .st-days { display: flex; flex-wrap: wrap; gap: 8px; min-height: 34px; align-items: center; }
 .st-day { display: inline-flex; align-items: center; gap: 4px; padding-inline-end: 4px; }
+.st-day, .st-days-empty { animation: st-day-in 180ms var(--ease-out) both; }
+.st-day[data-closing] { animation: st-day-out 160ms var(--ease-in) both; pointer-events: none; }
+@keyframes st-day-in { from { opacity: 0; } }
+@keyframes st-day-out { to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .st-day, .st-days-empty, .st-day[data-closing] { animation-duration: 1ms; }
+}
 .st-day button { all: unset; cursor: pointer; display: grid; place-items: center; padding: 2px; border-radius: 50%; color: var(--accent-ink); }
-.st-day button:hover { background: rgba(69, 123, 157, .18); }
+.st-day button svg { width: 14px; height: 14px; }
+.st-day button:disabled { opacity: .5; cursor: default; }
+.st-day button:not(:disabled):hover { background: rgba(69, 123, 157, .18); }
 .st-day button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .st-add-row { display: flex; gap: 8px; align-items: end; flex-wrap: wrap; }
 .st-serials { display: flex; flex-wrap: wrap; gap: 4px 10px; max-height: 120px; overflow: auto; padding: 8px 10px; background: var(--surface-2); border: 1px solid var(--line-2); border-radius: var(--r-sm); }
@@ -99,7 +108,7 @@
 /* physical side: the nav is an ltr scroller (bar on the right, see tokens.css), the divider stays on its left, toward the options */
 .st-opt-nav { border-left: 1px solid var(--line-2); max-height: 72vh; overflow: auto; }
 .st-opt-main { min-width: 0; }
-.st-opt-head { padding: 14px 18px 10px; border-bottom: 1px solid var(--line-2); display: grid; gap: 4px; }
+.st-opt-head { position: sticky; top: 0; z-index: 1; background: var(--surface); padding: 14px 18px 10px; border-bottom: 1px solid var(--line-2); display: grid; gap: 4px; }
 .st-opt-head h3 { margin: 0; font-size: 16px; }
 .st-opt-title { display: flex; align-items: center; gap: 10px; justify-content: space-between; }
 .st-extras { display: grid; gap: 6px; justify-items: start; }
