@@ -2,10 +2,9 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Button } from '@/components/ui/Button';
 import { FormError } from '@/components/ui/Feedback';
 import { Field } from '@/components/ui/Field';
-import { Modal } from '@/components/ui/Modal';
+import { FormDialog } from '@/components/ui/FormDialog';
 import { ApiError } from '@/lib/api/client';
 import { syncApi } from '@/lib/api/endpoints';
 import { invalidateWork } from '@/lib/api/keys';
@@ -42,32 +41,23 @@ export function ResolveConflictDialog({ booking, resolution, onClose }) {
 
   if (!conflict) return null;
 
+  function submit() {
+    if (!reason.trim()) {
+      setError('יש לכתוב נימוק.');
+      return;
+    }
+    setError('');
+    mutation.mutate();
+  }
+
   return (
-    <Modal
+    <FormDialog
+      dirty={reason.trim() !== ''}
       title={keep ? 'לשמור את ההחלטה כאן' : 'לקבל את המצב באפליקציה'}
       onClose={onClose}
       busy={mutation.isPending}
-      footer={
-        <>
-          <Button
-            variant="primary"
-            loading={mutation.isPending}
-            onClick={() => {
-              if (!reason.trim()) {
-                setError('יש לכתוב נימוק.');
-                return;
-              }
-              setError('');
-              mutation.mutate();
-            }}
-          >
-            אישור
-          </Button>
-          <Button onClick={onClose} disabled={mutation.isPending}>
-            ביטול
-          </Button>
-        </>
-      }
+      submitLabel="אישור"
+      onSubmit={submit}
     >
       <p style={{ margin: 0 }}>
         {keep
@@ -78,6 +68,6 @@ export function ResolveConflictDialog({ booking, resolution, onClose }) {
         <input className="input" value={reason} maxLength={500} onChange={(event) => setReason(event.target.value)} />
       </Field>
       <FormError>{error}</FormError>
-    </Modal>
+    </FormDialog>
   );
 }

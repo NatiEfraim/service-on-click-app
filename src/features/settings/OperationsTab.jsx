@@ -1,19 +1,17 @@
 'use client';
 
-import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 import { TimePicker } from '@/components/ui/TimePicker';
 import { Button } from '@/components/ui/Button';
 import { EmptyState, Notice } from '@/components/ui/Feedback';
 import { settingsApi } from '@/lib/api/endpoints';
+import { useSaveMutation } from '@/lib/useSaveMutation';
 
-import { useToast } from '@/providers/UiProvider';
 import { draftFromValue, draftProblems, draftToValue, isDatesReference, isDraftDirty, refInputKind, refKeyLabel } from './refs';
 import { Switch } from './Switch';
-import { handleWriteError, useReloadSettings } from './useSettings';
+import { useReloadSettings } from './useSettings';
 
 function RefRow({ reference, bookingTypeId, unitId, readOnly }) {
-  const toast = useToast();
   const reload = useReloadSettings(unitId, bookingTypeId);
   const [draft, setDraft] = useState(() => draftFromValue(reference.value));
   const [error, setError] = useState('');
@@ -30,16 +28,11 @@ function RefRow({ reference, bookingTypeId, unitId, readOnly }) {
 
   const dirty = isDraftDirty(reference.value, draft);
 
-  const mutation = useMutation({
+  const mutation = useSaveMutation({
     mutationFn: () => settingsApi.saveSystemReferences(bookingTypeId, { [reference.id]: draftToValue(reference.value, draft) }),
-    onSuccess: async () => {
-      toast('ההגדרה נשמרה ונרשמה בהיסטוריית השינויים.', 'ok');
-      await reload();
-    },
-    onError: async (e) => {
-      const shown = await handleWriteError(e, toast, reload);
-      if (shown) setError(shown.message);
-    },
+    success: 'ההגדרה נשמרה ונרשמה בהיסטוריית השינויים.',
+    reload,
+    onFailed: (shown) => setError(shown.message),
   });
 
   function save() {
@@ -90,7 +83,7 @@ function RefRow({ reference, bookingTypeId, unitId, readOnly }) {
                 value={typeof value === 'string' ? value : ''}
                 disabled={readOnly}
                 aria-invalid={problem ? true : undefined}
-                title={problem || undefined}
+                data-tip={problem || undefined}
                 onChange={(event) => change(key, kind === 'phone' ? event.target.value.replace(/[^0-9]/g, '').slice(0, 10) : event.target.value)}
               />
             </label>

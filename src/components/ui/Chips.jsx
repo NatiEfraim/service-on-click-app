@@ -3,7 +3,7 @@ import { sourceTag, statusTone } from '@/lib/labels';
 
 export function Chip({ tone = '', children, title }) {
   return (
-    <span className={`chip ${tone}`.trim()} title={title}>
+    <span className={`chip ${tone}`.trim()} data-tip={title}>
       {children}
     </span>
   );

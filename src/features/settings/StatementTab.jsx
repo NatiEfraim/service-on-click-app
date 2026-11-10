@@ -1,23 +1,21 @@
 'use client';
 
-import { useMutation } from '@tanstack/react-query';
 import { useId, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { FormError } from '@/components/ui/Feedback';
 import { Field } from '@/components/ui/Field';
 import { Seg } from '@/components/ui/Controls';
 import { settingsApi } from '@/lib/api/endpoints';
+import { useSaveMutation } from '@/lib/useSaveMutation';
 
-import { useToast } from '@/providers/UiProvider';
 import { statementError, statementFromServer } from './statement';
 import { Switch } from './Switch';
-import { handleWriteError, useReloadSettings } from './useSettings';
+import { useReloadSettings } from './useSettings';
 
 
 
 /** Statement the requester must agree to: text, timing and on/off. */
 export function StatementTab({ unitId, bookingTypeId, settings }) {
-  const toast = useToast();
   const reload = useReloadSettings(unitId, bookingTypeId);
   const ids = useId();
   const canEdit = settings.can_edit_global;
@@ -43,16 +41,11 @@ export function StatementTab({ unitId, bookingTypeId, settings }) {
   const dirty = text !== serverText || active !== (server?.is_active ?? false) || Number(showTime) !== (server?.show_time ?? 1);
   const placeholders = settings.system_references.flatMap((reference) => Object.keys(reference.value)).filter((key) => key === 'haircut_time' || key === 'clean_time');
 
-  const mutation = useMutation({
+  const mutation = useSaveMutation({
     mutationFn: () => settingsApi.saveStatement(unitId, bookingTypeId, { statement: text.trim() === '' ? null : text.trim(), is_active: active, show_time: Number(showTime) }),
-    onSuccess: async () => {
-      toast('ההצהרה נשמרה ונרשמה בהיסטוריית השינויים.', 'ok');
-      await reload();
-    },
-    onError: async (e) => {
-      const shown = await handleWriteError(e, toast, reload);
-      if (shown) setError(shown.message);
-    },
+    success: 'ההצהרה נשמרה ונרשמה בהיסטוריית השינויים.',
+    reload,
+    onFailed: (shown) => setError(shown.message),
   });
 
   function save() {

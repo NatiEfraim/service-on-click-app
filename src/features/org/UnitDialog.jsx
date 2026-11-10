@@ -2,10 +2,9 @@
 
 import { useMutation } from '@tanstack/react-query';
 import { useId, useState } from 'react';
-import { Button } from '@/components/ui/Button';
 import { FormError } from '@/components/ui/Feedback';
 import { Field } from '@/components/ui/Field';
-import { Modal } from '@/components/ui/Modal';
+import { FormDialog } from '@/components/ui/FormDialog';
 import { ApiError } from '@/lib/api/client';
 import { orgApi } from '@/lib/api/endpoints';
 
@@ -22,6 +21,7 @@ export function UnitDialog({ unit, units, onClose, onSaved }) {
 
   const [code, setCode] = useState(unit?.code ?? '');
   const [name, setName] = useState(unit && !isUnnamed(unit) ? unit.name : '');
+  const [start] = useState({ code, name }); // the values the dialog opened with
   const [errors, setErrors] = useState({});
   const [formError, setFormError] = useState('');
 
@@ -47,20 +47,12 @@ export function UnitDialog({ unit, units, onClose, onSaved }) {
   }
 
   return (
-    <Modal
+    <FormDialog
+      dirty={code !== start.code || name !== start.name}
       title={unit ? `עריכת היחידה ${unit.code}` : 'יחידה חדשה'}
       onClose={onClose}
       busy={mutation.isPending}
-      footer={
-        <>
-          <Button type="submit" form={formId} variant="primary" loading={mutation.isPending}>
-            שמירה
-          </Button>
-          <Button onClick={onClose} disabled={mutation.isPending}>
-            ביטול
-          </Button>
-        </>
-      }
+      formId={formId}
     >
       <form id={formId} onSubmit={submit} noValidate style={{ display: 'grid', gap: 14 }}>
         <div className="cols2">
@@ -106,6 +98,6 @@ export function UnitDialog({ unit, units, onClose, onSaved }) {
         </p>
         <FormError>{formError}</FormError>
       </form>
-    </Modal>
+    </FormDialog>
   );
 }

@@ -88,7 +88,7 @@ export function TimePicker({ value, onChange, label = 'שעה', disabled = false
   }
 
   return <>
-    <button ref={trigger} type="button" className="input tp-trigger" disabled={disabled} data-invalid={invalid || undefined} title={title} aria-label={label + ': ' + (value ? timeValue(timeParts(value).hour, timeParts(value).minute) : 'בחירת שעה')} aria-haspopup="dialog" aria-expanded={open} aria-controls={presence.mounted ? id : undefined} onClick={() => {
+    <button ref={trigger} type="button" className="input tp-trigger" disabled={disabled} data-invalid={invalid || undefined} data-tip={title} aria-label={label + ': ' + (value ? timeValue(timeParts(value).hour, timeParts(value).minute) : 'בחירת שעה')} aria-haspopup="dialog" aria-expanded={open} aria-controls={presence.mounted ? id : undefined} onClick={() => {
       if (!open) { setDraft(timeParts(value)); focused.current = false; }
       setOpen(!open);
     }}>

@@ -96,7 +96,7 @@ export function AttachmentsPanel({ attachments }) {
 
             if (!attachment.available || !attachment.url) {
               return (
-                <span key={key} className="thumb missing" title="הקובץ טרם התקבל מהאפליקציה">
+                <span key={key} className="thumb missing" data-tip="הקובץ טרם התקבל מהאפליקציה">
                   <span className="ph">
                     <Icon name={attachment.kind === 'image' ? 'image' : 'file'} />
                   </span>

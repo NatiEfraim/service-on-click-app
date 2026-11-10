@@ -35,7 +35,7 @@ export function MiniRoute({ booking, catalog }) {
   const modeClass = { here: 'h', hold: 'hold', stopped: 'stop', finished: 'fin' }[mode];
 
   return (
-    <span className="mr" title={mode === 'hold' ? `${booking.stage_label} · ${booking.status_label}` : booking.stage_label}>
+    <span className="mr" data-tip={mode === 'hold' ? `${booking.stage_label} · ${booking.status_label}` : booking.stage_label}>
       {stations.map((station, index) => (
         <i key={station.id} className={index < here ? 'd' : index === here ? modeClass : ''} />
       ))}
@@ -64,7 +64,7 @@ export function AgeBar({ booking }) {
   const tone = overdue ? 'over' : ratio >= DEFAULT_WARN_RATIO ? 'late' : ratio >= 0.5 ? 'near' : '';
 
   return (
-    <div className={`age ${tone}`.trim()} title={`שעות בשלב הנוכחי ושעות מאז שהקריאה נפתחה. הפס: הזמן הכולל מול יעד הטיפול (${target} ש׳${booking.target_hours == null ? ', ברירת מחדל' : ''})`}>
+    <div className={`age ${tone}`.trim()} data-tip={`שעות בשלב הנוכחי ושעות מאז שהקריאה נפתחה. הפס: הזמן הכולל מול יעד הטיפול (${target} ש׳${booking.target_hours == null ? ', ברירת מחדל' : ''})`}>
       <span className="age-columns" aria-label={`${Math.round(booking.stage_age_hours ?? 0)} שעות בשלב הנוכחי, ${booking.total_age_hours != null ? Math.round(booking.total_age_hours) : 'לא ידוע'} שעות בסך הכול`}>
         {/* each number says what it is under it, so the row reads without the column heading */}
         <span className="age-cell">

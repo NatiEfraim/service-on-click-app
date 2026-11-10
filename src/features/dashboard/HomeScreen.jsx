@@ -8,13 +8,13 @@ import { DomainIcon } from '@/components/booking/DomainBadge';
 import { Card } from '@/components/ui/Card';
 import { FadeIn } from '@/components/ui/FadeIn';
 import { EmptyState, ErrorNotice, Loading } from '@/components/ui/Feedback';
-import { Icon } from '@/components/ui/Icon';
 import { PageHead } from '@/components/ui/PageHead';
 import { insightsApi } from '@/lib/api/endpoints';
 import { keys } from '@/lib/api/keys';
-import { domainColor, domainIconSrc } from '@/lib/labels';
+import { domainColor } from '@/lib/labels';
 import { useSession } from '@/providers/SessionProvider';
 import { StageBars, StageColumns } from './StageBars';
+import { TileBody } from './TileBody';
 
 /** Matches the .chart-fade transition in screens.css. */
 const CHART_FADE_MS = 130;
@@ -28,27 +28,6 @@ const TILE_GROUPS = [
   { name: 'ציוד', types: [3, 4], iconType: 3, iconSrc: '/icons/groups/equipment.svg' },
   { name: 'מזון', types: [10, 11], iconType: 10, iconSrc: '/icons/groups/food.svg' },
 ];
-
-/** Icon, name and counts of a domain tile (or of a group, or of one domain inside an opened group). */
-function TileBody({ iconType, iconSrc, name, open, overdue }) {
-  const src = iconSrc ?? domainIconSrc(iconType);
-  return (
-    <>
-      <span className="dtile-ic">
-        {src ? (
-          // eslint-disable-next-line @next/next/no-img-element -- static svg
-          <img src={src} alt="" width={36} height={36} />
-        ) : (
-          <Icon name="layers" />
-        )}
-      </span>
-      <span className="dtile-name">{name}</span>
-      <span className="dtile-meta">
-        <b>{open}</b> פתוחות{overdue ? <> · <span className="bad-t">{overdue} חורגות</span></> : null}
-      </span>
-    </>
-  );
-}
 
 /**
  * The home data for a domain commander of several domains, built from GET overview (GET admin/home is admin-only on

@@ -1,13 +1,13 @@
 'use client';
 
+import { SHOW_DEPARTMENTS } from '@/lib/labels';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Select } from '@/components/ui/Select';
 import { useId, useMemo, useState } from 'react';
 import { DomainIcon } from '@/components/booking/DomainBadge';
-import { Button } from '@/components/ui/Button';
 import { EmptyState, ErrorNotice, FormError, Loading, Notice } from '@/components/ui/Feedback';
 import { Field } from '@/components/ui/Field';
-import { Modal } from '@/components/ui/Modal';
+import { FormDialog } from '@/components/ui/FormDialog';
 import { ApiError } from '@/lib/api/client';
 import { peopleApi } from '@/lib/api/endpoints';
 import { keys } from '@/lib/api/keys';
@@ -194,21 +194,14 @@ export function PermissionsDialog({ target, onClose }) {
   const reasonErrorId = `${ids}-reason-error`;
 
   return (
-    <Modal
+    <FormDialog
+      dirty={changes.length > 0 || (departmentEdit !== null && departmentEdit !== (currentDepartment === null ? '' : String(currentDepartment))) || reason.trim() !== ''}
       title={`הרשאות: ${displayName}`}
       wide
       onClose={onClose}
       busy={busy}
-      footer={
-        <>
-          <Button variant="primary" loading={busy} disabled={!matrix} onClick={submit}>
-            שמירה
-          </Button>
-          <Button onClick={onClose} disabled={busy}>
-            ביטול
-          </Button>
-        </>
-      }
+      submitDisabled={!matrix}
+      onSubmit={submit}
     >
       {loadError ? (
         <ErrorNotice error={loadError} onRetry={() => void reload()} title="לא ניתן לטעון את ההרשאות." />
@@ -235,6 +228,7 @@ export function PermissionsDialog({ target, onClose }) {
                 ) : null}
               </span>
             </div>
+            {SHOW_DEPARTMENTS ? (
             <Field label="מחלקה">
               <Select
                 className="input"
@@ -253,6 +247,7 @@ export function PermissionsDialog({ target, onClose }) {
                 ))}
               </Select>
             </Field>
+            ) : null}
           </div>
 
           {ownRowClosed ? <Notice tone="warn">לא ניתן לשנות את ההרשאות של עצמך.</Notice> : null}
@@ -285,7 +280,7 @@ export function PermissionsDialog({ target, onClose }) {
                         if (!cell) {
                           return (
                             <td key={role} className="ppl-c">
-                              <span className="ppl-na" title="התפקיד אינו רלוונטי לתחום זה" aria-hidden="true">
+                              <span className="ppl-na" data-tip="התפקיד אינו רלוונטי לתחום זה" aria-hidden="true">
                                 —
                               </span>
                               <span className="sr">התפקיד אינו רלוונטי לתחום זה</span>
@@ -296,7 +291,7 @@ export function PermissionsDialog({ target, onClose }) {
                         const isChanged = changed.has(cellKey(role, row.bookingTypeId));
                         return (
                           <td key={role} className="ppl-c">
-                            <label className={`ppl-cell${cell.lock ? ' locked' : ''}${isChanged ? ' changed' : ''}`} title={cell.lock ?? undefined}>
+                            <label className={`ppl-cell${cell.lock ? ' locked' : ''}${isChanged ? ' changed' : ''}`} data-tip={cell.lock ?? undefined}>
                               <input
                                 type="checkbox"
                                 checked={shownValue(row, role, edits) ?? false}
@@ -360,6 +355,6 @@ export function PermissionsDialog({ target, onClose }) {
           <FormError>{formError}</FormError>
         </>
       ) : null}
-    </Modal>
+    </FormDialog>
   );
 }

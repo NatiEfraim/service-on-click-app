@@ -13,6 +13,7 @@ import { bookingsReportApi } from '@/lib/api/endpoints';
 import { fmtDateTime } from '@/lib/format';
 import { useFitToWindow } from '@/lib/useFitToWindow';
 import { useSession } from '@/providers/SessionProvider';
+import { usePublishDrawerList } from '@/features/bookings/drawerList';
 
 const PER_PAGE = 25;
 /** The table never gets shorter than this when the window is small. */
@@ -58,6 +59,8 @@ export function BookingsReportScreen() {
   });
   const rows = query.data?.pages.flatMap((page) => page.data) ?? [];
   const meta = query.data?.pages[0]?.meta;
+  // the drawer steps through these rows (‹ › and ↑ ↓), in this order
+  usePublishDrawerList(rows.map((row) => row.serial_number), { total: meta?.total ?? null, hasMore: Boolean(query.hasNextPage), loadMore: () => void query.fetchNextPage() });
 
   // the card ends at the window's bottom and only the table scrolls inside it
   const card = useRef(null);
@@ -155,7 +158,7 @@ export function BookingsReportScreen() {
                 </thead>
                 <tbody>
                   {rows.map((row) => (
-                    <tr key={row.uuid ?? row.serial_number} className="clk" tabIndex={0} title="פרטי הקריאה" onClick={() => drawer.open(row.serial_number)} onKeyDown={(event) => event.key === 'Enter' && drawer.open(row.serial_number)}>
+                    <tr key={row.uuid ?? row.serial_number} className="clk" tabIndex={0} onClick={() => drawer.open(row.serial_number)} onKeyDown={(event) => event.key === 'Enter' && drawer.open(row.serial_number)}>
                       <td><b>{row.serial_number}</b></td>
                       <td>{row.booking_type_label}</td>
                       <td>{row.status_label}</td>

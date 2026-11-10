@@ -37,7 +37,7 @@ export function StageBars({ byTypeStage, onlyTypes, onPickType, pickedType }) {
             <button
               type="button"
               className={`lab${pickedType === row.type ? ' on' : ''}`}
-              title="הצגת גרף עמודות לפי שלב"
+              data-tip="הצגת גרף עמודות לפי שלב"
               aria-pressed={onPickType ? pickedType === row.type : undefined}
               onClick={() => (onPickType ? onPickType(row.type) : setChartType(row.type))}
             >

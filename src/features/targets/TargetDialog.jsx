@@ -2,11 +2,10 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Button } from '@/components/ui/Button';
 import { FormError } from '@/components/ui/Feedback';
 import { Field } from '@/components/ui/Field';
 import { Select } from '@/components/ui/Select';
-import { Modal } from '@/components/ui/Modal';
+import { FormDialog } from '@/components/ui/FormDialog';
 import { ApiError } from '@/lib/api/client';
 import { insightsApi } from '@/lib/api/endpoints';
 import { invalidateWork, keys } from '@/lib/api/keys';
@@ -29,6 +28,7 @@ export function TargetDialog({ bookingTypeId, current, onClose }) {
   const [value, setValue] = useState(hours === null ? '' : String(inDays ? hours / 24 : hours));
   const [unit, setUnit] = useState(hours === null || inDays ? 'd' : 'h');
   const [warnPercent, setWarnPercent] = useState(String(Math.round((current?.warn_ratio ?? DEFAULT_WARN_RATIO) * 10000) / 100));
+  const [start] = useState({ value, unit, warnPercent }); // the values the dialog opened with
   const [error, setError] = useState('');
 
   const mutation = useMutation({
@@ -58,20 +58,12 @@ export function TargetDialog({ bookingTypeId, current, onClose }) {
   }
 
   return (
-    <Modal
+    <FormDialog
+      dirty={value !== start.value || unit !== start.unit || warnPercent !== start.warnPercent}
       title={`יעד טיפול: ${typeName(bookingTypeId)}`}
       onClose={onClose}
       busy={mutation.isPending}
-      footer={
-        <>
-          <Button variant="primary" loading={mutation.isPending} onClick={submit}>
-            שמירה
-          </Button>
-          <Button onClick={onClose} disabled={mutation.isPending}>
-            ביטול
-          </Button>
-        </>
-      }
+      onSubmit={submit}
     >
       <div className="target-dialog-body">
       <p className="muted" style={{ margin: 0 }}>
@@ -97,6 +89,6 @@ export function TargetDialog({ bookingTypeId, current, onClose }) {
       {warningExplanation(value, unit, warnPercent) ? <p className="small" style={{ margin: 0 }} aria-live="polite">{warningExplanation(value, unit, warnPercent)}</p> : null}
       <FormError>{error}</FormError>
       </div>
-    </Modal>
+    </FormDialog>
   );
 }

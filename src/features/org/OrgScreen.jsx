@@ -1,10 +1,12 @@
 'use client';
 
+import { SHOW_DEPARTMENTS } from '@/lib/labels';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Card, CardBody } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chips';
+import { DataTable } from '@/components/ui/DataTable';
 import { EmptyState, ErrorNotice, Loading, Notice } from '@/components/ui/Feedback';
 import { PageHead } from '@/components/ui/PageHead';
 import { ApiError } from '@/lib/api/client';
@@ -52,13 +54,52 @@ export function OrgScreen() {
     setActionError('');
   };
 
+  const unitColumns = [
+    { id: 'code', header: 'אות (מוצגת באפליקציה)', sortValue: (unit) => unit.code, cell: (unit) => <span className="code">{unit.code}</span> },
+    {
+      id: 'name',
+      header: 'שם היחידה (פנימי)',
+      sortValue: (unit) => (isUnnamed(unit) ? '' : unit.name),
+      cell: (unit) => (
+        <span className="org-name">
+          <button type="button" className="org-pick" aria-current={unit.id === selected?.id ? 'true' : undefined} onClick={() => pick(unit.id)}>
+            {unit.name}
+          </button>
+          {isUnnamed(unit) ? <Chip tone="warn">טרם הוגדר שם</Chip> : null}
+        </span>
+      ),
+    },
+    ...(SHOW_DEPARTMENTS
+      ? [{ id: 'departments', header: 'מחלקות', className: 'num', sortValue: (unit) => unit.departments.filter((department) => department.is_active).length, cell: (unit) => unit.departments.filter((department) => department.is_active).length }]
+      : []),
+    { id: 'users', header: 'משתמשים', className: 'num', sortValue: (unit) => unit.users, cell: (unit) => unit.users },
+    {
+      id: 'actions',
+      header: <span className="sr">פעולות</span>,
+      className: 'org-act',
+      cell: (unit) => (
+        <Button
+          size="sm"
+          icon="edit"
+          aria-label={`עריכת היחידה ${unit.name}`}
+          onClick={(event) => {
+            event.stopPropagation();
+            setUnitDialog({ unit });
+          }}
+        >
+          עריכה
+        </Button>
+      ),
+    },
+  ];
+
   return (
     <div>
-      <PageHead hideTitle title="יחידות ומחלקות" />
+      <PageHead hideTitle title={SHOW_DEPARTMENTS ? 'יחידות ומחלקות' : 'יחידות'} />
 
       <Card
         title="יחידות"
-        hint="לחיצה על יחידה מציגה את המחלקות שלה"
+        hint={SHOW_DEPARTMENTS ? 'לחיצה על יחידה מציגה את המחלקות שלה' : undefined}
         tools={
           <Button size="sm" variant="primary" icon="plus" onClick={() => setUnitDialog({ unit: null })}>
             יחידה חדשה
@@ -74,67 +115,20 @@ export function OrgScreen() {
             <ErrorNotice error={org.error} onRetry={() => void org.refetch()} />
           </CardBody>
         ) : units.length ? (
-          <div className="tbl-wrap">
-            <table className="t">
-              <thead>
-                <tr>
-                  <th scope="col">אות (מוצגת באפליקציה)</th>
-                  <th scope="col">שם היחידה (פנימי)</th>
-                  <th scope="col" className="num">
-                    מחלקות
-                  </th>
-                  <th scope="col" className="num">
-                    משתמשים
-                  </th>
-                  <th scope="col">
-                    <span className="sr">פעולות</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {units.map((unit) => {
-                  const isSelected = unit.id === selected?.id;
-                  return (
-                    // mouse shortcut; the name inside is the keyboard path
-                    <tr key={unit.id} className={`clk${isSelected ? ' sel' : ''}`} onClick={() => pick(unit.id)}>
-                      <td>
-                        <span className="code">{unit.code}</span>
-                      </td>
-                      <td>
-                        <span className="org-name">
-                          <button type="button" className="org-pick" aria-current={isSelected ? 'true' : undefined} onClick={() => pick(unit.id)}>
-                            {unit.name}
-                          </button>
-                          {isUnnamed(unit) ? <Chip tone="warn">טרם הוגדר שם</Chip> : null}
-                        </span>
-                      </td>
-                      <td className="num">{unit.departments.filter((department) => department.is_active).length}</td>
-                      <td className="num">{unit.users}</td>
-                      <td className="org-act">
-                        <Button
-                          size="sm"
-                          icon="edit"
-                          aria-label={`עריכת היחידה ${unit.name}`}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            setUnitDialog({ unit });
-                          }}
-                        >
-                          עריכה
-                        </Button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            label="יחידות"
+            columns={unitColumns}
+            rows={units}
+            rowKey={(unit) => unit.id}
+            // mouse shortcut; the name inside is the keyboard path
+            rowProps={(unit) => ({ className: `clk${unit.id === selected?.id ? ' sel' : ''}`, onClick: () => pick(unit.id) })}
+          />
         ) : (
           <EmptyState title="אין יחידות">אפשר להוסיף יחידה חדשה.</EmptyState>
         )}
       </Card>
 
-      {selected ? (
+      {SHOW_DEPARTMENTS && selected ? (
         <Card
           spaced
           aria-label={`מחלקות ביחידה ${selected.name}`}

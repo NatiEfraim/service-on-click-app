@@ -2,10 +2,9 @@
 
 import { useMutation } from '@tanstack/react-query';
 import { useId, useState } from 'react';
-import { Button } from '@/components/ui/Button';
 import { FormError } from '@/components/ui/Feedback';
 import { Field } from '@/components/ui/Field';
-import { Modal } from '@/components/ui/Modal';
+import { FormDialog } from '@/components/ui/FormDialog';
 import { ApiError } from '@/lib/api/client';
 import { orgApi } from '@/lib/api/endpoints';
 
@@ -20,6 +19,7 @@ export function DepartmentDialog({ unit, department, onClose }) {
   const formId = useId();
 
   const [name, setName] = useState(department?.name ?? '');
+  const [start] = useState({ name }); // the values the dialog opened with
   const [problem, setProblem] = useState('');
   const [formError, setFormError] = useState('');
 
@@ -44,20 +44,12 @@ export function DepartmentDialog({ unit, department, onClose }) {
   }
 
   return (
-    <Modal
+    <FormDialog
+      dirty={name !== start.name}
       title={department ? 'עריכת מחלקה' : `מחלקה חדשה ביחידה ${unit.name}`}
       onClose={onClose}
       busy={mutation.isPending}
-      footer={
-        <>
-          <Button type="submit" form={formId} variant="primary" loading={mutation.isPending}>
-            שמירה
-          </Button>
-          <Button onClick={onClose} disabled={mutation.isPending}>
-            ביטול
-          </Button>
-        </>
-      }
+      formId={formId}
     >
       <form id={formId} onSubmit={submit} noValidate style={{ display: 'grid', gap: 14 }}>
         <div>
@@ -81,6 +73,6 @@ export function DepartmentDialog({ unit, department, onClose }) {
         </p>
         <FormError>{formError}</FormError>
       </form>
-    </Modal>
+    </FormDialog>
   );
 }

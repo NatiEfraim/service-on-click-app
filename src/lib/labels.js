@@ -24,16 +24,16 @@ export const STAGE_SHORT = {
   closed: 'סגורה',
 };
 
-/** One colour per stage, in the muted grape / sage / teal palette of the app (stage order). */
+/** One colour per stage for the dashboard charts. */
 export const STAGE_COLOR = {
-  control_officer: '#6B4552',
-  vice_approver: '#A07D8C',
-  approver: '#2E7470',
-  supplier_files: '#C9BFA6',
-  supplier_approval: '#B5AE93',
-  supplier_number: '#948E72',
-  realization: '#145E4A',
-  barber: '#5E8C7E',
+  control_officer: '#6D4C88',
+  vice_approver: '#A85834',
+  approver: '#3B6397',
+  supplier_files: '#AD903F',
+  supplier_approval: '#934662',
+  supplier_number: '#5C6D83',
+  realization: '#376F51',
+  barber: '#39828C',
   closed: '#8A8296',
 };
 
@@ -121,3 +121,6 @@ export function commentError(comment, required) {
 }
 
 export const STAGE_FILTER_ORDER = ['barber', ...STAGE_ORDER.filter((stage) => stage !== 'barber')];
+
+/** Departments are hidden in the console for now; flip to true to show them again (data and API are untouched). */
+export const SHOW_DEPARTMENTS = false;

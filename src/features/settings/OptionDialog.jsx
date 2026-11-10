@@ -1,24 +1,23 @@
 'use client';
 
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Select } from '@/components/ui/Select';
 import { useId, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { FormError } from '@/components/ui/Feedback';
 import { Field } from '@/components/ui/Field';
 import { Seg } from '@/components/ui/Controls';
-import { Modal } from '@/components/ui/Modal';
+import { FormDialog } from '@/components/ui/FormDialog';
 import { settingsApi } from '@/lib/api/endpoints';
+import { useSaveMutation } from '@/lib/useSaveMutation';
 
 import { OPTION_FIELD_TYPES } from '@/lib/labels';
-import { useToast } from '@/providers/UiProvider';
 import { FIELD_TYPE_NUMBER, FIELD_TYPE_TEXT, INPUT_TYPES } from './constants';
 import { optionNameError } from './fieldRules';
-import { handleWriteError, useReloadSettings } from './useSettings';
+import { useReloadSettings } from './useSettings';
 
 /** Add or edit an option: name, kind and field type; a new list-type option can bring closed-text sub-options. */
 export function OptionDialog({ unitId, bookingTypeId, settings, field, target, siblings, onClose }) {
-  const toast = useToast();
   const reload = useReloadSettings(unitId, bookingTypeId);
   const ids = useId();
   const { option, parent } = target;
@@ -56,7 +55,7 @@ export function OptionDialog({ unitId, bookingTypeId, settings, field, target, s
   const isList = chosen !== null && OPTION_FIELD_TYPES.includes(chosen);
   const offerExtras = !option && kind === 'choice' && isList;
 
-  const mutation = useMutation({
+  const mutation = useSaveMutation({
     mutationFn: async () => {
       const saved = await settingsApi.saveOption(field.id, {
         ...(option ? { option_id: option.id } : {}),
@@ -73,16 +72,11 @@ export function OptionDialog({ unitId, bookingTypeId, settings, field, target, s
         }
       }
     },
-    onSuccess: async () => {
-      toast(option ? 'האפשרות עודכנה.' : 'האפשרות נוספה.', 'ok');
-      await reload();
-      onClose();
-    },
-    onError: async (e) => {
-      const shown = await handleWriteError(e, toast, reload);
-      if (shown) setError(shown.status === 409 ? 'יש לטפל בתתי האפשרויות תחילה.' : shown.message);
-      else onClose();
-    },
+    success: option ? 'האפשרות עודכנה.' : 'האפשרות נוספה.',
+    reload,
+    onSaved: onClose,
+    onFailed: (shown) => setError(shown.status === 409 ? 'יש לטפל בתתי האפשרויות תחילה.' : shown.message),
+    onHandled: onClose,
   });
 
   function submit() {
@@ -97,20 +91,13 @@ export function OptionDialog({ unitId, bookingTypeId, settings, field, target, s
   const where = parent ? `בתוך "${parent.name}"` : `בשדה "${field.field_display_name}"`;
 
   return (
-    <Modal
+    <FormDialog
+      dirty={name.trim() !== (option?.name ?? '').trim() || kind !== (option?.is_input ? 'input' : 'choice') || extras.some((extra) => extra.trim() !== '') || (typeId !== null && typeId !== loadedType)}
       title={option ? 'עריכת אפשרות' : 'אפשרות חדשה'}
       onClose={onClose}
       busy={mutation.isPending}
-      footer={
-        <>
-          <Button variant="primary" loading={mutation.isPending} disabled={Boolean(option) && lookup.isPending && known === null} onClick={submit}>
-            שמירה
-          </Button>
-          <Button onClick={onClose} disabled={mutation.isPending}>
-            ביטול
-          </Button>
-        </>
-      }
+      submitDisabled={Boolean(option) && lookup.isPending && known === null}
+      onSubmit={submit}
     >
       <p className="small muted" style={{ margin: 0 }}>{where}</p>
       <Field label="שם האפשרות">
@@ -190,6 +177,6 @@ export function OptionDialog({ unitId, bookingTypeId, settings, field, target, s
         השינוי נשמר מיד, נרשם בהיסטוריית השינויים ונשלח גם לאפליקציה.
       </p>
       <FormError>{error}</FormError>
-    </Modal>
+    </FormDialog>
   );
 }
