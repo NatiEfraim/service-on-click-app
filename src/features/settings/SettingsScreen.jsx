@@ -15,6 +15,8 @@ import { TABS } from './constants';
 import { DatesTab } from './DatesTab';
 import { OperationsTab } from './OperationsTab';
 import { OptionsTab } from './OptionsTab';
+import { choiceFields } from './options';
+import { isDatesReference } from './refs';
 import { StatementTab } from './StatementTab';
 import { TargetTab } from './TargetTab';
 import { useSettingsQuery } from './useSettings';
@@ -41,6 +43,14 @@ export function SettingsScreen() {
 
   // a domain commander (approver) does not see the statement
   const hidden = new Set(me.is_super_admin || me.is_admin ? [] : ['statement']);
+  // as in the mobile app, a domain shows only the settings it has: no blocked dates (equipment, construction),
+  // no choice fields (barber) or no operations settings means no tab for them
+  if (query.data) {
+    const references = query.data.system_references ?? [];
+    if (!references.some(isDatesReference)) hidden.add('dates');
+    if (!references.some((reference) => !isDatesReference(reference))) hidden.add('refs');
+    if (!choiceFields(query.data.form_fields ?? []).length) hidden.add('options');
+  }
   const tabs = TABS.filter((candidate) => !hidden.has(candidate.id));
   const requested = search.get('tab');
   const tab = tabs.find((candidate) => candidate.id === requested)?.id ?? tabs[0].id;

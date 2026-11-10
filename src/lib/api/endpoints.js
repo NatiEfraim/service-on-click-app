@@ -83,6 +83,8 @@ export const insightsApi = {
 
 
 export const settingsApi = {
+  /** The settings as the mobile app reads them (by route name, e.g. "car-booking"); blocked dates there are the live list. */
+  appReferences: (routeName, signal) => getData(`${APPROVER}/system-references/${routeName}`, undefined, signal),
   get: (unitId, bookingTypeId, signal) =>
     getData(`${APPROVER}/settings/${unitId}/${bookingTypeId}`, undefined, signal),
   /** Previews which bookings the blocked dates would cancel; saves nothing. */
