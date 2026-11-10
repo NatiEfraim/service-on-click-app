@@ -127,7 +127,7 @@ export function Ticket({ booking, showActions = true, onAction, outcome, enterin
             {owner} <span className="serial">{booking.serial_number}</span>
           </button>
           {booking.attachments_count > 0 ? (
-            <span className="clip" title={`${booking.attachments_count} קבצים מצורפים`}>
+            <span className="clip" data-tip={`${booking.attachments_count} קבצים מצורפים`}>
               <Icon name="clip" />
               {booking.attachments_count}
             </span>

@@ -44,7 +44,7 @@ function DomainCard({ unitId, bookingTypeId, index }) {
           <h2>{name}</h2>
           {query.data ? (
             // two names, then "+N" (the full list is the tooltip), so a long list never runs out of the card
-            <span className="hint" title={admins.join(', ') || undefined}>
+            <span className="hint" data-tip={admins.join(', ') || undefined}>
               {admins.length ? `מפקד מחנה: ${shortList(admins)}` : 'לא שובץ מפקד מחנה'}
             </span>
           ) : null}
@@ -74,7 +74,7 @@ function DomainCard({ unitId, bookingTypeId, index }) {
           // one line a stage: "stage: names" (two names, then "+N"; the full list is the line's tooltip)
           <ol className="st-lines" aria-label={`שלבי האישור ב${name}`}>
             {stations.map((station) => (
-              <li key={station.id} className={station.people.length ? '' : 'none'} title={station.people.join(', ') || undefined}>
+              <li key={station.id} className={station.people.length ? '' : 'none'} data-tip={station.people.join(', ') || undefined}>
                 <span className="pt" aria-hidden="true" />
                 <b>{station.label}</b>
                 <span className="names">

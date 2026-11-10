@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useState } from 'react';
 import { cssTransition, toast as toastify, ToastContainer } from 'react-toastify';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
+import { TooltipHost } from '@/components/ui/Tooltip';
 
 /** As in Rio: a toast rises from below while fading in, and fades out in place (keyframes in components.css). */
 const RiseFade = cssTransition({ enter: 'toast-rise-in', exit: 'toast-fade-out', collapseDuration: 180 });
@@ -43,6 +44,7 @@ export function UiProvider({ children }) {
     <ToastContext.Provider value={toast}>
       <ConfirmContext.Provider value={confirm}>
         {children}
+        <TooltipHost />
         <ToastContainer position="bottom-left" autoClose={2500} rtl stacked pauseOnFocusLoss={false} transition={RiseFade} />
         {pending ? (
           <Modal

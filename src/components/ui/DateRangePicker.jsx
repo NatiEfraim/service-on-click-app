@@ -142,7 +142,7 @@ export function DateRangePicker({ value, onChange, label = 'תאריך', placeho
         <AnimatedText>{text}</AnimatedText>
       </button>
       {clearPresence.mounted ? (
-        <button type="button" className="drp-clear" data-closing={clearPresence.closing || undefined} disabled={clearPresence.closing} aria-label="ניקוי התאריכים" title="ניקוי" onClick={() => onChange({ from: '', to: '' })}>
+        <button type="button" className="drp-clear" data-closing={clearPresence.closing || undefined} disabled={clearPresence.closing} aria-label="ניקוי התאריכים" data-tip="ניקוי" onClick={() => onChange({ from: '', to: '' })}>
           <Icon name="x" />
         </button>
       ) : null}

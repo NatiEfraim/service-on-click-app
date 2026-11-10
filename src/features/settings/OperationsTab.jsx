@@ -83,7 +83,7 @@ function RefRow({ reference, bookingTypeId, unitId, readOnly }) {
                 value={typeof value === 'string' ? value : ''}
                 disabled={readOnly}
                 aria-invalid={problem ? true : undefined}
-                title={problem || undefined}
+                data-tip={problem || undefined}
                 onChange={(event) => change(key, kind === 'phone' ? event.target.value.replace(/[^0-9]/g, '').slice(0, 10) : event.target.value)}
               />
             </label>

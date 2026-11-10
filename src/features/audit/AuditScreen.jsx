@@ -82,7 +82,7 @@ function AuditTarget({ row }) {
           type="button"
           className="audit-peek-btn"
           aria-label={`פרטי קריאה ${row.booking_serial}`}
-          title="פרטי הקריאה"
+          data-tip="פרטי הקריאה"
           onClick={(event) => {
             event.stopPropagation();
             drawer.open(row.booking_serial);
@@ -168,7 +168,7 @@ function PermissionsPeek({ person }) {
 
   return (
     <span ref={ref} className="audit-peek">
-      <button type="button" className="audit-peek-btn" aria-expanded={open} aria-label={`ההרשאות הנוכחיות של ${person.name ?? 'המשתמש'}`} title="הצצה בהרשאות הנוכחיות" onClick={(event) => { event.stopPropagation(); setOpen(!open); }}>
+      <button type="button" className="audit-peek-btn" aria-expanded={open} aria-label={`ההרשאות הנוכחיות של ${person.name ?? 'המשתמש'}`} data-tip="הצצה בהרשאות הנוכחיות" onClick={(event) => { event.stopPropagation(); setOpen(!open); }}>
         <Icon name="eye" />
       </button>
       {presence.mounted ? createPortal(

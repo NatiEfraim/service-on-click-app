@@ -19,7 +19,7 @@ export function Pipeline({ byStage: raw, analysis, onStage, stages = PIPELINE_ST
       {stages.map((id) => {
         const info = analysis[id];
         return (
-          <button key={id} type="button" className={`cell ${info?.severity ?? ''}`} style={{ '--c': STAGE_COLOR[id] }} title="הצגת הקריאות בשלב" onClick={() => onStage(id)}>
+          <button key={id} type="button" className={`cell ${info?.severity ?? ''}`} style={{ '--c': STAGE_COLOR[id] }} data-tip="הצגת הקריאות בשלב" onClick={() => onStage(id)}>
             <span className="s">
               <i className="sdot" />
               {STAGE_SHORT[id]}

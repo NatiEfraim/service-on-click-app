@@ -280,7 +280,7 @@ export function PermissionsDialog({ target, onClose }) {
                         if (!cell) {
                           return (
                             <td key={role} className="ppl-c">
-                              <span className="ppl-na" title="התפקיד אינו רלוונטי לתחום זה" aria-hidden="true">
+                              <span className="ppl-na" data-tip="התפקיד אינו רלוונטי לתחום זה" aria-hidden="true">
                                 —
                               </span>
                               <span className="sr">התפקיד אינו רלוונטי לתחום זה</span>
@@ -291,7 +291,7 @@ export function PermissionsDialog({ target, onClose }) {
                         const isChanged = changed.has(cellKey(role, row.bookingTypeId));
                         return (
                           <td key={role} className="ppl-c">
-                            <label className={`ppl-cell${cell.lock ? ' locked' : ''}${isChanged ? ' changed' : ''}`} title={cell.lock ?? undefined}>
+                            <label className={`ppl-cell${cell.lock ? ' locked' : ''}${isChanged ? ' changed' : ''}`} data-tip={cell.lock ?? undefined}>
                               <input
                                 type="checkbox"
                                 checked={shownValue(row, role, edits) ?? false}

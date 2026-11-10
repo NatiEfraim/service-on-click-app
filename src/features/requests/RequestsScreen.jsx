@@ -163,7 +163,7 @@ export function RequestsScreen() {
             <AnimatedText>{advanced ? `סינון (${advanced})` : 'סינון'}</AnimatedText>
           </Button>
           {clearPresence.mounted ? (
-            <Button size="sm" variant="ghost" icon="x" className="requests-clear" data-closing={clearPresence.closing || undefined} disabled={!hasFilters} aria-label="ניקוי הסינון" title="ניקוי הסינון" onClick={() => router.replace(filters.view === DEFAULT_FILTERS.view ? pathname : `${pathname}?view=${filters.view}`, { scroll: false })}>
+            <Button size="sm" variant="ghost" icon="x" className="requests-clear" data-closing={clearPresence.closing || undefined} disabled={!hasFilters} aria-label="ניקוי הסינון" data-tip={hasFilters ? 'ניקוי הסינון' : undefined} onClick={() => router.replace(filters.view === DEFAULT_FILTERS.view ? pathname : `${pathname}?view=${filters.view}`, { scroll: false })}>
             </Button>
           ) : null}
           </div>

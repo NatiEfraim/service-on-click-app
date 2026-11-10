@@ -58,7 +58,7 @@ export function DrawerStepper({ serial, onGo }) {
 
   return (
     <nav className="drawer-stepper" aria-label="מעבר בין קריאות">
-      <Button size="sm" variant="ghost" icon="right" aria-label="הקריאה הקודמת (חץ למעלה)" title="הקריאה הקודמת (↑)" disabled={!place.previous} onClick={goPrevious} />
+      <Button size="sm" variant="ghost" icon="right" aria-label="הקריאה הקודמת (חץ למעלה)" data-tip="הקריאה הקודמת (↑)" disabled={!place.previous} onClick={goPrevious} />
       <span className="pos" aria-live="polite">
         {place.index + 1} מתוך {place.count}
       </span>
@@ -67,7 +67,7 @@ export function DrawerStepper({ serial, onGo }) {
         variant="ghost"
         icon="left"
         aria-label="הקריאה הבאה (חץ למטה)"
-        title="הקריאה הבאה (↓)"
+        data-tip="הקריאה הבאה (↓)"
         loading={waitingForNext}
         disabled={!place.next && !place.nextNeedsLoad}
         onClick={goNext}

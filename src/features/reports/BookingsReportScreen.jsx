@@ -158,7 +158,7 @@ export function BookingsReportScreen() {
                 </thead>
                 <tbody>
                   {rows.map((row) => (
-                    <tr key={row.uuid ?? row.serial_number} className="clk" tabIndex={0} title="פרטי הקריאה" onClick={() => drawer.open(row.serial_number)} onKeyDown={(event) => event.key === 'Enter' && drawer.open(row.serial_number)}>
+                    <tr key={row.uuid ?? row.serial_number} className="clk" tabIndex={0} onClick={() => drawer.open(row.serial_number)} onKeyDown={(event) => event.key === 'Enter' && drawer.open(row.serial_number)}>
                       <td><b>{row.serial_number}</b></td>
                       <td>{row.booking_type_label}</td>
                       <td>{row.status_label}</td>
