@@ -3,66 +3,18 @@
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/Button';
-import { Chip } from '@/components/ui/Chips';
 import { EmptyState } from '@/components/ui/Feedback';
 import { Icon } from '@/components/ui/Icon';
 import { SideNav } from '@/components/ui/SideNav';
 import { settingsApi } from '@/lib/api/endpoints';
 import { useSaveMutation } from '@/lib/useSaveMutation';
 
-import { OPTION_FIELD_TYPES } from '@/lib/labels';
 import { useSetSearchParams } from '@/lib/useSetSearchParams';
 import { useConfirm } from '@/providers/UiProvider';
-import { fieldTypeName } from './fieldRules';
-import { FIELD_TYPE_TEXT } from './constants';
 import { OptionDialog } from './OptionDialog';
 import { buildOptionTree, choiceFields, countOptions } from './options';
 import { useReloadSettings } from './useSettings';
-
-/** Sub-options hang under a list-type option; a typed value or closed text has none (as in the mobile app). */
-function canHoldChildren(option) {
-  if (option.is_input) return false;
-  if (option.field_type_id != null) return OPTION_FIELD_TYPES.includes(option.field_type_id);
-  return option.has_category;
-}
-
-function OptionRows({ nodes, depth, canEdit, fieldTypes, onEdit, onAddChild, onRemove, lastRoot }) {
-  return (
-    <>
-      {nodes.map((node) => {
-        const { option } = node;
-        const isCategory = node.children.length > 0;
-        // a choice keeps at least one option; a category must be emptied first
-        const blocked = isCategory ? 'יש להסיר קודם את תתי האפשרויות' : lastRoot && depth === 0 ? 'שדה בחירה חייב לכלול לפחות אפשרות אחת' : '';
-        const typed = option.field_type_id != null && option.field_type_id !== FIELD_TYPE_TEXT;
-        return (
-          <div key={option.id}>
-            <div className={`st-opt${isCategory ? ' cat' : ''}`} style={{ '--depth': depth }}>
-              <span className="name">{option.name}</span>
-              {option.is_input ? <Chip tone="acc">הזנת ערך</Chip> : null}
-              {typed ? <Chip>{fieldTypeName(option.field_type_id, fieldTypes)}</Chip> : null}
-              {isCategory ? <Chip>{node.children.length} תתי-אפשרויות</Chip> : null}
-              {canEdit ? (
-                <span className="st-actions">
-                  {canHoldChildren(option) ? (
-                    <Button size="sm" icon="plus" aria-label={`הוספת תת-אפשרות ל${option.name}`} data-tip="הוספת תת-אפשרות" onClick={() => onAddChild(option)} />
-                  ) : null}
-                  <Button size="sm" icon="edit" aria-label={`עריכת האפשרות ${option.name}`} onClick={() => onEdit(option)}>
-                    עריכה
-                  </Button>
-                  <Button size="sm" variant="danger" icon="trash" aria-label={`הסרת האפשרות ${option.name}`} data-tip={blocked || 'הסרה מהטופס'} disabled={Boolean(blocked)} onClick={() => onRemove(node)} />
-                </span>
-              ) : null}
-            </div>
-            {isCategory ? (
-              <OptionRows nodes={node.children} depth={depth + 1} canEdit={canEdit} fieldTypes={fieldTypes} onEdit={onEdit} onAddChild={onAddChild} onRemove={onRemove} lastRoot={false} />
-            ) : null}
-          </div>
-        );
-      })}
-    </>
-  );
-}
+import { OptionRows } from './OptionRows';
 
 /** Choice options at any depth (super admin only), as in the mobile app. A removed option bookings used is archived, otherwise deleted. */
 export function OptionsTab({ unitId, bookingTypeId, settings }) {
@@ -99,7 +51,6 @@ export function OptionsTab({ unitId, bookingTypeId, settings }) {
     return () => clearTimeout(timer);
   }, [current?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const shown = fields.find((field) => field.id === shownId) ?? current;
-
 
   const tree = useMemo(() => (shown ? buildOptionTree(settings.options, shown.id) : []), [settings.options, shown]);
 

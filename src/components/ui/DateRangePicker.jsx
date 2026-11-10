@@ -5,42 +5,13 @@ import { createPortal } from 'react-dom';
 import { AnimatedText } from './AnimatedText';
 import { Icon } from './Icon';
 import { usePresence } from './usePresence';
-
-/** Dates travel as 'YYYY-MM-DD' (what the API's from / to take). */
-const pad = (n) => String(n).padStart(2, '0');
-const toIso = (date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-const fromIso = (iso) => {
-  const [y, m, d] = iso.split('-').map(Number);
-  return new Date(y, m - 1, d);
-};
-const show = (iso) => {
-  const [y, m, d] = iso.split('-');
-  return `${d}/${m}/${y}`;
-};
-const addDays = (date, days) => new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
+import { toIso, fromIso, show, presets, monthGrid } from './date-range-utils';
 
 const MONTH = new Intl.DateTimeFormat('he', { month: 'long', year: 'numeric' });
 /** Matches .drp-pop's width in components.css (used to keep the calendar inside the window). */
 const CALENDAR_WIDTH = 296;
 /** Sunday first, as in Israel. */
 const WEEKDAYS = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
-
-function presets() {
-  const today = new Date();
-  return [
-    { label: 'היום', from: toIso(today), to: toIso(today) },
-    { label: '7 ימים', from: toIso(addDays(today, -6)), to: toIso(today) },
-    { label: '30 ימים', from: toIso(addDays(today, -29)), to: toIso(today) },
-    { label: 'החודש', from: toIso(new Date(today.getFullYear(), today.getMonth(), 1)), to: toIso(today) },
-  ];
-}
-
-/** The 6 x 7 days shown for a month, starting on the Sunday on or before its 1st. */
-function monthGrid(month) {
-  const first = new Date(month.getFullYear(), month.getMonth(), 1);
-  const start = addDays(first, -first.getDay());
-  return Array.from({ length: 42 }, (_, i) => addDays(start, i));
-}
 
 /** One day: the same calendar, a click picks the day and closes. `value` / `onChange` are a 'YYYY-MM-DD' string ('' = none). */
 export function DatePicker({ value, onChange, label = 'תאריך', placeholder = 'בחירת תאריך', clearable = true, min, max, isDateDisabled }) {

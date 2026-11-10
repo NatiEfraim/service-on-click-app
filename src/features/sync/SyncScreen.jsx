@@ -6,17 +6,18 @@ import { Fragment, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { ExpandRow } from '@/components/ui/ExpandRow';
-import { EmptyState, ErrorNotice, Loading, Notice } from '@/components/ui/Feedback';
+import { EmptyState, ErrorNotice, Loading } from '@/components/ui/Feedback';
 import { Icon } from '@/components/ui/Icon';
 import { PageHead } from '@/components/ui/PageHead';
 import { StatTile } from '@/components/ui/Stat';
 import { ResolveConflictDialog } from '@/features/bookings/ResolveConflictDialog';
-import { useBookingDrawer } from '@/features/bookings/useBookingDrawer';
 import { ApiError } from '@/lib/api/client';
 import { syncApi } from '@/lib/api/endpoints';
 import { invalidateWork, keys } from '@/lib/api/keys';
 import { fmtAgo, fmtDateTime } from '@/lib/format';
 import { useToast } from '@/providers/UiProvider';
+import { BookingLink } from './BookingLink';
+import { FileRecords } from './FileRecords';
 
 const KIND_LABEL = { booking_status: 'סטטוסים של קריאות', booking_values: 'תיקוני ערכים', system_config: 'הגדרות מערכת' };
 const STATE = {
@@ -28,17 +29,6 @@ const STATE = {
   awaiting_external_support: { label: 'ממתין לתמיכה באפליקציה', tone: 'warn' },
 };
 const stateOf = (state) => STATE[state] ?? { label: state, tone: '' };
-
-/** A link-looking booking number that opens the booking's side panel. */
-function BookingLink({ serial }) {
-  const drawer = useBookingDrawer();
-  if (!serial) return '—';
-  return (
-    <button type="button" className="linkbtn" onClick={(event) => { event.stopPropagation(); drawer.open(serial); }}>
-      {serial}
-    </button>
-  );
-}
 
 /** One headline number of the status strip. */
 /** Super admin: is the channel to the mobile app flowing, and if not, what is stuck and how to free it. */
@@ -226,28 +216,3 @@ export function SyncScreen() {
   );
 }
 
-/** The bookings one file carried (loaded when the row opens). */
-function FileRecords({ file }) {
-  const query = useQuery({ queryKey: keys.syncFile(file.id), queryFn: ({ signal }) => syncApi.file(file.id, signal), staleTime: 60_000 });
-  return (
-    <div className="audit-detail-body">
-      <p className="hint ltr" style={{ textAlign: 'start' }}>{file.file_name}</p>
-      {file.last_error ? <Notice tone="bad">{file.last_error}</Notice> : null}
-      {query.isPending ? (
-        <Loading rows={2} />
-      ) : query.isError ? (
-        <ErrorNotice error={query.error} onRetry={() => void query.refetch()} />
-      ) : query.data.records.length === 0 ? (
-        <p className="hint">אין רשומות בקובץ.</p>
-      ) : (
-        <div className="sync-records">
-          {query.data.records.map((record, i) => (
-            <span key={i} className="chip">
-              {record.serial_number ?? record.booking_serial ? <BookingLink serial={record.serial_number ?? record.booking_serial} /> : `#${i + 1}`}
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}

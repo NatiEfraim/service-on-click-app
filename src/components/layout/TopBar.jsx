@@ -3,144 +3,18 @@
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { insightsApi } from '@/lib/api/endpoints';
 import { keys } from '@/lib/api/keys';
 import { buildNav, isActivePath } from '@/lib/nav';
-import { initials } from '@/lib/format';
-import { ROLE_NAME } from '@/lib/labels';
 import { APP_NAME } from '@/lib/config';
 import { useSession } from '@/providers/SessionProvider';
 import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
-import { usePresence } from '@/components/ui/usePresence';
-import { MENU_HOVER_CLOSE_MS } from '@/lib/motion';
 import { GlobalSearch } from './GlobalSearch';
 import { Logo } from './Logo';
-
-/** Closes a dropdown on outside click or Escape. */
-function useDismiss(open, close) {
-  const ref = useRef(null);
-  useEffect(() => {
-    if (!open) return;
-    const onPointer = (event) => {
-      if (ref.current && !ref.current.contains(event.target)) close();
-    };
-    const onKey = (event) => {
-      if (event.key === 'Escape') close();
-    };
-    document.addEventListener('mousedown', onPointer);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onPointer);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [open, close]);
-  return ref;
-}
-
-/**
- * A mouse opens a dropdown by resting on it; leaving closes it after a short grace, so a slightly wobbly path to an item
- * (or out and straight back) does not shut it. Click and keyboard still toggle it. Spread the result on the dropdown's wrapper.
- */
-function useHoverOpen(setOpen) {
-  const leaveTimer = useRef(null);
-  useEffect(() => () => window.clearTimeout(leaveTimer.current), []);
-  const hoverable = () => window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-  return {
-    onMouseEnter: () => {
-      window.clearTimeout(leaveTimer.current);
-      if (hoverable()) setOpen(true);
-    },
-    onMouseLeave: () => {
-      if (!hoverable()) return;
-      leaveTimer.current = window.setTimeout(() => setOpen(false), MENU_HOVER_CLOSE_MS);
-    },
-  };
-}
-
-function ManageMenu({ group, pathname, onNavigate }) {
-  const [open, setOpen] = useState(false);
-  const ref = useDismiss(open, () => setOpen(false));
-  const hover = useHoverOpen(setOpen);
-  const presence = usePresence(open);
-  const current = group.items.some((item) => isActivePath(pathname, item.href, item.also));
-
-  return (
-    <div className={`dd${current ? ' current' : ''}`} ref={ref} {...hover}>
-      <button type="button" aria-haspopup="true" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
-        {group.label}
-        <Icon name="down" />
-      </button>
-      {presence.mounted ? (
-        <div className="menu" data-closing={presence.closing || undefined}>
-          {group.items.map((item) => (
-            <Link
-              key={item.id}
-              href={item.href}
-              aria-current={isActivePath(pathname, item.href, item.also) ? 'page' : undefined}
-              onClick={() => {
-                setOpen(false);
-                onNavigate();
-              }}
-            >
-              <span>
-                {item.label}
-                <small>{item.description}</small>
-              </span>
-            </Link>
-          ))}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function UserMenu() {
-  const { me, unitName, signOut } = useSession();
-  const [open, setOpen] = useState(false);
-  const ref = useDismiss(open, () => setOpen(false));
-  const hover = useHoverOpen(setOpen);
-  const presence = usePresence(open);
-
-  const name = me.user.full_name ?? me.user.personal_number;
-  const roles = me.is_super_admin
-    ? ROLE_NAME.super_admin
-    : me.roles
-        .map((role) => ROLE_NAME[role] ?? role)
-        .filter((label) => label !== ROLE_NAME.user)
-        .join(', ');
-
-  return (
-    <div className="dd" ref={ref} {...hover}>
-      <button type="button" className="userbtn" aria-haspopup="true" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
-        <span className="avatar">{initials(name)}</span>
-        <span className="nm">
-          {name}
-          <small>{roles}</small>
-        </span>
-        <Icon name="down" />
-      </button>
-      {presence.mounted ? (
-        <div className="menu end" data-closing={presence.closing || undefined} style={{ minWidth: 280 }}>
-          <div style={{ padding: 10 }}>
-            <b>{name}</b>
-            <div className="small muted">
-              {roles || 'ללא תפקיד'} · {unitName(me.user.unit_id)}
-            </div>
-            <div className="small muted">
-              מספר אישי <span className="serial">{me.user.personal_number}</span>
-            </div>
-          </div>
-          <button type="button" className="mi" onClick={() => void signOut()}>
-            <Icon name="logout" />
-            התנתקות
-          </button>
-        </div>
-      ) : null}
-    </div>
-  );
-}
+import { ManageMenu } from './ManageMenu';
+import { UserMenu } from './UserMenu';
 
 export function TopBar() {
   const { me } = useSession();
