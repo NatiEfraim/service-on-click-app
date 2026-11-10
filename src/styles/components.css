@@ -348,3 +348,6 @@ table.t { width: 100%; border-collapse: collapse; font-size: 14px; }
 /* a disabled button with a hint: the wrapper takes the hover */
 .btn-tip { display: inline-flex; }
 .btn-tip > .btn[disabled] { pointer-events: none; }
+
+/* a hint may list names one per line */
+.tip { white-space: pre-line; }

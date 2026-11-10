@@ -80,15 +80,13 @@ export function OrgScreen() {
       cell: (unit) => (
         <Button
           size="sm"
-          icon="edit"
+          icon="edit" data-tip="עריכה"
           aria-label={`עריכת היחידה ${unit.name}`}
           onClick={(event) => {
             event.stopPropagation();
             setUnitDialog({ unit });
           }}
-        >
-          עריכה
-        </Button>
+         />
       ),
     },
   ];
@@ -101,9 +99,7 @@ export function OrgScreen() {
         title="יחידות"
         hint={SHOW_DEPARTMENTS ? 'לחיצה על יחידה מציגה את המחלקות שלה' : undefined}
         tools={
-          <Button size="sm" variant="primary" icon="plus" onClick={() => setUnitDialog({ unit: null })}>
-            יחידה חדשה
-          </Button>
+          <Button size="sm" variant="primary" icon="plus" aria-label="יחידה חדשה" data-tip="יחידה חדשה" onClick={() => setUnitDialog({ unit: null })} />
         }
       >
         {org.isPending ? (
@@ -121,7 +117,7 @@ export function OrgScreen() {
             rows={units}
             rowKey={(unit) => unit.id}
             // mouse shortcut; the name inside is the keyboard path
-            rowProps={(unit) => ({ className: `clk${unit.id === selected?.id ? ' sel' : ''}`, onClick: () => pick(unit.id) })}
+            rowProps={SHOW_DEPARTMENTS ? (unit) => ({ className: 'clk', onClick: () => pick(unit.id) }) : undefined}
           />
         ) : (
           <EmptyState title="אין יחידות">אפשר להוסיף יחידה חדשה.</EmptyState>
@@ -169,9 +165,7 @@ export function OrgScreen() {
                       <td className="num">{department.users}</td>
                       <td>{department.is_active ? <Chip tone="ok">פעילה</Chip> : <Chip>מושבתת</Chip>}</td>
                       <td className="org-act">
-                        <Button size="sm" icon="edit" aria-label={`עריכת המחלקה ${department.name}`} onClick={() => setDepartmentDialog({ department })}>
-                          עריכה
-                        </Button>
+                        <Button size="sm" icon="edit" data-tip="עריכה" aria-label={`עריכת המחלקה ${department.name}`} onClick={() => setDepartmentDialog({ department })} />
                         <Button
                           size="sm"
                           variant={department.is_active ? 'danger' : 'default'}

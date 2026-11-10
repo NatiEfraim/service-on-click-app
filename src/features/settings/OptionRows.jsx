@@ -34,9 +34,7 @@ export function OptionRows({ nodes, depth, canEdit, fieldTypes, onEdit, onAddChi
                   {canHoldChildren(option) ? (
                     <Button size="sm" icon="plus" aria-label={`הוספת תת-אפשרות ל${option.name}`} data-tip="הוספת תת-אפשרות" onClick={() => onAddChild(option)} />
                   ) : null}
-                  <Button size="sm" icon="edit" aria-label={`עריכת האפשרות ${option.name}`} onClick={() => onEdit(option)}>
-                    עריכה
-                  </Button>
+                  <Button size="sm" icon="edit" data-tip="עריכה" aria-label={`עריכת האפשרות ${option.name}`} onClick={() => onEdit(option)} />
                   <Button size="sm" variant="danger" icon="trash" aria-label={`הסרת האפשרות ${option.name}`} data-tip={blocked || 'הסרה מהטופס'} disabled={Boolean(blocked)} onClick={() => onRemove(node)} />
                 </span>
               ) : null}

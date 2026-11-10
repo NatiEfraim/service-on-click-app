@@ -3,6 +3,7 @@ export const TABS = [
   { id: 'target', label: 'יעד טיפול' },
   { id: 'refs', label: 'הגדרות תפעול' },
   { id: 'dates', label: 'תאריכים חסומים' },
+  { id: 'barber', label: 'ימי מספרה' },
   { id: 'options', label: 'אפשרויות בחירה' },
   { id: 'statement', label: 'הצהרה' },
 ];

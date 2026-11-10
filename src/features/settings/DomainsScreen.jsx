@@ -10,6 +10,7 @@ import { useSetSearchParams } from '@/lib/useSetSearchParams';
 import { useSession } from '@/providers/SessionProvider';
 import './settings.css';
 import { DomainCard } from './DomainCard';
+import { DomainsOpenTotal } from './DomainsOpenTotal';
 
 /** Below this the grid scrolls inside itself instead of squeezing the cards further. */
 const MIN_GRID_HEIGHT = 420;
@@ -67,11 +68,14 @@ export function DomainsScreen() {
       {typeIds.length === 0 ? (
         <EmptyState title="אין תחומים בניהולך" />
       ) : (
+        <>
+        <DomainsOpenTotal unitId={unitId} typeIds={typeIds} />
         <div ref={grid} className="st-domains st-domains-fit">
           {typeIds.map((id, index) => (
             <DomainCard key={`${unitId}-${id}`} unitId={unitId} bookingTypeId={id} index={index} />
           ))}
         </div>
+        </>
       )}
     </>
   );
