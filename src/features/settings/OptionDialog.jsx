@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { FormError } from '@/components/ui/Feedback';
 import { Field } from '@/components/ui/Field';
 import { Seg } from '@/components/ui/Controls';
-import { Modal } from '@/components/ui/Modal';
+import { FormDialog } from '@/components/ui/FormDialog';
 import { settingsApi } from '@/lib/api/endpoints';
 import { useSaveMutation } from '@/lib/useSaveMutation';
 
@@ -91,20 +91,13 @@ export function OptionDialog({ unitId, bookingTypeId, settings, field, target, s
   const where = parent ? `בתוך "${parent.name}"` : `בשדה "${field.field_display_name}"`;
 
   return (
-    <Modal
+    <FormDialog
+      dirty={name.trim() !== (option?.name ?? '').trim() || kind !== (option?.is_input ? 'input' : 'choice') || extras.some((extra) => extra.trim() !== '') || (typeId !== null && typeId !== loadedType)}
       title={option ? 'עריכת אפשרות' : 'אפשרות חדשה'}
       onClose={onClose}
       busy={mutation.isPending}
-      footer={
-        <>
-          <Button variant="primary" loading={mutation.isPending} disabled={Boolean(option) && lookup.isPending && known === null} onClick={submit}>
-            שמירה
-          </Button>
-          <Button onClick={onClose} disabled={mutation.isPending}>
-            ביטול
-          </Button>
-        </>
-      }
+      submitDisabled={Boolean(option) && lookup.isPending && known === null}
+      onSubmit={submit}
     >
       <p className="small muted" style={{ margin: 0 }}>{where}</p>
       <Field label="שם האפשרות">
@@ -184,6 +177,6 @@ export function OptionDialog({ unitId, bookingTypeId, settings, field, target, s
         השינוי נשמר מיד, נרשם בהיסטוריית השינויים ונשלח גם לאפליקציה.
       </p>
       <FormError>{error}</FormError>
-    </Modal>
+    </FormDialog>
   );
 }

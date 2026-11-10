@@ -5,10 +5,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Select } from '@/components/ui/Select';
 import { useId, useMemo, useState } from 'react';
 import { DomainIcon } from '@/components/booking/DomainBadge';
-import { Button } from '@/components/ui/Button';
 import { EmptyState, ErrorNotice, FormError, Loading, Notice } from '@/components/ui/Feedback';
 import { Field } from '@/components/ui/Field';
-import { Modal } from '@/components/ui/Modal';
+import { FormDialog } from '@/components/ui/FormDialog';
 import { ApiError } from '@/lib/api/client';
 import { peopleApi } from '@/lib/api/endpoints';
 import { keys } from '@/lib/api/keys';
@@ -195,21 +194,14 @@ export function PermissionsDialog({ target, onClose }) {
   const reasonErrorId = `${ids}-reason-error`;
 
   return (
-    <Modal
+    <FormDialog
+      dirty={changes.length > 0 || (departmentEdit !== null && departmentEdit !== (currentDepartment === null ? '' : String(currentDepartment))) || reason.trim() !== ''}
       title={`הרשאות: ${displayName}`}
       wide
       onClose={onClose}
       busy={busy}
-      footer={
-        <>
-          <Button variant="primary" loading={busy} disabled={!matrix} onClick={submit}>
-            שמירה
-          </Button>
-          <Button onClick={onClose} disabled={busy}>
-            ביטול
-          </Button>
-        </>
-      }
+      submitDisabled={!matrix}
+      onSubmit={submit}
     >
       {loadError ? (
         <ErrorNotice error={loadError} onRetry={() => void reload()} title="לא ניתן לטעון את ההרשאות." />
@@ -363,6 +355,6 @@ export function PermissionsDialog({ target, onClose }) {
           <FormError>{formError}</FormError>
         </>
       ) : null}
-    </Modal>
+    </FormDialog>
   );
 }

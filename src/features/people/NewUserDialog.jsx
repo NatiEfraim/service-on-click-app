@@ -7,7 +7,7 @@ import { useId, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { FormError } from '@/components/ui/Feedback';
 import { Field } from '@/components/ui/Field';
-import { Modal } from '@/components/ui/Modal';
+import { FormDialog } from '@/components/ui/FormDialog';
 import { ApiError } from '@/lib/api/client';
 import { peopleApi } from '@/lib/api/endpoints';
 import { PERSONAL_NUMBER_PATTERN } from '@/lib/patterns';
@@ -110,20 +110,14 @@ export function NewUserDialog({ onClose, onCreated }) {
   );
 
   return (
-    <Modal
+    <FormDialog
+      dirty={[firstName, surname, personalNumber, phone, departmentId].some((value) => String(value).trim() !== '')}
       title="משתמש חדש"
       onClose={onClose}
       busy={mutation.isPending}
-      footer={
-        <>
-          <Button type="submit" form={formId} variant="primary" disabled={!ready || lookup.isFetching} loading={mutation.isPending}>
-            יצירה
-          </Button>
-          <Button onClick={onClose} disabled={mutation.isPending}>
-            ביטול
-          </Button>
-        </>
-      }
+      submitLabel="יצירה"
+      submitDisabled={!ready || lookup.isFetching}
+      formId={formId}
     >
       <form id={formId} onSubmit={submit} noValidate style={{ display: 'grid', gap: 14 }}>
         <div>
@@ -230,6 +224,6 @@ export function NewUserDialog({ onClose, onCreated }) {
         </fieldset>
         <FormError>{formError}</FormError>
       </form>
-    </Modal>
+    </FormDialog>
   );
 }

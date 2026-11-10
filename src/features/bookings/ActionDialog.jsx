@@ -2,9 +2,8 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
-import { Button } from '@/components/ui/Button';
 import { FormError } from '@/components/ui/Feedback';
-import { Modal } from '@/components/ui/Modal';
+import { FormDialog } from '@/components/ui/FormDialog';
 import { ApiError } from '@/lib/api/client';
 import { bookingsApi } from '@/lib/api/endpoints';
 import { invalidateWork } from '@/lib/api/keys';
@@ -87,20 +86,14 @@ export function ActionDialog({ booking, action, onClose, onDone, onDecided }) {
   }
 
   return (
-    <Modal
+    <FormDialog
+      dirty={comment.trim() !== ''}
       title={action.label}
       onClose={onClose}
       busy={mutation.isPending}
-      footer={
-        <>
-          <Button variant={tone === 'danger' ? 'danger-solid' : 'primary'} loading={mutation.isPending} onClick={submit}>
-            {action.label}
-          </Button>
-          <Button onClick={onClose} disabled={mutation.isPending}>
-            ביטול
-          </Button>
-        </>
-      }
+      submitLabel={action.label}
+      submitVariant={tone === 'danger' ? 'danger-solid' : 'primary'}
+      onSubmit={submit}
     >
       <p style={{ margin: 0 }}>
         קריאה <span className="serial">{booking.serial_number}</span> ({booking.booking_type_label}) תעבור מ&quot;{booking.status_label}&quot; ל&quot;{nextLabel}&quot;.
@@ -129,6 +122,6 @@ export function ActionDialog({ booking, action, onClose, onDone, onDecided }) {
         {fieldError}
       </div>
       <FormError>{error}</FormError>
-    </Modal>
+    </FormDialog>
   );
 }
