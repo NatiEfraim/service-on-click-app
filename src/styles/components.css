@@ -307,3 +307,23 @@ table.t { width: 100%; border-collapse: collapse; font-size: 14px; }
 @media (prefers-reduced-motion: reduce) { .side-nav-ind { transition: none; } }
 .side-nav .path { min-width: 0; overflow-wrap: anywhere; }
 .side-nav .n { flex: none; color: var(--mute); font-weight: 400; font-size: 13px; }
+
+/* DataTable (components/ui): a sortable header is a quiet button; its arrow shows on hover and stays when sorted */
+.t th .th-sort { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; border-radius: var(--r-sm); color: inherit; transition: color 150ms var(--ease-out); }
+.t th.num .th-sort { flex-direction: row-reverse; }
+.t th .th-sort svg { width: 14px; height: 14px; opacity: 0; transition: opacity 150ms var(--ease-out); }
+.t th .th-sort:hover { color: var(--ink); }
+.t th .th-sort:hover svg { opacity: .45; }
+.t th .th-sort.on { color: var(--ink); }
+.t th .th-sort.on svg { opacity: 1; color: var(--accent); }
+.t th .th-sort:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* the drawer's previous / next booking (DrawerStepper) */
+.drawer-stepper { display: inline-flex; align-items: center; gap: 2px; margin-inline-end: 8px; }
+.drawer-stepper .pos { min-width: 5.5em; text-align: center; font-size: 13px; color: var(--mute); font-variant-numeric: tabular-nums; }
+
+/* stepping between bookings in the drawer: the old one fades out (and can no longer be clicked), the new one fades in */
+.drawer-swap { display: grid; gap: 16px; align-content: start; animation: drawer-swap-in 140ms var(--ease-out); }
+.drawer-swap.out { opacity: 0; pointer-events: none; transition: opacity 90ms ease-in; animation: none; }
+@keyframes drawer-swap-in { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .drawer-swap { animation-duration: 100ms; } .drawer-swap.out { transition-duration: 60ms; } }

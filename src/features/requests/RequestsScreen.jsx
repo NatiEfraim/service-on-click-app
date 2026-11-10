@@ -29,6 +29,7 @@ import { useFitToWindow } from '@/lib/useFitToWindow';
 import { useSession } from '@/providers/SessionProvider';
 import { workflowFilterOptions, normalizeWorkflowFilters } from './workflow-filters';
 import { advancedCount, DEFAULT_FILTERS, parseFilters, SORTS, toApiParams, toSearchParams } from './filters';
+import { usePublishDrawerList } from '@/features/bookings/drawerList';
 
 /** Every booking the user may see; filters live in the URL so links and Back reproduce the list. */
 export function RequestsScreen() {
@@ -86,6 +87,8 @@ export function RequestsScreen() {
   const settled = !query.isPlaceholderData && query.data !== undefined;
   const rows = query.data?.pages.flatMap((page) => page.data) ?? [];
   const total = query.data?.pages[0]?.meta.total ?? 0;
+  // the drawer steps through these rows (‹ › and ↑ ↓), in this order
+  usePublishDrawerList(rows.map((row) => row.serial_number), { total: total || null, hasMore: Boolean(query.hasNextPage), loadMore: () => void query.fetchNextPage() });
 
   // The card ends at the bottom of the window and the list takes what the toolbar and filters leave, so only the list
   // scrolls. Capping the card (whose top never moves) rather than the list lets the list shrink and grow with the

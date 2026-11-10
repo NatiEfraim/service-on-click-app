@@ -14,6 +14,8 @@ export function useBookingDrawer() {
 
   const open = useCallback((next) => setParams({ booking: String(next) }, 'push'), [setParams]);
   const close = useCallback(() => setParams({ booking: null }), [setParams]);
+  // stepping to another booking in the open drawer: no new history entry, so Back still closes the drawer
+  const go = useCallback((next) => setParams({ booking: String(next) }), [setParams]);
 
-  return { serial, open, close };
+  return { serial, open, close, go };
 }

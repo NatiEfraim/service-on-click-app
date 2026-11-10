@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { DRAWER_EXIT_MS, EASE_DRAWER } from '@/lib/motion';
 import { Button } from './Button';
@@ -12,10 +12,15 @@ const FADE_OUT = [{ opacity: 1 }, { opacity: 0 }];
 /** Back out the way it came in: to the left edge it sits on. */
 const SLIDE_OUT = [{ transform: 'translateX(0)' }, { transform: 'translateX(100%)' }];
 
-function DrawerInner({ title, label, onClose, children }) {
+function DrawerInner({ title, label, onClose, tools, scrollKey, children }) {
   const ref = useRef(null);
   const scrimRef = useRef(null);
   const closeRef = useRef(null);
+  const scrollRef = useRef(null);
+  // a new item in the same panel (e.g. the next booking) starts from the top
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: 0 });
+  }, [scrollKey]);
   useOverlay(ref, { onEscape: onClose, initialFocus: closeRef });
   const [exitParts] = useState(() => [{ ref: scrimRef, frames: FADE_OUT }, { ref, frames: SLIDE_OUT }]);
   useExitGhost(exitParts, { duration: DRAWER_EXIT_MS, easing: EASE_DRAWER });
@@ -27,11 +32,12 @@ function DrawerInner({ title, label, onClose, children }) {
         <header>
           <h2>{title}</h2>
           <span style={{ flex: 1 }} />
+          {tools}
           <Button ref={closeRef} size="sm" onClick={onClose}>
             סגירה
           </Button>
         </header>
-        <div className="scroll">{children}</div>
+        <div ref={scrollRef} className="scroll">{children}</div>
       </aside>
     </>
   );
