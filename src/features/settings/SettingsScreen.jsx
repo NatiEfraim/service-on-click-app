@@ -41,8 +41,9 @@ export function SettingsScreen() {
   const card = useRef(null);
   useFitToWindow(card, 180, query.isSuccess);
 
-  // a domain commander (approver) does not see the statement
-  const hidden = new Set(me.is_super_admin || me.is_admin ? [] : ['statement']);
+  // Keep the statement tab hidden until it is needed again.
+  const showStatement = false;
+  const hidden = new Set(showStatement && (me.is_super_admin || me.is_admin) ? [] : ['statement']);
   // as in the mobile app, a domain shows only the settings it has: no blocked dates (equipment, construction),
   // no choice fields (barber) or no operations settings means no tab for them
   if (query.data) {
