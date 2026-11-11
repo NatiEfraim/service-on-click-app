@@ -225,6 +225,16 @@ span.chart-fade { flex-direction: row; align-items: center; gap: 8px; white-spac
 .panel > header { display: flex; align-items: baseline; gap: 10px; padding: 14px 18px 10px; border-bottom: 1px solid var(--line-2); }
 .panel > header h2 { font-size: 16px; margin: 0; font-weight: 700; }
 .panel .body { padding: 14px 18px; }
+.booking-tag { position: relative; display: inline-flex; }
+.booking-tag-in, .booking-tag-out { display: inline-flex; }
+.booking-tag-in { animation: booking-tag-in 220ms var(--ease-out) 80ms both; }
+.booking-tag-out { animation: booking-tag-out 180ms var(--ease-in) both; pointer-events: none; }
+.booking-tag[data-replacing] .booking-tag-out { position: absolute; inset-block-start: 0; inset-inline-start: 0; width: max-content; }
+@keyframes booking-tag-in { from { opacity: 0; } }
+@keyframes booking-tag-out { to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .booking-tag .booking-tag-in, .booking-tag .booking-tag-out { animation-duration: 1ms; animation-delay: 0ms; }
+}
 .rail { padding: 6px 4px 2px; overflow-x: auto; }
 .rail-track { position: relative; isolation: isolate; display: flex; align-items: flex-start; min-width: var(--rail-min-width); --rail-duration: 360ms; }
 .rail-track::before, .rail-progress { content: ""; position: absolute; top: 10px; inset-inline-start: var(--rail-start); height: 3px; }

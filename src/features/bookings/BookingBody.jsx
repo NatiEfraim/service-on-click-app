@@ -18,6 +18,32 @@ import { AttachmentsPanel } from './Attachments';
 import { ResolveConflictDialog } from './ResolveConflictDialog';
 import { useStatusAction } from './useStatusAction';
 
+function FadingTag({ value, children }) {
+  const [current, setCurrent] = useState({ value, children });
+  const [previous, setPrevious] = useState(null);
+
+  if (current.value !== value) {
+    setPrevious(current.value == null ? null : current);
+    setCurrent({ value, children });
+  }
+
+  if (value == null && !previous) return null;
+
+  return (
+    <span className="booking-tag" data-replacing={Boolean(previous && value != null) || undefined}>
+      {previous && (
+        <span key={`out-${previous.value}`} className="booking-tag-out" aria-hidden="true"
+          onAnimationEnd={(event) => {
+            if (event.target === event.currentTarget) setPrevious(null);
+          }}>
+          {previous.children}
+        </span>
+      )}
+      {value != null && <span key={value} className="booking-tag-in">{children}</span>}
+    </span>
+  );
+}
+
 export function Body({ booking }) {
   const session = useSession();
   const { catalog, can, canAct, unitName, typeName, departmentName } = session;
@@ -33,11 +59,15 @@ export function Body({ booking }) {
     <>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         <DomainBadge bookingTypeId={booking.booking_type_id} />
-        <StatusChip statusId={booking.status_id} label={booking.status_label} />
+        <FadingTag value={`${booking.status_id}:${booking.status_label}`}>
+          <StatusChip statusId={booking.status_id} label={booking.status_label} />
+        </FadingTag>
         <Chip>{booking.booking_type_label}</Chip>
         <Chip>{unitName(booking.unit_id)}</Chip>
-        {conflict || booking.has_conflict ? <NeedsDecision /> : null}
-        {booking.sync_state === 'pending' ? <Chip tone="info">ממתינה לשליחה לאפליקציה</Chip> : null}
+        <FadingTag value={conflict || booking.has_conflict ? 'conflict' : null}><NeedsDecision /></FadingTag>
+        <FadingTag value={booking.sync_state === 'pending' ? 'pending' : null}>
+          <Chip tone="info">ממתינה לשליחה לאפליקציה</Chip>
+        </FadingTag>
       </div>
 
       {conflict ? (
