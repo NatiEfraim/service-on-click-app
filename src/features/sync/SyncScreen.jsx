@@ -51,7 +51,8 @@ function PendingDecisionRow({ row, selected }) {
         setPosition(null);
         return;
       }
-      const columns = Array.from(source.current.cells, (cell) => `${cell.getBoundingClientRect().width / bounds.width * 100}%`);
+      // the row's own column widths (px), so the tab's text sits exactly over the row's while the tab reaches to the panel
+      const columns = Array.from(source.current.cells, (cell) => `${cell.getBoundingClientRect().width}px`);
       setPosition({
         '--decision-columns': columns.join(' '),
         '--decision-top': `${bounds.top}px`,

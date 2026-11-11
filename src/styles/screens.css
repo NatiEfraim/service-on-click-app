@@ -479,30 +479,37 @@ span.chart-fade { flex-direction: row; align-items: center; gap: 8px; white-spac
 }
 .sync-pending tr:has(.sync-booking-link[aria-current]) > td { background: var(--bg); }
 :is(.sync-problem, .sync-records) .sync-booking-link[aria-current] { font-weight: 700; }
+/* the booking open in the side panel, in the sync screen's "ממתינות לשליחה" table: its row becomes a tab joined to the
+   panel - the panel's background, reaching from the row to the panel's edge, lifted above the dimming. The tab is laid
+   out at its full size from the start and only its visible part animates (clip-path), so nothing is re-laid out on
+   each frame: it reaches out to the panel as the panel slides in, and draws back into the row as the panel slides out
+   (240ms = DRAWER_EXIT_MS), then melts into the row's own background. Its text sits in the row's exact columns (px) */
 .sync-decision-preview {
+  --gap: max(0px, calc(var(--decision-right) - var(--drawer-width)));
   position: fixed; z-index: 61; pointer-events: none;
-  top: clamp(0px, var(--decision-top), calc(100dvh - var(--decision-height) - 16px));
-  left: max(12px, min(var(--decision-left), calc(100vw - var(--drawer-width) - 260px)));
-  right: var(--drawer-width); min-height: calc(var(--decision-height) + 12px);
-  display: grid; grid-template-columns: var(--decision-columns); align-items: center; text-align: start; font-size: 14px;
-  border-start-end-radius: var(--r); border-end-end-radius: var(--r); background: var(--bg);
-  animation: sync-decision-open 300ms var(--ease-drawer) both;
+  top: var(--decision-top); left: var(--decision-left); right: var(--drawer-width); height: var(--decision-height);
+  padding-inline-start: var(--gap);
+  display: grid; grid-template-columns: var(--decision-columns); align-content: center; align-items: center; text-align: start; font-size: 14px;
+  background: var(--bg); border-start-end-radius: var(--r); border-end-end-radius: var(--r);
+  will-change: clip-path;
+  animation: sync-tab-in 300ms var(--ease-drawer) both;
 }
 .sync-decision-preview > span { min-width: 0; padding-inline: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-@media (min-width: 1061px) and (prefers-reduced-motion: no-preference) {
+.sync-decision-preview[data-closing] { animation: sync-tab-out 240ms var(--ease-drawer) both; }
+@keyframes sync-tab-in {
+  from { clip-path: inset(0 var(--gap) 0 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+@keyframes sync-tab-out {
+  0% { clip-path: inset(0 0 0 0); background-color: var(--bg); opacity: 1; }
+  80% { clip-path: inset(0 var(--gap) 0 0); background-color: var(--surface); opacity: 1; }
+  100% { clip-path: inset(0 var(--gap) 0 0); background-color: var(--surface); opacity: 0; }
+}
+/* the row under the tab: its text hides while the tab (with the same text in the same place) is up, and comes back as
+   the tab melts away, so the swap is never seen */
+@media (min-width: 1061px) {
   .sync-pending tr[data-preview] > td > * { opacity: 0; }
-  .sync-pending tr[data-preview][data-closing] > td > * { opacity: 1; transition: opacity 240ms var(--ease-drawer); }
-}
-.sync-decision-preview[data-closing] {
-  animation: sync-decision-open 240ms var(--ease-drawer) reverse both, sync-decision-fade 240ms linear both;
-}
-@keyframes sync-decision-open {
-  from { top: var(--decision-top); left: var(--decision-left); right: var(--decision-right); min-height: var(--decision-height); }
-}
-@keyframes sync-decision-fade {
-  from { background-color: var(--bg); }
-  70% { background-color: var(--surface); opacity: 1; }
-  to { background-color: var(--surface); opacity: 0; }
+  .sync-pending tr[data-preview][data-closing] > td > * { opacity: 1; transition: opacity 120ms linear 140ms; }
 }
 @media (max-width: 1060px) {
   .sync-decision-preview { display: none; }
