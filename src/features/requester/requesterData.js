@@ -3,7 +3,7 @@
  * when the API is ready, only this file changes (same function names, same shapes).
  */
 
-import { requesterApi } from '@/lib/api/endpoints';
+import { OPEN_STATUS_IDS, requesterApi } from '@/lib/api/endpoints';
 import { domainIconSrc } from '@/lib/labels';
 
 /** Topics → groups → request types. `icon` is a name from components/ui/Icon. */
@@ -251,11 +251,31 @@ export async function fetchRequestDetails(row, signal) {
   };
 }
 
-/** The four counters on the home. */
-export async function fetchCounters() {
-  const count = (status) => demoRequests.filter((request) => request.status === status).length;
-  const done = count('done');
-  return { open: demoRequests.length - done, action: count('action'), handling: count('handling'), done };
+/** The only status that waits for the requester (StatusBookingEnum::PENDING_FILE: "נדרשת השלמת קבצים מהלקוח"). */
+const WAITING_FOR_USER = 8;
+const COMPLETED = 5;
+
+/**
+ * Which home counter a request falls under: done, action (waits for the user), handling (open, with someone else),
+ * or null (closed without completing: rejected or cancelled). "open" is action + handling.
+ */
+export function counterOf(row) {
+  if (row.status) return row.status === 'done' ? 'done' : row.status === 'action' ? 'action' : 'handling';
+  if (row.statusId === COMPLETED) return 'done';
+  if (row.statusId === WAITING_FOR_USER) return 'action';
+  return OPEN_STATUS_IDS.includes(row.statusId) ? 'handling' : null;
+}
+
+/** The four counters on the home, from the user's requests (the rows fetchMyRequests returns). */
+export function countRequests(rows) {
+  const counts = { open: 0, action: 0, handling: 0, done: 0 };
+  for (const row of rows) {
+    const counter = counterOf(row);
+    if (!counter) continue;
+    counts[counter] += 1;
+    if (counter !== 'done') counts.open += 1;
+  }
+  return counts;
 }
 
 /** Sends a request. `values` holds the field values, `files` the attachments. */

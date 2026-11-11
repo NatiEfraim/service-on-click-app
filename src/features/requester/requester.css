@@ -132,3 +132,17 @@
 /* the scroll bar on the right, as in every other list (tokens.css): the scroller ltr, its rows back to rtl */
 .rq-mine.full .rq-list { direction: ltr; }
 .rq-mine.full .rq-list > * { direction: rtl; }
+/* "changed since your last visit": a highlighted row with an "עודכנה" tag, and a count on the home counters */
+.rq-row-side { display: inline-flex; align-items: center; gap: 8px; flex: none; }
+.rq-row.changed { background: var(--info-w); box-shadow: inset -3px 0 0 var(--info); }
+.rq-row.changed:hover { background: color-mix(in srgb, var(--info-w) 70%, var(--hover)); }
+.rq-row.changed b { font-weight: 800; }
+.rq-new { font-size: 12px; font-weight: 700; color: var(--info); background: #fff; border: 1px solid var(--info); border-radius: 999px; padding: 1px 8px; }
+.rq-changed-count { display: block; margin-top: 2px; font-size: 12px; font-weight: 700; color: var(--info); }
+/* the home counters are buttons: each opens "הקריאות שלי" filtered to its requests */
+button.rq-counter { font: inherit; color: inherit; text-align: start; width: 100%; cursor: pointer; transition: border-color .15s ease, box-shadow .15s ease, transform .15s var(--ease-out); }
+button.rq-counter .go { margin-inline-start: auto; color: var(--mute); transition: transform .18s var(--ease-out), color .15s ease; }
+button.rq-counter:hover { border-color: var(--accent-soft); box-shadow: var(--shadow-lg, 0 4px 14px rgba(0, 0, 0, .06)); }
+button.rq-counter:hover .go { color: var(--ink); transform: translateX(-3px); }
+button.rq-counter:active { transform: scale(0.99); }
+button.rq-counter:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

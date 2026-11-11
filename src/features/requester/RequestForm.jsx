@@ -7,6 +7,7 @@ import { FormError } from '@/components/ui/Feedback';
 import { Icon } from '@/components/ui/Icon';
 import { Select } from '@/components/ui/Select';
 import { ATTACH_ACCEPT, findType, FORMS, iconSrc, submitRequest } from './requesterData';
+import { markSeen } from './seen';
 
 const isAllowedFile = (file) => file.type === 'application/pdf' || file.type.startsWith('image/');
 
@@ -32,7 +33,9 @@ export function RequestForm({ typeId, onHome, onDone }) {
 
   const send = useMutation({
     mutationFn: () => submitRequest(typeId, values, files),
-    onSuccess: () => {
+    onSuccess: (request) => {
+      // the user's own new request is already "seen": it must not stand out as changed
+      markSeen([request]);
       void client.invalidateQueries({ queryKey: ['requester-demo'] });
       onDone();
     },

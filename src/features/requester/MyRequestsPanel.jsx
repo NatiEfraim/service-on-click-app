@@ -16,7 +16,17 @@ import { OPEN_STATUS_IDS } from '@/lib/api/endpoints';
 import { useDebounced } from '@/lib/useDebounced';
 import { useFitToWindow } from '@/lib/useFitToWindow';
 import { RequestDrawer } from './RequestDrawer';
-import { fetchMyRequests, fetchPermittedCategories, PROGRESS_STEPS, requestProgress, STATUS_LABEL } from './requesterData';
+import { isChanged, markSeen, useSeen } from './seen';
+import { counterOf, fetchMyRequests, fetchPermittedCategories, PROGRESS_STEPS, requestProgress, STATUS_LABEL } from './requesterData';
+
+/** The home counters, as a filter on the full page (?bucket=): a counter's click lands here with it chosen. */
+const BUCKETS = [
+  { id: 'open', label: 'קריאות פתוחות' },
+  { id: 'action', label: 'נדרשת פעולה ממך' },
+  { id: 'handling', label: 'בטיפול אצל גורם' },
+  { id: 'done', label: 'הושלמו' },
+];
+const inBucket = (row, bucket) => (bucket === 'open' ? ['action', 'handling'].includes(counterOf(row)) : counterOf(row) === bucket);
 
 const STATUS_TONE = { action: 'warn', handling: 'info', done: 'ok' };
 
@@ -59,7 +69,8 @@ const statusNameOf = (row) => (row.status ? STATUS_LABEL[row.status] : row.statu
  * "הקריאות שלי": an icon and name for every category the user may open requests in (the new topics and the service
  * domains); picking one lists their requests in it. `full` is the whole-page version, otherwise the home's side panel.
  */
-export function MyRequestsPanel({ full = false, category, onCategory, onAll }) {
+export function MyRequestsPanel({ full = false, category, onCategory, bucket: rawBucket = null, onBucket = () => {}, onAll }) {
+  const bucket = BUCKETS.some((option) => option.id === rawBucket) ? rawBucket : null;
   const categories = useQuery({ queryKey: ['requester-demo', 'categories'], queryFn: ({ signal }) => fetchPermittedCategories(signal) });
   const list = categories.data ?? [];
   const current = list.find((candidate) => candidate.id === category) ?? null;
@@ -72,17 +83,25 @@ export function MyRequestsPanel({ full = false, category, onCategory, onAll }) {
   const [view, setView] = useState('all');
   // the request open in the side panel
   const [opened, setOpened] = useState(null);
+  // "changed since your last visit": opening a request marks it as seen in its current status
+  const seen = useSeen();
+  const open = (row) => {
+    markSeen([row]);
+    setOpened(row);
+  };
   // the full page ends at the window's bottom: only the list scrolls, never the page
   const card = useRef(null);
   useFitToWindow(card, 320, full);
   const [search, setSearch] = useState('');
   const query = useDebounced(search.trim(), 200);
   // the full page's "סינון" panel, as in the management requests screen: category, step, status, opening dates
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  // arriving from a home counter: the filters open, so the chosen "מצב" is in view
+  const [filtersOpen, setFiltersOpen] = useState(() => Boolean(bucket));
   const [stage, setStage] = useState('');
   const [status, setStatus] = useState('');
   const [range, setRange] = useState({ from: null, to: null });
   const allRows = requests.data ?? [];
+  const changedRows = allRows.filter((row) => isChanged(seen, row));
   const statusNames = [...new Set(allRows.map(statusNameOf).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'he'));
   const inRange = (row) => {
     if (!range.from && !range.to) return true;
@@ -94,13 +113,15 @@ export function MyRequestsPanel({ full = false, category, onCategory, onAll }) {
         (row) =>
           (view === 'all' || isOpen(row)) &&
           matches(row, query) &&
+          (!bucket || inBucket(row, bucket)) &&
           (stage === '' || requestProgress(row.statusId, row.status).step === Number(stage)) &&
           (!status || statusNameOf(row) === status) &&
           inRange(row),
       )
     : allRows;
-  const advanced = (current ? 1 : 0) + (stage !== '' ? 1 : 0) + (status ? 1 : 0) + (range.from || range.to ? 1 : 0);
+  const advanced = (bucket ? 1 : 0) + (current ? 1 : 0) + (stage !== '' ? 1 : 0) + (status ? 1 : 0) + (range.from || range.to ? 1 : 0);
   const clearFilters = () => {
+    onBucket(null);
     onCategory(null);
     setStage('');
     setStatus('');
@@ -147,6 +168,11 @@ export function MyRequestsPanel({ full = false, category, onCategory, onAll }) {
             </Button>
             {advanced ? <Button size="sm" variant="ghost" icon="x" className="requests-clear" aria-label="ניקוי הסינון" data-tip="ניקוי הסינון" onClick={clearFilters} /> : null}
           </div>
+          {changedRows.length ? (
+            <Button size="sm" variant="ghost" icon="check" onClick={() => markSeen(changedRows)}>
+              סימון הכל כנקרא ({changedRows.length})
+            </Button>
+          ) : null}
           <span className="grow" />
           {requests.isSuccess ? <span className="small muted">{rows.length} קריאות</span> : null}
           <div className="requests-sort-control">
@@ -163,6 +189,12 @@ export function MyRequestsPanel({ full = false, category, onCategory, onAll }) {
               <Select autoWidth className="input" value={current?.id ?? ''} onChange={(event) => onCategory(event.target.value || null)}>
                 <option value="">כל התחומים</option>
                 {list.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+              </Select>
+            </Field>
+            <Field label="מצב">
+              <Select autoWidth className="input" value={bucket ?? ''} onChange={(event) => onBucket(event.target.value || null)}>
+                <option value="">כל המצבים</option>
+                {BUCKETS.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
               </Select>
             </Field>
             <Field label="שלב">
@@ -195,12 +227,20 @@ export function MyRequestsPanel({ full = false, category, onCategory, onAll }) {
         <ul className="rq-list">
           {rows.map((row) => (
             <li key={row.id}>
-              <button type="button" className="rq-row" onClick={() => setOpened(row)} aria-label={`פרטי קריאה ${row.serial}`}>
+              <button
+                type="button"
+                className={`rq-row${isChanged(seen, row) ? ' changed' : ''}`}
+                onClick={() => open(row)}
+                aria-label={`פרטי קריאה ${row.serial}${isChanged(seen, row) ? ', עודכנה מאז הביקור האחרון' : ''}`}
+              >
               <div>
                 <b>{row.typeName}</b> <span className="serial">{row.serial}</span>
                 <div className="small muted">נפתחה {row.createdAt}</div>
               </div>
-              {row.status ? <Chip tone={STATUS_TONE[row.status]}>{STATUS_LABEL[row.status]}</Chip> : <StatusChip statusId={row.statusId} label={row.statusName} />}
+              <span className="rq-row-side">
+                {isChanged(seen, row) ? <span className="rq-new" data-tip="הסטטוס השתנה מאז שצפית בקריאה">עודכנה</span> : null}
+                {row.status ? <Chip tone={STATUS_TONE[row.status]}>{STATUS_LABEL[row.status]}</Chip> : <StatusChip statusId={row.statusId} label={row.statusName} />}
+              </span>
               </button>
             </li>
           ))}
@@ -219,7 +259,7 @@ export function MyRequestsPanel({ full = false, category, onCategory, onAll }) {
         <EmptyState title={current ? `אין לך קריאות ב${current.name}` : 'עוד לא פתחת קריאות'}>בחר סוג קריאה כדי לפתוח קריאה ראשונה</EmptyState>
       )
       )}
-      {opened ? <RequestDrawer row={opened} rows={rows} onGo={setOpened} onClose={() => setOpened(null)} /> : null}
+      {opened ? <RequestDrawer row={opened} rows={rows} onGo={open} onClose={() => setOpened(null)} /> : null}
     </section>
   );
 }

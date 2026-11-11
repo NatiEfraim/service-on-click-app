@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Logo } from '@/components/layout/Logo';
 import { Button } from '@/components/ui/Button';
 import { FadeIn } from '@/components/ui/FadeIn';
@@ -14,7 +14,8 @@ import { initials } from '@/lib/format';
 import { useSetSearchParams } from '@/lib/useSetSearchParams';
 import { MyRequestsPanel } from './MyRequestsPanel';
 import { RequestForm } from './RequestForm';
-import { fetchCounters, findType, iconSrc, TOPICS } from './requesterData';
+import { counterOf, countRequests, fetchMyRequests, findType, iconSrc, TOPICS } from './requesterData';
+import { isChanged, rememberFirstVisit, useSeen } from './seen';
 import './requester.css';
 
 const COUNTERS = [
@@ -78,7 +79,16 @@ export function RequesterHome({ onSignOut, fallback }) {
   const search = useSearchParams();
   const setParams = useSetSearchParams();
   const user = useQuery({ queryKey: ['requester', 'user'], queryFn: ({ signal }) => requesterApi.user(signal), retry: false });
-  const counters = useQuery({ queryKey: ['requester-demo', 'counters'], queryFn: fetchCounters });
+  // the user's requests (shared with the "הקריאות שלי" panel's cache): the counters are counted from them
+  const mine = useQuery({ queryKey: ['requester-demo', 'requests', 'all'], queryFn: ({ signal }) => fetchMyRequests(null, signal) });
+  const counts = mine.data ? countRequests(mine.data) : null;
+  // "changed since your last visit": the first visit records the statuses; later changes show on each counter
+  const seen = useSeen();
+  useEffect(() => {
+    if (mine.data) rememberFirstVisit(mine.data);
+  }, [mine.data]);
+  const changedIn = (counterId) =>
+    (mine.data ?? []).filter((row) => isChanged(seen, row) && (counterId === 'open' ? ['action', 'handling'].includes(counterOf(row)) : counterOf(row) === counterId)).length;
   // topic cards the user folded (the chevron in each card's head)
   const [closed, setClosed] = useState([]);
 
@@ -91,7 +101,7 @@ export function RequesterHome({ onSignOut, fallback }) {
   const typeId = search.get('type');
   const view = typeId && findType(typeId) ? 'form' : search.get('rq') === 'mine' ? 'mine' : 'home';
 
-  const go = (patch) => setParams({ rq: null, type: null, cat: null, ...patch }, 'push');
+  const go = (patch) => setParams({ rq: null, type: null, cat: null, bucket: null, ...patch }, 'push');
   const openType = (id) => go({ type: id });
 
   return (
@@ -137,7 +147,7 @@ export function RequesterHome({ onSignOut, fallback }) {
           </FadeIn>
         ) : view === 'mine' ? (
           <FadeIn key="mine">
-            <MyRequestsPanel full category={search.get('cat')} onCategory={(cat) => setParams({ cat })} onOpenType={openType} />
+            <MyRequestsPanel full category={search.get('cat')} onCategory={(cat) => setParams({ cat })} bucket={search.get('bucket')} onBucket={(bucket) => setParams({ bucket })} onOpenType={openType} />
           </FadeIn>
         ) : (
           <FadeIn key="home">
@@ -147,13 +157,22 @@ export function RequesterHome({ onSignOut, fallback }) {
             </div>
             <div className="rq-counters">
               {COUNTERS.map((counter) => (
-                <div key={counter.id} className={`card rq-counter ${counter.id}`}>
+                // a counter opens "הקריאות שלי" filtered to its requests (?bucket=)
+                <button
+                  key={counter.id}
+                  type="button"
+                  className={`card rq-counter ${counter.id}`}
+                  onClick={() => go({ rq: 'mine', bucket: counter.id })}
+                  aria-label={`${counter.label}: ${counts ? counts[counter.id] : ''}. הצגת הקריאות`}
+                >
                   <span className="ic"><Icon name={counter.icon} /></span>
                   <span>
-                    <b>{counters.data ? counters.data[counter.id] : '–'}</b>
+                    <b>{counts ? counts[counter.id] : '–'}</b>
                     <span>{counter.label}</span>
+                    {changedIn(counter.id) ? <span className="rq-changed-count">{changedIn(counter.id)} עודכנו מאז הביקור האחרון</span> : null}
                   </span>
-                </div>
+                  <Icon name="left" className="go" />
+                </button>
               ))}
             </div>
             <div className="rq-home">
