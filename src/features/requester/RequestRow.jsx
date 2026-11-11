@@ -6,7 +6,7 @@ import { isHoldStatus } from '@/lib/booking-workflow';
 import { domainColor, STAGE_SHORT } from '@/lib/labels';
 import { DEFAULT_WARN_RATIO, targetHoursOr } from '@/lib/targets';
 import { Celebration } from './Celebration';
-import { daysSince, requestRoute } from './requesterData';
+import { daysSince, isRejectedRequest, requestRoute } from './requesterData';
 
 /**
  * The "updated since your last visit" mark: a mint "עדכון חדש" pill that pops in and bobs now and then, with tiny
@@ -102,8 +102,8 @@ export function RequestRow({ row, img, changed, selected, celebrating, onOpen, o
         {changed ? <UpdateMark /> : null}
         {closed ? <StatusChip statusId={row.statusId} label={row.statusName} /> : <AgeDays updatedAt={row.updatedAt} createdAt={row.createdAt} />}
       </span>
-      {/* just became completed (and not celebrated yet in this browser): the whole row glows green once, with light confetti */}
-      {celebrating ? <Celebration variant="row" onDone={onCelebrated} /> : null}
+      {/* status changed since the last visit: the whole row glows green once, with light confetti */}
+      {celebrating ? <Celebration key={celebrating} variant="row" rejected={isRejectedRequest(row.statusId)} onDone={onCelebrated} /> : null}
     </button>
   );
 }

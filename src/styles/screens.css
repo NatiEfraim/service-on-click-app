@@ -57,7 +57,7 @@
 .ticket.leaving { position: relative; pointer-events: none; }
 /* timed from ROW_STAMP_MS in lib/motion.js (Ticket sets --stamp-ms): the colour takes 40% of it, the mark pops in over the next 60% */
 .ticket-stamp {
-  position: absolute; inset: 0; z-index: 1; display: grid; place-items: center; color: #fff;
+  position: absolute; inset: 0; z-index: 1; display: grid; place-items: center; color: #fff; border-radius: var(--r);
   animation: fade calc(var(--stamp-ms, 300ms) * 0.4) var(--ease-out);
 }
 .ticket.ok .ticket-stamp { background: var(--ok); }
@@ -471,6 +471,46 @@ span.chart-fade { flex-direction: row; align-items: center; gap: 8px; white-spac
 .sync-problem { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 12px; border-radius: var(--r-sm); background: var(--surface-2); }
 .sync-actions { display: flex; gap: 8px; margin-inline-start: auto; }
 .sync-files { max-height: 420px; overflow-y: auto; }
+.sync-pending { direction: ltr; }
+.sync-pending > .t { direction: rtl; }
+.sync-problem:has(.sync-booking-link[aria-current]),
+.sync-records .chip:has(.sync-booking-link[aria-current]) {
+  position: relative; z-index: 61; background: var(--bg);
+}
+.sync-pending tr:has(.sync-booking-link[aria-current]) > td { background: var(--bg); }
+:is(.sync-problem, .sync-records) .sync-booking-link[aria-current] { font-weight: 700; }
+.sync-decision-preview {
+  position: fixed; z-index: 61; pointer-events: none;
+  top: clamp(0px, var(--decision-top), calc(100dvh - var(--decision-height) - 16px));
+  left: max(12px, min(var(--decision-left), calc(100vw - var(--drawer-width) - 260px)));
+  right: var(--drawer-width); min-height: calc(var(--decision-height) + 12px);
+  display: grid; grid-template-columns: var(--decision-columns); align-items: center; text-align: start; font-size: 14px;
+  border-start-end-radius: var(--r); border-end-end-radius: var(--r); background: var(--bg);
+  animation: sync-decision-open 300ms var(--ease-drawer) both;
+}
+.sync-decision-preview > span { min-width: 0; padding-inline: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (min-width: 1061px) and (prefers-reduced-motion: no-preference) {
+  .sync-pending tr[data-preview] > td > * { opacity: 0; }
+  .sync-pending tr[data-preview][data-closing] > td > * { opacity: 1; transition: opacity 240ms var(--ease-drawer); }
+}
+.sync-decision-preview[data-closing] {
+  animation: sync-decision-open 240ms var(--ease-drawer) reverse both, sync-decision-fade 240ms linear both;
+}
+@keyframes sync-decision-open {
+  from { top: var(--decision-top); left: var(--decision-left); right: var(--decision-right); min-height: var(--decision-height); }
+}
+@keyframes sync-decision-fade {
+  from { background-color: var(--bg); }
+  70% { background-color: var(--surface); opacity: 1; }
+  to { background-color: var(--surface); opacity: 0; }
+}
+@media (max-width: 1060px) {
+  .sync-decision-preview { display: none; }
+  .sync-pending tr:has(.sync-booking-link[aria-current]) { position: relative; z-index: 61; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sync-decision-preview, .sync-decision-preview[data-closing] { animation: none; }
+}
 .sync-files thead th { position: sticky; top: 0; z-index: 1; }
 .sync-records { display: flex; flex-wrap: wrap; gap: 6px; }
 .audit-items { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
@@ -524,13 +564,13 @@ span.chart-fade { flex-direction: row; align-items: center; gap: 8px; white-spac
 .sbar .lab.on { background: var(--accent-wash); }
 .sbar .lab:focus-visible { outline: 2px solid var(--accent); }
 /* order -1: first in the row, so on the right side in right-to-left */
-.sbars-legend { order: -1; flex: none; flex-direction: column; flex-wrap: nowrap; justify-content: center; gap: 6px; padding: 0 0 52px; padding-inline-end: 14px; border-inline-end: 1px solid var(--line-2); }
+.sbars-legend { font-size: 16px; order: -1; flex: none; flex-direction: column; flex-wrap: nowrap; justify-content: center; gap: 6px; padding: 0 0 52px; padding-inline-end: 14px; border-inline-end: 1px solid var(--line-2); }
 
 /* home bottom card: the picked domain's stage columns, the stage legend on the right, the domain names below to pick from */
 .hcols { display: flex; flex-direction: column; height: 100%; min-height: 0; }
 .hcols-main { flex: 1; min-height: 0; display: flex; align-items: stretch; }
 .hcols-chart { flex: 1; min-width: 0; }
-.hcols-legend { flex: none; flex-direction: column; flex-wrap: nowrap; justify-content: center; gap: 6px; padding: 8px 18px; border-inline-end: 1px solid var(--line-2); }
+.hcols-legend { font-size: 16px; flex: none; flex-direction: column; flex-wrap: nowrap; justify-content: center; gap: 6px; padding: 8px 18px; border-inline-end: 1px solid var(--line-2); }
 .hcols-domains { flex: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; padding: 8px 12px 10px; border-top: 1px solid var(--line-2); }
 .hcols-domains button {
   all: unset; display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; cursor: pointer;
@@ -554,28 +594,15 @@ span.chart-fade { flex-direction: row; align-items: center; gap: 8px; white-spac
   position: relative;
   transition: margin 260ms var(--ease-out), box-shadow 260ms var(--ease-out), background-color 260ms var(--ease-out), border-radius 260ms var(--ease-out), border-color 260ms var(--ease-out);
 }
-.ticket::before {
-  content: ""; position: absolute; inset: 0; inset-inline-start: -4px; border-radius: inherit; padding: 2px; pointer-events: none;
-  background: conic-gradient(from var(--sel-angle, 0deg), #2FA85A, #8EE3A8, var(--accent-mid), var(--accent), #2FA85A);
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor; mask-composite: exclude;
-  opacity: 0; transition: opacity 260ms var(--ease-out);
-}
 .ticket.selected {
-  z-index: 61; margin: 12px 10px; border-radius: 14px; background: var(--surface); border-bottom-color: transparent;
-  border-inline-start-color: transparent;
-  box-shadow: 0 6px 16px color-mix(in srgb, var(--ink) 14%, transparent), 0 2px 6px color-mix(in srgb, #2FA85A 14%, transparent);
+  z-index: 61; margin-block: 12px; margin-inline: 0 10px; background: var(--bg);
+  border-start-end-radius: 14px; border-end-end-radius: 14px;
+  border-start-start-radius: 0; border-end-start-radius: 0;
+  border-bottom-color: transparent; border-inline-start-color: transparent;
 }
-.ticket.selected::before { opacity: 1; animation: ticket-sel-flow 4s linear infinite; }
-.ticket.selected:hover { background: var(--surface); }
+.ticket.selected:hover { background: var(--bg); }
 /* the row above it drops its divider too, so the selected one touches nothing */
 .ticket:has(+ .ticket.selected) { border-bottom-color: transparent; }
 /* while a booking is open its list stays put (the row sits above the dimming, so the wheel would reach the list) */
 .queue-scroll:has(.ticket.selected), .scroll-y:has(.ticket.selected) { overflow: hidden; }
-@property --sel-angle { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
-@keyframes ticket-sel-flow { to { --sel-angle: 360deg; } }
-@media (prefers-reduced-motion: reduce) { .ticket, .ticket::before { transition: none; } .ticket.selected::before { animation: none; } }
-/* the flowing border also covers the row's 1px bottom divider (outside the padding box, where ::before ends), so the
-   white of the selected row never shows below its frame */
-.ticket::before { inset-block-end: -1px; }
-.ticket:last-child::before { inset-block-end: 0; }
+@media (prefers-reduced-motion: reduce) { .ticket { transition: none; } }

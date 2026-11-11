@@ -1,6 +1,5 @@
 'use client';
 
-import { useLayoutEffect, useRef } from 'react';
 import { Select } from '@/components/ui/Select';
 import { useSearchParams } from 'next/navigation';
 
@@ -11,9 +10,6 @@ import { useSession } from '@/providers/SessionProvider';
 import './settings.css';
 import { DomainCard } from './DomainCard';
 import { DomainsOpenTotal } from './DomainsOpenTotal';
-
-/** Below this the grid scrolls inside itself instead of squeezing the cards further. */
-const MIN_GRID_HEIGHT = 420;
 
 /** Service domains of one unit (the system admin picks the unit, everyone else sees their own). */
 export function DomainsScreen() {
@@ -27,31 +23,15 @@ export function DomainsScreen() {
 
   const setUnit = (id) => setParams({ unit: String(id) });
 
-  // the grid takes exactly the room left above the footer, so the page itself never scrolls; the rows share it
-  const grid = useRef(null);
-  useLayoutEffect(() => {
-    const el = grid.current;
-    if (!el) return;
-    const fit = () => {
-      const page = el.closest('.page');
-      const footer = document.querySelector('.app-footer')?.offsetHeight ?? 0;
-      const below = (page ? parseFloat(getComputedStyle(page).paddingBottom) : 0) + footer;
-      el.style.height = `${Math.max(MIN_GRID_HEIGHT, window.innerHeight - el.getBoundingClientRect().top - window.scrollY - below)}px`;
-    };
-    fit();
-    window.addEventListener('resize', fit);
-    return () => window.removeEventListener('resize', fit);
-  }, [typeIds.length]);
-
   if (!unitId) return <EmptyState title="לא נמצאה יחידה" />;
 
   return (
     <>
-      <PageHead
-        hideTitle
-        title="תחומי שירות"
-        actions={
-          me.is_super_admin ? (
+      <PageHead hideTitle title="תחומי שירות" />
+      {typeIds.length > 0 || me.is_super_admin ? (
+        <div className="st-domains-toolbar">
+          {typeIds.length > 0 ? <DomainsOpenTotal unitId={unitId} typeIds={typeIds} /> : null}
+          {me.is_super_admin ? (
             <label className="st-unit">
               יחידה
               <Select className="input" value={unitId} onChange={(event) => setUnit(Number(event.target.value))}>
@@ -62,20 +42,17 @@ export function DomainsScreen() {
                 ))}
               </Select>
             </label>
-          ) : undefined
-        }
-      />
+          ) : null}
+        </div>
+      ) : null}
       {typeIds.length === 0 ? (
         <EmptyState title="אין תחומים בניהולך" />
       ) : (
-        <>
-        <DomainsOpenTotal unitId={unitId} typeIds={typeIds} />
-        <div ref={grid} className="st-domains st-domains-fit">
+        <div className="st-domains">
           {typeIds.map((id, index) => (
             <DomainCard key={`${unitId}-${id}`} unitId={unitId} bookingTypeId={id} index={index} />
           ))}
         </div>
-        </>
       )}
     </>
   );

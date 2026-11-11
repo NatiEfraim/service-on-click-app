@@ -72,12 +72,9 @@ export function markSeen(rows) {
   if (changed || read() === null) write(next);
 }
 
-/**
- * Completions already celebrated (request ids), so the little celebration on a request that has just become completed
- * plays once per request, in this browser. A request that was completed before the first visit is never celebrated:
- * the panel only celebrates a completion that is also "changed since the last visit".
- */
-const CELEBRATED_KEY = 'requester-celebrated-v1';
+/** A status update can play once per request in this browser. */
+const CELEBRATED_KEY = 'requester-celebrated-v2';
+export const celebrationKey = (row) => JSON.stringify([row.id, statusKey(row), row.updatedAt ?? null]);
 
 function readCelebrated() {
   try {
@@ -87,18 +84,17 @@ function readCelebrated() {
   }
 }
 
-/** Already celebrated in this browser. */
-export function wasCelebrated(id) {
-  return readCelebrated().has(id);
+export function wasCelebrated(key) {
+  return readCelebrated().has(key);
 }
 
-/** Remember that this request's completion was celebrated (kept to the latest 500). */
-export function markCelebrated(id) {
-  const ids = [...readCelebrated()].filter((other) => other !== id);
-  ids.push(id);
+export function markCelebrated(key) {
+  const keys = readCelebrated();
+  keys.delete(key);
+  keys.add(key);
   try {
-    window.localStorage.setItem(CELEBRATED_KEY, JSON.stringify(ids.slice(-500)));
+    window.localStorage.setItem(CELEBRATED_KEY, JSON.stringify([...keys].slice(-500)));
   } catch {
-    // private window or blocked storage: it may play again after a reload, nothing worse
+    // Storage can be unavailable in private browsing.
   }
 }

@@ -16,7 +16,7 @@ import { useDebounced } from '@/lib/useDebounced';
 import { useFitToWindow } from '@/lib/useFitToWindow';
 import { RequestDrawer } from './RequestDrawer';
 import { RequestRow } from './RequestRow';
-import { isChanged, markCelebrated, markSeen, useSeen, wasCelebrated } from './seen';
+import { celebrationKey, isChanged, markCelebrated, markSeen, useSeen, wasCelebrated } from './seen';
 import { counterOf, stageOf } from './requesterData';
 import { STAGE_SHORT } from '@/lib/labels';
 import { useCatalog, useMyRequests } from './useRequester';
@@ -109,16 +109,22 @@ export function MyRequestsPanel({ full = false, category, onCategory, bucket: ra
   const [range, setRange] = useState({ from: null, to: null });
   const allRows = requests.data ?? [];
   const changedRows = allRows.filter((row) => isChanged(seen, row));
-  // a completion that is new since the last visit gets a one-time celebration; a played one is remembered
-  // once due it stays due until it has played, so opening the request (which marks it seen) does not cancel it
+  // Keep an update queued even when opening the drawer marks it as seen.
   const [celebrated, setCelebrated] = useState(() => new Set());
   const [due, setDue] = useState(() => new Set());
-  const newlyDue = typeof window === 'undefined' ? [] : allRows.filter((row) => counterOf(row) === 'done' && isChanged(seen, row) && !due.has(row.id) && !wasCelebrated(row.id));
-  if (newlyDue.length) setDue(new Set([...due, ...newlyDue.map((row) => row.id)]));
-  const celebrating = (row) => due.has(row.id) && !celebrated.has(row.id) && !wasCelebrated(row.id);
-  const finishCelebration = (id) => {
-    markCelebrated(id);
-    setCelebrated((previous) => new Set(previous).add(id));
+  const newlyDue = changedRows
+    .map(celebrationKey)
+    .filter((key) => !due.has(key) && !celebrated.has(key) && !wasCelebrated(key));
+  if (newlyDue.length) setDue(new Set([...due, ...newlyDue]));
+  const celebrating = (row) => {
+    const key = celebrationKey(row);
+    return due.has(key) && !celebrated.has(key) && !wasCelebrated(key);
+  };
+  const finishCelebration = (row) => {
+    const key = celebrationKey(row);
+    markCelebrated(key);
+    setCelebrated((previous) => new Set(previous).add(key));
+    setDue((previous) => new Set([...previous].filter((candidate) => candidate !== key)));
   };
   // "סימון הכל כנקרא" fades out instead of vanishing (as the management "ניקוי הסינון"), keeping its last count meanwhile
   const markAll = usePresence(changedRows.length > 0, MARK_ALL_EXIT_MS);
@@ -268,9 +274,9 @@ export function MyRequestsPanel({ full = false, category, onCategory, bucket: ra
                 img={typeImg[row.bookingTypeId]}
                 changed={isChanged(seen, row)}
                 selected={opened?.id === row.id}
-                celebrating={celebrating(row)}
+                celebrating={celebrating(row) ? celebrationKey(row) : null}
                 onOpen={() => open(row)}
-                onCelebrated={() => finishCelebration(row.id)}
+                onCelebrated={() => finishCelebration(row)}
               />
             </li>
           ))}
@@ -289,7 +295,7 @@ export function MyRequestsPanel({ full = false, category, onCategory, bucket: ra
         <EmptyState title={current ? `אין לך קריאות ב${current.name}` : 'עוד לא פתחת קריאות'}>בחר סוג קריאה כדי לפתוח קריאה ראשונה</EmptyState>
       )
       )}
-      {opened ? <RequestDrawer row={opened} rows={rows} onGo={open} onClose={() => setOpened(null)} celebrate={celebrating(opened)} onCelebrated={() => finishCelebration(opened.id)} /> : null}
+      {opened ? <RequestDrawer row={opened} rows={rows} onGo={open} onClose={() => setOpened(null)} celebrate={celebrating(opened) ? celebrationKey(opened) : null} onCelebrated={() => finishCelebration(opened)} /> : null}
     </section>
   );
 }

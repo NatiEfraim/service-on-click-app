@@ -7,7 +7,7 @@ export function BookingLink({ serial }) {
   const drawer = useBookingDrawer();
   if (!serial) return '—';
   return (
-    <button type="button" className="linkbtn" onClick={(event) => { event.stopPropagation(); drawer.open(serial); }}>
+    <button type="button" className="linkbtn sync-booking-link" aria-current={drawer.serial === Number(serial) || undefined} onClick={(event) => { event.stopPropagation(); drawer.open(serial); }}>
       {serial}
     </button>
   );

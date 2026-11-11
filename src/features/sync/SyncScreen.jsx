@@ -2,7 +2,8 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
-import { Fragment, useState } from 'react';
+import { Fragment, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { ExpandRow } from '@/components/ui/ExpandRow';
@@ -10,11 +11,14 @@ import { EmptyState, ErrorNotice, Loading } from '@/components/ui/Feedback';
 import { Icon } from '@/components/ui/Icon';
 import { PageHead } from '@/components/ui/PageHead';
 import { StatTile } from '@/components/ui/Stat';
+import { usePresence } from '@/components/ui/usePresence';
 import { ResolveConflictDialog } from '@/features/bookings/ResolveConflictDialog';
+import { useBookingDrawer } from '@/features/bookings/useBookingDrawer';
 import { ApiError } from '@/lib/api/client';
 import { syncApi } from '@/lib/api/endpoints';
 import { invalidateWork, keys } from '@/lib/api/keys';
 import { fmtAgo, fmtDateTime } from '@/lib/format';
+import { DRAWER_EXIT_MS } from '@/lib/motion';
 import { useToast } from '@/providers/UiProvider';
 import { BookingLink } from './BookingLink';
 import { FileRecords } from './FileRecords';
@@ -31,10 +35,67 @@ const STATE = {
 const stateOf = (state) => STATE[state] ?? { label: state, tone: '' };
 
 /** One headline number of the status strip. */
+function PendingDecisionRow({ row, selected }) {
+  const source = useRef(null);
+  const [position, setPosition] = useState(null);
+  const presence = usePresence(selected, DRAWER_EXIT_MS);
+
+  useLayoutEffect(() => {
+    if (!selected) return;
+    const measure = () => {
+      const bounds = source.current.getBoundingClientRect();
+      const scroller = source.current.closest('.sync-pending');
+      const viewport = scroller.getBoundingClientRect();
+      const headerBottom = scroller.querySelector('thead').getBoundingClientRect().bottom;
+      if (bounds.top < headerBottom || bounds.bottom > viewport.bottom) {
+        setPosition(null);
+        return;
+      }
+      const columns = Array.from(source.current.cells, (cell) => `${cell.getBoundingClientRect().width / bounds.width * 100}%`);
+      setPosition({
+        '--decision-columns': columns.join(' '),
+        '--decision-top': `${bounds.top}px`,
+        '--decision-left': `${bounds.left}px`,
+        '--decision-right': `${window.innerWidth - bounds.right}px`,
+        '--decision-height': `${bounds.height}px`,
+      });
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    window.addEventListener('scroll', measure, true);
+    return () => {
+      window.removeEventListener('resize', measure);
+      window.removeEventListener('scroll', measure, true);
+    };
+  }, [selected]);
+
+  const showPreview = presence.mounted && position;
+  const label = row.status_label ?? row.status_id;
+  const time = fmtAgo(row.decided_at);
+  return (
+    <>
+      <tr ref={source} data-preview={Boolean(showPreview) || undefined} data-closing={presence.closing || undefined}>
+        <td><BookingLink serial={row.booking_serial} /></td>
+        <td><span>{label}</span></td>
+        <td style={{ whiteSpace: 'nowrap' }}><span>{time}</span></td>
+      </tr>
+      {showPreview ? createPortal(
+        <div className="sync-decision-preview" data-closing={presence.closing || undefined} style={position} dir="rtl" aria-hidden="true">
+          <span><span className="linkbtn">{row.booking_serial}</span></span>
+          <span>{label}</span>
+          <span>{time}</span>
+        </div>,
+        document.body,
+      ) : null}
+    </>
+  );
+}
+
 /** Super admin: is the channel to the mobile app flowing, and if not, what is stuck and how to free it. */
 export function SyncScreen() {
   const client = useQueryClient();
   const toast = useToast();
+  const { serial: openedSerial } = useBookingDrawer();
   const query = useQuery({ queryKey: keys.sync, queryFn: ({ signal }) => syncApi.overview(signal), refetchInterval: 30_000 });
   const [openFile, setOpenFile] = useState(null);
   const [resolving, setResolving] = useState(null);
@@ -184,18 +245,14 @@ export function SyncScreen() {
           {pending.length === 0 ? (
             <div className="card-body sync-clear"><Icon name="check" /> כל ההחלטות נשלחו.</div>
           ) : (
-            <div className="tbl-wrap sync-files">
+            <div className="tbl-wrap sync-files sync-pending">
               <table className="t">
                 <thead>
                   <tr><th>קריאה</th><th>החלטה</th><th>מתי</th></tr>
                 </thead>
                 <tbody>
                   {pending.map((row) => (
-                    <tr key={row.booking_serial}>
-                      <td><BookingLink serial={row.booking_serial} /></td>
-                      <td>{row.status_label ?? row.status_id}</td>
-                      <td style={{ whiteSpace: 'nowrap' }}>{fmtAgo(row.decided_at)}</td>
-                    </tr>
+                    <PendingDecisionRow key={row.booking_serial} row={row} selected={openedSerial === Number(row.booking_serial)} />
                   ))}
                 </tbody>
               </table>

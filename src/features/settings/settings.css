@@ -4,11 +4,13 @@
 .st-sub-link { font-weight: 600; }
 
 /* ----- domains page */
+.st-domains-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-block-end: 8px; }
 .st-unit { display: flex; align-items: center; gap: 8px; }
+.st-domains-toolbar .st-unit { margin-inline-start: auto; }
 /* three equal cards per row; every card in the grid gets the same height, the footer stays at the bottom */
-.st-domains { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: 1fr; gap: 20px; }
+.st-domains { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
 /* backwards, not both: once the entrance ends, the card's transform is free for the hover lift */
-.st-domains .dcard { grid-template-rows: auto 1fr auto; animation: st-rise 260ms var(--ease-out) backwards; }
+.st-domains .dcard { min-height: 220px; grid-template-rows: auto 1fr auto; animation: st-rise 260ms var(--ease-out) backwards; }
 /* sized by its content, not stretched, so its height can be measured and animated */
 .st-card-body { align-self: start; }
 /* the route replaces the skeleton without a jump */
@@ -16,7 +18,8 @@
 @keyframes st-rise { from { opacity: 0; transform: translateY(8px) scale(0.98); } }
 @media (max-width: 1100px) { .st-domains { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 720px) { .st-domains { grid-template-columns: minmax(0, 1fr); grid-auto-rows: auto; } }
-.st-domains .card-head { align-items: flex-start; }
+.st-domains .card-head { align-items: flex-start; padding: 16px 18px; }
+.st-domains .card-head h2 { font-size: 18px; }
 .st-domains .card-head > div:not(.dom) { min-width: 0; flex: 1; }
 .st-domains .card-head .hint { display: block; margin-top: 2px; }
 .st-domains .card-head .tools { flex: none; }
@@ -164,26 +167,14 @@
   .st-opt-nav { position: sticky; top: 0; max-height: min(72dvh, 100dvh - 320px); background: var(--surface); z-index: 1; }
 }
 
-/* fitted to the window: three rows share the room left above the footer; a card's body scrolls inside it if it has to */
-/* no scrollbar of its own: the rows shrink to fit, and a card whose list is longer scrolls inside its own body */
-.st-domains-fit { grid-template-rows: repeat(3, minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); gap: 14px; overflow: visible; }
-.st-domains-fit .dcard { min-height: 0; overflow: hidden; }
-.st-domains-fit .card-head { padding: 10px 14px; gap: 10px; }
-.st-domains-fit .card-head h2 { font-size: 15px; }
-.st-domains-fit .card-head .hint { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.st-domains-fit .st-card-body { min-height: 0; overflow-y: auto; align-self: stretch; }
-.st-domains-fit .card-foot { padding: 7px 14px; }
-.st-lines { list-style: none; margin: 0; padding: 8px 14px; display: grid; gap: 6px; }
-.st-lines li { display: grid; grid-template-columns: 10px auto minmax(0, 1fr); align-items: center; gap: 8px; font-size: 13px; }
+.st-lines { list-style: none; margin: 0; padding: 12px 18px 18px; display: grid; gap: 8px; }
+.st-lines li { display: grid; grid-template-columns: 10px auto minmax(0, 1fr); align-items: baseline; gap: 8px; font-size: 15px; }
 .st-lines .pt { width: 8px; height: 8px; border-radius: 50%; background: var(--s3); }
 .st-lines li.none .pt { background: var(--warn); }
 .st-lines b { font-weight: 700; white-space: nowrap; }
 .st-lines b::after { content: ":"; }
-.st-lines .names { color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.st-lines .names { color: var(--mute); overflow-wrap: anywhere; }
 .st-lines li.none .names { color: var(--warn); }
-@media (max-width: 1100px) { .st-domains-fit { grid-template-rows: none; height: auto !important; overflow: visible; } }
-.st-domains-fit .card-head > div:not(.dom) { overflow: hidden; }
-.st-domains-fit .st-lines li { min-width: 0; }
 
 /* switching fields in the options tab: the old panel fades out, the new one fades in */
 .st-opt-fade { animation: st-opt-in 180ms cubic-bezier(0.2, 0, 0, 1); }
@@ -242,7 +233,7 @@
 .dcard-link .tools, .dcard-link .more-names, .dcard-link .st-card-msg .btn { position: relative; z-index: 2; }
 
 /* total open bookings, top right of the domains page (DomainsOpenTotal); a fixed height so the cards never move */
-.st-open-total { display: flex; justify-content: flex-start; min-height: 24px; margin: 0 0 12px; font-size: 14px; }
+.st-open-total { display: flex; justify-content: flex-start; min-height: 24px; align-items: center; font-size: 14px; }
 .st-open-total a { color: var(--ink-2); text-decoration: none; border-radius: var(--r-sm); transition: color 150ms var(--ease-out); }
 .st-open-total b { color: var(--accent); font-size: 16px; font-variant-numeric: tabular-nums; }
 .st-open-total a:hover { color: var(--accent); text-decoration: underline; }

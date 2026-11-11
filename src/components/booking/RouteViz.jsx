@@ -8,10 +8,21 @@ export function Rail({ booking, catalog, history }) {
   const stations = routeFor(booking, catalog, history);
   const { here, mode } = routePosition(booking, stations);
 
+  const status = mode === 'hold' || mode === 'stopped' ? booking.status_label
+    : mode === 'finished' ? 'הושלמה' : fmtHours(booking.stage_age_hours);
+
+  return (
+    <ApprovalTrack stations={stations} here={here} mode={mode} label={booking.stage_label}>
+      <span className="sub">{status}</span>
+    </ApprovalTrack>
+  );
+}
+
+export function ApprovalTrack({ stations, here, mode, label, children }) {
   const stepWidth = 100 / stations.length;
 
   return (
-    <div className="rail" role="img" aria-label={`מסלול הקריאה: ${booking.stage_label}`}>
+    <div className="rail" dir="rtl" role="img" aria-label={`מסלול הקריאה: ${label}`}>
       <div className={`rail-track ${mode}`} style={{
         '--rail-min-width': `${stations.length * 86}px`,
         '--rail-start': `${stepWidth / 2}%`,
@@ -25,11 +36,7 @@ export function Rail({ booking, catalog, history }) {
             <div key={station.id} className={`station ${state}`.trim()}>
               <span className="dot" />
               <span className="name">{station.label}</span>
-              {index === here ? (
-                <span className="sub">
-                  {mode === 'hold' ? booking.status_label : mode === 'stopped' ? booking.status_label : mode === 'finished' ? 'הושלמה' : fmtHours(booking.stage_age_hours)}
-                </span>
-              ) : null}
+              {index === here ? children : null}
             </div>
           );
         })}

@@ -67,7 +67,7 @@ export function BookingDrawer({ serial, onClose, onGo }) {
       tools={<DrawerStepper serial={serial} onGo={onGo} />}
       title={
         <>
-          קריאה <span className="serial" style={{ fontSize: 16 }}>{serial}</span>
+          קריאה <span className="ltr" style={{ fontSize: 16, fontWeight: 400 }}>{serial}</span>
         </>
       }
     >

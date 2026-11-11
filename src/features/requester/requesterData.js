@@ -263,6 +263,8 @@ export function waitedLabel(days) {
 const BARBER_TYPE_ID = 5;
 const CONTROL_OFFICER_TYPE_IDS = [8];
 /** The statuses that end a request (StatusBookingEnum::isTerminal). */
+export const isRejectedRequest = (statusId) => [4, 12, 16, 18].includes(Number(statusId));
+
 const TERMINAL_STATUS_IDS = [4, 5, 6, 7, 12, 13];
 
 /**
