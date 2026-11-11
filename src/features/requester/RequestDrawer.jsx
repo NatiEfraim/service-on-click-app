@@ -9,10 +9,10 @@ import { Drawer } from '@/components/ui/Drawer';
 import { ErrorNotice, Loading, Notice } from '@/components/ui/Feedback';
 import { Icon } from '@/components/ui/Icon';
 import { holdDescription, isHoldStatus } from '@/lib/booking-workflow';
-import { fmtDateTime } from '@/lib/format';
-import { fetchRequestDetails, iconSrc, PROGRESS_STEPS, requestProgress, STATUS_LABEL } from './requesterData';
-
-const STATUS_TONE = { action: 'warn', handling: 'info', done: 'ok' };
+import { fmtDate, fmtDateTime } from '@/lib/format';
+import { daysSince, fetchRequestDetails, parseDay, requestRoute, waitedLabel } from './requesterData';
+import { Celebration } from './Celebration';
+import { REQUESTER_KEY, useCatalog } from './useRequester';
 
 /** A form value as text: plain values as they are, a list joined, an object by its name. */
 function valueText(value) {
@@ -24,8 +24,17 @@ function valueText(value) {
 }
 
 /** A date from the server as the rest of the app shows it; a value it cannot read stays as it came. */
+/**
+ * A date from the server as the rest of the app shows it. The requester endpoints send a day as "d/m/Y" (day first),
+ * which the shared parser would read month first (04/11 as April 11): those are read here; anything else (a comment's
+ * full timestamp) goes through fmtDateTime; a value neither can read stays as it came.
+ */
 const when = (value) => {
   if (!value) return '—';
+  if (/^d{1,2}[/.]d{1,2}[/.]d{2,4}$/.test(String(value).trim())) {
+    const day = parseDay(value);
+    return day ? fmtDate(day) : String(value);
+  }
   const text = fmtDateTime(value);
   return text === '—' ? String(value) : text;
 };
@@ -68,16 +77,24 @@ function RequestStepper({ row, rows, onGo }) {
   );
 }
 
-/** The request's steps as a row of dots: done ones filled, the current one marked (on hold, stopped or finished in its colour). */
-function ProgressRail({ statusId, demoStatus, label }) {
-  const { step, mode } = requestProgress(statusId, demoStatus);
+/**
+ * The request's route, the same stations the management screens show for its domain (requestRoute): passed ones filled,
+ * the current one marked (on hold, stopped or finished in its colour), with the status and how long it has been there.
+ */
+function ProgressRail({ statusId, bookingTypeId, label, since, celebrate = false, onCelebrated }) {
+  const { stations, here, mode } = requestRoute(statusId, bookingTypeId);
+  // how long it has been at this step (from its last update), while it is still moving: not once completed or stopped
+  const waited = mode === 'here' || mode === 'hold' ? waitedLabel(daysSince(since)) : '';
   return (
-    <div className="rail" role="img" aria-label={`הקריאה בשלב ${PROGRESS_STEPS[step]}: ${label}`}>
-      {PROGRESS_STEPS.map((name, index) => (
-        <div key={name} className={`station ${index < step ? 'done' : index === step ? mode : ''}`.trim()}>
+    <div className="rail" role="img" aria-label={`מסלול הקריאה: ${stations[here]?.label ?? ''}, ${label}`}>
+      {stations.map((station, index) => (
+        <div key={station.id} className={`station ${index < here ? 'done' : index === here ? mode : ''}`.trim()}>
           <span className="dot" />
-          <span className="name">{name}</span>
-          {index === step ? <span className="sub">{mode === 'finished' ? 'הושלמה' : label}</span> : null}
+          <span className="name">{station.label}</span>
+          {index === here ? <span className="sub">{mode === 'finished' ? 'הושלמה' : label}</span> : null}
+          {index === here && waited ? <span className="rq-waited">{waited}</span> : null}
+          {/* a request that has just become completed: the celebration plays on its last station */}
+          {index === here && mode === 'finished' && celebrate ? <Celebration className="on-station" onDone={onCelebrated} /> : null}
         </div>
       ))}
     </div>
@@ -89,13 +106,15 @@ function ProgressRail({ statusId, demoStatus, label }) {
  * domain and status on top, the status message, the details (requester, dates, every value filled in), comments and
  * attachments. View only. The approval route and status history are not shown: the requester endpoint does not send them.
  */
-export function RequestDrawer({ row, rows = [], onGo, onClose }) {
+export function RequestDrawer({ row, rows = [], onGo, onClose, celebrate = false, onCelebrated }) {
   const query = useQuery({
-    queryKey: ['requester-demo', 'request', row.id],
+    queryKey: [...REQUESTER_KEY, 'request', row.id],
     queryFn: ({ signal }) => fetchRequestDetails(row, signal),
     retry: false,
   });
   const details = query.data;
+  const catalog = useCatalog();
+  const typeImg = (catalog.data?.topics ?? []).flatMap((topic) => topic.groups.flatMap((group) => group.types)).find((type) => type.id === row.bookingTypeId)?.img ?? null;
 
   return (
     <Drawer
@@ -116,22 +135,19 @@ export function RequestDrawer({ row, rows = [], onGo, onClose }) {
       ) : (
         <div className="rq-drawer">
           <div className="rq-drawer-top">
-            {row.bookingTypeId ? <DomainBadge bookingTypeId={row.bookingTypeId} /> : <span className="rq-drawer-pic"><img src={iconSrc(row.typeId)} alt="" /></span>}
-            {row.status ? (
-              <Chip tone={STATUS_TONE[row.status]}>{STATUS_LABEL[row.status]}</Chip>
-            ) : (
-              <StatusChip statusId={details.statusId} label={details.statusName} />
-            )}
+            {/* a ביטחון מידע / תקשוב type has its own picture (catalog); every other domain its domain badge */}
+            {typeImg ? <span className="rq-drawer-pic"><img src={typeImg} alt="" /></span> : <DomainBadge bookingTypeId={row.bookingTypeId} />}
+            <StatusChip statusId={details.statusId} label={details.statusName} />
             <Chip>{row.typeName}</Chip>
           </div>
 
           <section className="panel">
             <header>
               <h2>איפה הקריאה עומדת</h2>
-              <span className="hint">{row.status ? STATUS_LABEL[row.status] : details.statusName}</span>
+              <span className="hint">{details.statusName}</span>
             </header>
             <div className="body">
-              <ProgressRail statusId={details.statusId} demoStatus={row.status} label={row.status ? STATUS_LABEL[row.status] : details.statusName} />
+              <ProgressRail statusId={details.statusId} bookingTypeId={row.bookingTypeId} label={details.statusName} since={details.updatedAt || details.createdAt} celebrate={celebrate} onCelebrated={onCelebrated} />
             </div>
           </section>
 

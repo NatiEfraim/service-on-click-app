@@ -28,6 +28,8 @@ const TILE_GROUPS = [
   { name: 'רכב', types: [1, 2], iconType: 1, iconSrc: '/icons/groups/car.svg' },
   { name: 'ציוד', types: [3, 4], iconType: 3, iconSrc: '/icons/groups/equipment.svg' },
   { name: 'מזון', types: [10, 11], iconType: 10, iconSrc: '/icons/groups/food.svg' },
+  { name: 'ביטחון מידע', types: [14, 15, 16], iconType: 14, iconSrc: '/icons/requester/infosec.svg' },
+  { name: 'תקשוב', types: [17, 18, 19], iconType: 17, iconSrc: '/icons/requester/it.svg' },
 ];
 
 /**
@@ -114,6 +116,10 @@ export function HomeScreen() {
   const barber = tiles.findIndex((t) => t.members.some((m) => m.booking_type_id === 5));
   if (food >= 0 && barber >= 0) [tiles[food], tiles[barber]] = [tiles[barber], tiles[food]];
 
+  const rows = Math.max(1, Math.ceil(tiles.length / 3));
+  const perRow = Math.ceil(tiles.length / rows);
+  const expandLastRow = tiles.length === 8;
+
   // everything appears together, fading in, once the data is here
   return (
     <FadeIn duration={HOME_FADE_MS}>
@@ -123,7 +129,7 @@ export function HomeScreen() {
       />
       <div className="home" ref={fitRef}>
       <div className="home-top">
-        <section className="tiles stagger" aria-label="תחומי שירות" style={{ '--per-row': Math.ceil(tiles.length / Math.ceil(tiles.length / 3)), '--rows': Math.ceil(tiles.length / 3) }}>
+        <section className="tiles stagger" aria-label="תחומי שירות" data-expand-last-row={expandLastRow || undefined} style={{ '--per-row': perRow, '--rows': rows }}>
           {tiles.map((tile, index) =>
             tile.members.length === 1 ? (
               <Link key={tile.key} href={`/dashboard?types=${tile.members[0].booking_type_id}`} className="dtile" style={{ '--dc': domainColor(tile.members[0].booking_type_id), '--i': index }}>
@@ -133,13 +139,13 @@ export function HomeScreen() {
               // Hover (or focus) opens the group into its domains; each one links to its own dashboard.
               <div key={tile.key} className="dtile dgroup" tabIndex={0} aria-label={`${tile.name}: ${tile.members.map((m) => m.name).join(', ')}`} style={{ '--dc': domainColor(tile.members[0].booking_type_id), '--i': index }}>
                 <TileBody iconType={tile.iconType} iconSrc={tile.iconSrc} name={tile.name} open={tile.open} overdue={tile.overdue} />
-                <span className="dgroup-menu">
+                <div className="dgroup-menu" data-members={tile.members.length}>
                   {tile.members.map((domain) => (
                     <Link key={domain.booking_type_id} href={`/dashboard?types=${domain.booking_type_id}`} className="dgroup-item" style={{ '--dc': domainColor(domain.booking_type_id) }}>
                       <TileBody iconType={domain.booking_type_id} name={domain.name} open={domain.open} overdue={domain.overdue} />
                     </Link>
                   ))}
-                </span>
+                </div>
               </div>
             ),
           )}

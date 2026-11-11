@@ -8,22 +8,32 @@ export function Rail({ booking, catalog, history }) {
   const stations = routeFor(booking, catalog, history);
   const { here, mode } = routePosition(booking, stations);
 
+  const stepWidth = 100 / stations.length;
+
   return (
     <div className="rail" role="img" aria-label={`מסלול הקריאה: ${booking.stage_label}`}>
-      {stations.map((station, index) => {
-        const state = index < here ? 'done' : index === here ? mode : '';
-        return (
-          <div key={station.id} className={`station ${state}`.trim()}>
-            <span className="dot" />
-            <span className="name">{station.label}</span>
-            {index === here ? (
-              <span className="sub">
-                {mode === 'hold' ? booking.status_label : mode === 'stopped' ? booking.status_label : mode === 'finished' ? 'הושלמה' : fmtHours(booking.stage_age_hours)}
-              </span>
-            ) : null}
-          </div>
-        );
-      })}
+      <div className={`rail-track ${mode}`} style={{
+        '--rail-min-width': `${stations.length * 86}px`,
+        '--rail-start': `${stepWidth / 2}%`,
+        '--rail-progress': `${here * stepWidth}%`,
+      }}>
+        <span className="rail-progress" aria-hidden="true" />
+        <span className="rail-marker" aria-hidden="true" />
+        {stations.map((station, index) => {
+          const state = index < here ? 'done' : index === here ? mode : '';
+          return (
+            <div key={station.id} className={`station ${state}`.trim()}>
+              <span className="dot" />
+              <span className="name">{station.label}</span>
+              {index === here ? (
+                <span className="sub">
+                  {mode === 'hold' ? booking.status_label : mode === 'stopped' ? booking.status_label : mode === 'finished' ? 'הושלמה' : fmtHours(booking.stage_age_hours)}
+                </span>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

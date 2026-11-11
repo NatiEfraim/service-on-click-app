@@ -82,7 +82,31 @@ export const domainColor = (bookingTypeId) => DOMAIN_COLOR[bookingTypeId] ?? '#8
 
 /** Domains with an illustration in /public/icons/domains. */
 const DOMAIN_ICONS = new Set([1, 2, 3, 4, 5, 8, 10, 11, 13]);
-export const domainIconSrc = (bookingTypeId) => (DOMAIN_ICONS.has(bookingTypeId) ? `/icons/domains/${bookingTypeId}.svg` : null);
+/** The colour picture of a topic or a request type (public/icons/requester), by its server name. */
+const PICTURE = {
+  infosec: 'infosec',
+  ict: 'it',
+  clearance_grant: 'clearance-grant',
+  removable_media: 'removable-media',
+  security_incident: 'security-incident',
+  folder_permission: 'folder-permission',
+  manta_permission: 'manta-permission',
+  network_folder: 'network-folder',
+};
+export const requesterIconSrc = (name) => (PICTURE[name] ? `/icons/requester/${PICTURE[name]}.svg` : null);
+
+const REQUEST_TYPE_NAMES = {
+  14: 'clearance_grant',
+  15: 'removable_media',
+  16: 'security_incident',
+  17: 'folder_permission',
+  18: 'manta_permission',
+  19: 'network_folder',
+};
+
+export function domainIconSrc(bookingTypeId, name = REQUEST_TYPE_NAMES[bookingTypeId]) {
+  return requesterIconSrc(name) ?? (DOMAIN_ICONS.has(bookingTypeId) ? `/icons/domains/${bookingTypeId}.svg` : null);
+}
 
 
 

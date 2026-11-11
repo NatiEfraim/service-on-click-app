@@ -1,203 +1,165 @@
 /**
- * Everything the regular-user home reads or sends. The backend for it does not exist yet, so this runs on demo data;
- * when the API is ready, only this file changes (same function names, same shapes).
+ * Everything the regular-user home reads or sends, from the website API's requester endpoints:
+ * GET /requester/catalog, GET /requester/form/{id}, GET /requester/counters, POST /bookings/{id},
+ * GET /bookings/my-bookings and GET /bookings/{uuid}.
  */
 
-import { requesterApi } from '@/lib/api/endpoints';
-import { domainIconSrc } from '@/lib/labels';
+import { OPEN_STATUS_IDS, requesterApi } from '@/lib/api/endpoints';
+import { routeFor, routePosition } from '@/features/bookings/route';
+import { domainIconSrc, requesterIconSrc } from '@/lib/labels';
 
-/** Topics → groups → request types. `icon` is a name from components/ui/Icon. */
-export const TOPICS = [
-  {
-    id: 'infosec',
-    name: 'ביטחון מידע',
-    icon: 'shield',
-    groups: [
-      {
-        id: 'clearance',
-        name: 'סיווג ביטחוני',
-        types: [{ id: 'clearance-grant', name: 'מתן סיווג ביטחוני', icon: 'shield', description: 'בקשה לקבלת סיווג ביטחוני או העלאת רמת סיווג' }],
-      },
-      {
-        id: 'datasec',
-        name: 'אבטחת מידע',
-        types: [
-          { id: 'removable-media', name: 'אישור הכנסת מדיה נתיקה', icon: 'download', description: 'אישור להכנסת התקן אחסון נייד לרשת' },
-          { id: 'security-incident', name: 'דיווח על אירוע ביטחון מידע', icon: 'alert', description: 'דיווח על חשד לאירוע או חשיפת מידע' },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'it',
-    name: 'תקשוב',
-    icon: 'layers',
-    groups: [
-      {
-        id: 'permissions',
-        name: 'הרשאות',
-        types: [
-          { id: 'folder-permission', name: 'הרשאות לתיקייה', icon: 'file', description: 'הוספה או שינוי של הרשאות לתיקייה קיימת' },
-          { id: 'manta-permission', name: 'הרשאות למנת"ה', icon: 'users', description: 'בקשת הרשאה למערכת מנת"ה' },
-          { id: 'network-folder', name: 'יצירת תיקיית רשת', icon: 'building', description: 'פתיחת תיקייה משותפת חדשה ברשת' },
-        ],
-      },
-    ],
-  },
-];
+/** Files a form accepts as attachments (POST /bookings/{id}: jpg, jpeg, png, gif, webp, pdf; up to 10, 10 MB each). */
+export const ATTACH_ACCEPT = 'image/jpeg,image/png,image/gif,image/webp,application/pdf';
+export const MAX_FILES = 10;
+export const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
-const PHONE = { pattern: /^05\d{8}$/, message: 'מספר טלפון נייד בן 10 ספרות, מתחיל ב-05' };
-const PERSONAL = { pattern: /^\d{5,9}$/, message: 'מספר אישי: 5 עד 9 ספרות' };
+/**
+ * GET /requester/catalog, shaped for the screens. The server already keeps only what the user may open
+ * ("user_<id>" permission and the user's unit). Request types are identified by their booking type id.
+ * - topics: [{ id (server name), name, img, groups: [{ id, name, types: [{ id, key, name, description, img }] }] }]
+ * - categories: the topics and the plain domains, for "הקריאות שלי": [{ id, name, img, typeIds }]
+ */
+export async function fetchCatalog(signal) {
+  const data = await requesterApi.catalog(signal);
+  const byPosition = (a, b) => Number(a.position ?? 0) - Number(b.position ?? 0);
+  const topics = [...(data?.topics ?? [])].sort(byPosition).map((topic) => ({
+    id: topic.name,
+    name: topic.display_name,
+    img: requesterIconSrc(topic.name),
+    groups: [...(topic.groups ?? [])].sort(byPosition).map((group) => ({
+      id: group.id,
+      name: group.display_name,
+      types: [...(group.booking_types ?? [])].sort(byPosition).map((type) => ({
+        id: type.id,
+        key: type.name,
+        name: type.display_name,
+        description: type.description ?? '',
+        img: domainIconSrc(type.id, type.name),
+      })),
+    })),
+  }));
+  const domains = [...(data?.domains ?? [])].sort(byPosition);
+  const categories = [
+    ...topics.map((topic) => ({ id: topic.id, name: topic.name, img: topic.img, typeIds: topic.groups.flatMap((group) => group.types.map((type) => type.id)) })),
+    ...domains.map((domain) => ({ id: `d${domain.id}`, name: domain.display_name, img: domainIconSrc(domain.id), typeIds: [domain.id] })),
+  ];
+  return { topics, categories };
+}
 
-/** The fields of each form. kind: text | textarea | select | date | number. */
-export const FORMS = {
-  'clearance-grant': [
-    { id: 'role', label: 'תפקיד', kind: 'text', required: true },
-    { id: 'level', label: 'רמת סיווג מבוקשת', kind: 'select', required: true, options: ['שמור', 'סודי', 'סודי ביותר'] },
-    { id: 'reason', label: 'נימוק הבקשה', kind: 'textarea', required: true },
-    { id: 'phone', label: 'טלפון לתיאום', kind: 'text', required: true, placeholder: '05XXXXXXXX', ltr: true, ...PHONE },
-  ],
-  'removable-media': [
-    { id: 'media', label: 'סוג המדיה', kind: 'select', required: true, options: ['דיסק און קי', 'כונן חיצוני', 'תקליטור', 'כרטיס זיכרון'] },
-    { id: 'serial', label: 'מספר סידורי של ההתקן', kind: 'text', required: true, ltr: true },
-    { id: 'purpose', label: 'מטרת השימוש', kind: 'textarea', required: true },
-    { id: 'until', label: 'נדרש עד תאריך', kind: 'date' },
-  ],
-  'security-incident': [
-    { id: 'date', label: 'תאריך האירוע', kind: 'date', required: true },
-    { id: 'description', label: 'תיאור האירוע', kind: 'textarea', required: true },
-    { id: 'location', label: 'מיקום', kind: 'text' },
-  ],
-  'folder-permission': [
-    { id: 'path', label: 'נתיב התיקייה', kind: 'text', required: true, ltr: true },
-    { id: 'access', label: 'סוג ההרשאה', kind: 'select', required: true, options: ['קריאה', 'קריאה וכתיבה', 'שליטה מלאה'] },
-    { id: 'grantee', label: 'מספר אישי של מקבל ההרשאה', kind: 'text', required: true, ltr: true, ...PERSONAL },
-    { id: 'justification', label: 'הצדקה', kind: 'textarea', required: true },
-    { id: 'until', label: 'בתוקף עד', kind: 'date' },
-  ],
-  'manta-permission': [
-    { id: 'profile', label: 'פרופיל מבוקש', kind: 'select', required: true, options: ['צופה', 'משתמש', 'מנהל'] },
-    { id: 'grantee', label: 'מספר אישי של מקבל ההרשאה', kind: 'text', required: true, ltr: true, ...PERSONAL },
-    { id: 'justification', label: 'הצדקה', kind: 'textarea', required: true },
-  ],
-  'network-folder': [
-    { id: 'name', label: 'שם התיקייה', kind: 'text', required: true },
-    { id: 'location', label: 'מיקום (שרת או נתיב אב)', kind: 'text', required: true, ltr: true },
-    { id: 'owners', label: 'בעלי התיקייה (מספרים אישיים)', kind: 'textarea', required: true },
-    { id: 'size', label: 'נפח משוער (GB)', kind: 'number' },
-  ],
-};
-
-/** Files a form accepts as attachments. */
-export const ATTACH_ACCEPT = 'image/*,application/pdf';
-
-/** The colour picture of a topic or a request type (public/icons/requester). */
-export const iconSrc = (id) => `/icons/requester/${id}.svg`;
-
-/** The type with its topic and group, for breadcrumbs; null when unknown. */
-export function findType(typeId) {
-  for (const topic of TOPICS) {
+/** The type with its topic and group, for the form's breadcrumb; null when the catalog does not offer it. */
+export function findType(catalog, typeId) {
+  for (const topic of catalog?.topics ?? []) {
     for (const group of topic.groups) {
-      const type = group.types.find((candidate) => candidate.id === typeId);
+      const type = group.types.find((candidate) => candidate.id === Number(typeId));
       if (type) return { topic, group, type };
     }
   }
   return null;
 }
 
-/**
- * The mobile app's service domains (booking_types, ids from the API's BookingTypeSeeder). Listed here because the API's
- * domain catalog is management-only; any user may open a request in any of them, as in the mobile app.
- */
-export const DOMAINS = [
-  { id: 1, name: 'רכב שיתופי' },
-  { id: 2, name: 'תיאום שינוע רכב לטיפול' },
-  { id: 3, name: 'ציוד גברים' },
-  { id: 4, name: 'ציוד נשים' },
-  { id: 5, name: 'מספרה' },
-  { id: 8, name: 'הובלות' },
-  { id: 10, name: 'מזון מחוץ ליחידה' },
-  { id: 11, name: 'מזון בתוך היחידה' },
-  { id: 13, name: 'בינוי' },
-];
+/** How a server field type is drawn: the input's kind, and the HTML input type for plain inputs. */
+const FIELD_KIND = {
+  text: ['text', 'text'],
+  text_box: ['text', 'text'],
+  text_area: ['textarea'],
+  tel: ['text', 'tel'],
+  email: ['text', 'email'],
+  url: ['text', 'url'],
+  number: ['text', 'number'],
+  number_with_asterisk: ['text', 'number'],
+  date: ['text', 'date'],
+  time: ['text', 'time'],
+  month: ['text', 'month'],
+  week: ['text', 'week'],
+  select: ['select'],
+  radio: ['select'],
+};
 
-/** The permission that lets a user open requests in a domain (PermissionEnum::USER on the API): "user_<booking type id>". */
-const USER_PERMISSION = /^user_(\d+)$/;
-
-/**
- * Categories the user may open requests in: the new topics (their picture from public/icons/requester), then the
- * service domains the user holds "user_<id>" for in GET /user's permissions, the same check the mobile app's home makes
- * (its unit filter is not available to a plain user here). Domains get their own icon and `bookingTypeId`; ids are
- * strings so they can sit in the URL.
- */
-export async function fetchPermittedCategories(signal) {
-  const user = await requesterApi.user(signal);
-  const allowed = new Set((user?.permissions ?? []).map((permission) => Number(USER_PERMISSION.exec(permission?.name ?? '')?.[1])).filter(Boolean));
-  return [
-    ...TOPICS.map((topic) => ({ id: topic.id, name: topic.name, img: iconSrc(topic.id) })),
-    ...DOMAINS.filter((domain) => allowed.has(domain.id)).map((domain) => ({ id: `d${domain.id}`, name: domain.name, img: domainIconSrc(domain.id), bookingTypeId: domain.id })),
-  ];
+/** A field as the form draws it; `regex` comes from the field's `validations`. */
+function toField(raw) {
+  const [kind, inputType] = FIELD_KIND[raw.field_type?.name] ?? ['text', 'text'];
+  let regex = null;
+  try {
+    regex = raw.validations?.regex ? new RegExp(raw.validations.regex) : null;
+  } catch {
+    regex = null;
+  }
+  return {
+    id: raw.id,
+    label: raw.field_display_name ?? raw.field_name ?? '',
+    kind,
+    inputType,
+    ltr: ['tel', 'email', 'url', 'number'].includes(inputType),
+    required: Boolean(raw.is_required),
+    regex,
+    options: raw.options ?? [],
+    children: [...(raw.children ?? [])].sort((a, b) => a.position - b.position).map(toField),
+  };
 }
 
-/** The user's requests in the new topics (demo store, kept for this browser session). */
-let demoRequests = [];
-let nextSerial = 1001;
+/** GET /requester/form/{id}: the fields in order (the server filters them to the user's unit). Upload fields are left to the form's own attachments. */
+export async function fetchForm(typeId, signal) {
+  const data = await requesterApi.form(typeId, signal);
+  return [...(data ?? [])]
+    .filter((raw) => !['file', 'image', 'hidden'].includes(raw.field_type?.name))
+    .sort((a, b) => a.position - b.position)
+    .map(toField);
+}
 
 /**
- * The user's requests in one category (null: all): the demo topic requests, and the real requests of the service domains
- * from GET /bookings/my-bookings (up to 200, newest first). One row shape: id, typeName, serial, createdAt, and
- * either `status` (demo: action | handling | done) or `statusId` + `statusName` (real).
+ * Opens a request (POST /bookings/{id}, multipart): `values` maps field id → value (a select's value is its option id),
+ * `files` are the attachments. Returns the new booking; a 422 carries per-field messages (`values.<id>`, `files.<n>`).
  */
+export async function submitRequest(typeId, values, files) {
+  const body = new FormData();
+  for (const [fieldId, value] of Object.entries(values)) {
+    if (value !== undefined && value !== null && value !== '') body.append(`values[${fieldId}]`, value);
+  }
+  for (const file of files) body.append('files[]', file);
+  return requesterApi.create(typeId, body);
+}
+
+/** The four home counters (GET /requester/counters): open, action (waits for the user), handling, done. */
+export async function fetchCounters(signal) {
+  return requesterApi.counters(signal);
+}
+
 /** GET /bookings/my-bookings page size (PaginationEnum::PER_PAGE on the API), and how many pages to read at most (200 requests). */
 const PAGE_SIZE = 20;
 const MAX_PAGES = 10;
 
-export async function fetchMyRequests(categoryId, signal) {
-  const demo = demoRequests.filter((request) => !categoryId || request.topicId === categoryId);
-  const domainId = categoryId?.startsWith('d') ? Number(categoryId.slice(1)) : null;
-  if (categoryId && !domainId) return demo;
-  // GET /bookings/my-bookings sends 20 a page with no paging meta: a short page is the last one
+/**
+ * The user's requests from GET /bookings/my-bookings (up to 200, newest first), limited to `typeIds` when given
+ * (a category of "הקריאות שלי"). Row shape: id (uuid), typeName, bookingTypeId, serial, createdAt, updatedAt, statusId, statusName.
+ */
+export async function fetchMyRequests(typeIds, signal) {
+  // the API sends 20 a page with no paging meta: a short page is the last one
   const bookings = [];
   for (let page = 1; page <= MAX_PAGES; page += 1) {
     const rows = (await requesterApi.myBookings(page, null, signal)).data ?? [];
     bookings.push(...rows);
     if (rows.length < PAGE_SIZE) break;
   }
-  const real = bookings
-    .filter((booking) => !domainId || booking.booking_type?.id === domainId)
+  return bookings
+    .filter((booking) => !typeIds || typeIds.includes(booking.booking_type?.id))
     .map((booking) => ({
       id: booking.uuid,
       typeName: booking.booking_type?.display_name ?? '',
       bookingTypeId: booking.booking_type?.id,
       serial: booking.serial_number,
       createdAt: booking.created_at,
+      updatedAt: booking.updated_at,
       statusId: booking.status?.id,
       statusName: booking.status?.display_name ?? '',
     }));
-  return [...(domainId ? [] : demo), ...real];
 }
 
 /**
- * One request in full, for the side panel: a real one from GET /bookings/{uuid}, a demo one from what was filled in.
+ * One request in full, for the side panel, from GET /bookings/{uuid}.
  * Shape: statusId, statusName, statusMessage, createdAt, updatedAt, viceApprover, requester {name, personalId, phone},
  * values [{label, value, depth}], files [{name, url}], comments [{id, author, createdAt, text}].
  */
 export async function fetchRequestDetails(row, signal) {
-  if (row.status) {
-    const fields = FORMS[row.typeId] ?? [];
-    return {
-      statusId: null,
-      statusName: STATUS_LABEL[row.status],
-      createdAt: row.createdAt,
-      updatedAt: null,
-      viceApprover: null,
-      values: fields.filter((field) => row.values?.[field.id]).map((field) => ({ label: field.label, value: row.values[field.id] })),
-      files: (row.files ?? []).map((name) => ({ name, url: null })),
-      comments: [],
-      requester: null,
-      statusMessage: null,
-    };
-  }
   const booking = await requesterApi.booking(row.id, signal);
   // booking_values is a tree (ShowBookingResource / BookingValueFormatterService): a field may hold sub-fields
   // (form_fields), chosen options (option_fields, each an ancestor chain down to the chosen one, which may carry a typed
@@ -251,71 +213,102 @@ export async function fetchRequestDetails(row, signal) {
   };
 }
 
-/** The four counters on the home. */
-export async function fetchCounters() {
-  const count = (status) => demoRequests.filter((request) => request.status === status).length;
-  const done = count('done');
-  return { open: demoRequests.length - done, action: count('action'), handling: count('handling'), done };
-}
-
-/** Sends a request. `values` holds the field values, `files` the attachments. */
-export async function submitRequest(typeId, values, files) {
-  const found = findType(typeId);
-  if (!found) throw new Error('סוג הקריאה אינו מוכר.');
-  const request = {
-    id: nextSerial,
-    serial: String(nextSerial++),
-    typeId,
-    typeName: found.type.name,
-    topicId: found.topic.id,
-    status: 'handling',
-    createdAt: new Date().toLocaleDateString('he-IL'),
-    values,
-    files: files.map((file) => file.name),
-  };
-  demoRequests = [request, ...demoRequests];
-  return request;
-}
-
-export const STATUS_LABEL = { action: 'נדרשת פעולה ממך', handling: 'בטיפול', done: 'הושלמה' };
-
-/** The four steps a request goes through, as the requester sees them. */
-export const PROGRESS_STEPS = ['נשלחה', 'בטיפול', 'אושרה', 'הושלמה'];
+/** The only status that waits for the requester (StatusBookingEnum::PENDING_FILE: "נדרשת השלמת קבצים מהלקוח"). */
+const WAITING_FOR_USER = 8;
+const COMPLETED = 5;
 
 /**
- * Where a request stands, from its status (StatusBookingEnum on the API): the step it is at and how (here: waiting there,
- * hold: waiting for something, stopped: rejected or cancelled, finished: done). Demo requests use their own status.
+ * Which home counter a request falls under: done, action (waits for the user), handling (open, with someone else),
+ * or null (closed without completing: rejected or cancelled). "open" is action + handling.
  */
-export function requestProgress(statusId, demoStatus) {
-  if (demoStatus) return demoStatus === 'done' ? { step: 3, mode: 'finished' } : { step: 1, mode: demoStatus === 'action' ? 'hold' : 'here' };
-  switch (statusId) {
-    case 1: // received
-      return { step: 0, mode: 'here' };
-    case 2: // processing
-    case 14: // with the control officer
-    case 15: // vice approver approved
-    case 16: // vice approver rejected (back to the approver)
-    case 17: // control officer approved
-      return { step: 1, mode: 'here' };
-    case 8: // waiting for a file
-    case 9: // waiting during processing
-      return { step: 1, mode: 'hold' };
-    case 3: // approved
-    case 11: // approved by the barber
-      return { step: 2, mode: 'here' };
-    case 10: // waiting after approval
-      return { step: 2, mode: 'hold' };
-    case 5: // completed
-      return { step: 3, mode: 'finished' };
-    case 4: // rejected
-    case 7: // cancelled by the approver
-    case 12: // cancelled by the barber
-    case 18: // rejected by the control officer
-      return { step: 1, mode: 'stopped' };
-    case 6: // cancelled by the user
-    case 13: // cancelled by a change of time
-      return { step: 0, mode: 'stopped' };
-    default:
-      return { step: 0, mode: 'here' };
+export function counterOf(row) {
+  if (row.statusId === COMPLETED) return 'done';
+  if (row.statusId === WAITING_FOR_USER) return 'action';
+  return OPEN_STATUS_IDS.includes(row.statusId) ? 'handling' : null;
+}
+
+
+/** A date from the requester endpoints as a local day: they send "d/m/Y" (day first); an ISO date also works. Null if unreadable. */
+export function parseDay(value) {
+  const text = String(value ?? '').trim();
+  const dmy = /^(\d{1,2})[/.](\d{1,2})[/.](\d{2,4})/.exec(text);
+  if (dmy) {
+    const year = dmy[3].length === 2 ? 2000 + Number(dmy[3]) : Number(dmy[3]);
+    const date = new Date(year, Number(dmy[2]) - 1, Number(dmy[1]));
+    return Number.isNaN(date.getTime()) ? null : date;
   }
+  const date = text ? new Date(text) : null;
+  return date && !Number.isNaN(date.getTime()) ? new Date(date.getFullYear(), date.getMonth(), date.getDate()) : null;
+}
+
+/** Whole days from a date until today (0 = today); null if the date cannot be read. */
+export function daysSince(value, today = new Date()) {
+  const day = parseDay(value);
+  if (!day) return null;
+  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  return Math.max(0, Math.round((start - day) / 86_400_000));
+}
+
+/** "כבר 3 ימים" in Hebrew: today, a day, two days, N days. */
+export function waitedLabel(days) {
+  if (days === null || days === undefined) return '';
+  if (days === 0) return 'מהיום';
+  if (days === 1) return 'כבר יום';
+  if (days === 2) return 'כבר יומיים';
+  return `כבר ${days} ימים`;
+}
+
+
+/** The barber (BookingTypeEnum::BARBER_BOOKING) and the one domain whose route starts at the control officer (הובלות). */
+const BARBER_TYPE_ID = 5;
+const CONTROL_OFFICER_TYPE_IDS = [8];
+/** The statuses that end a request (StatusBookingEnum::isTerminal). */
+const TERMINAL_STATUS_IDS = [4, 5, 6, 7, 12, 13];
+
+/**
+ * Who or what a request is waiting for: the same answer as the API's Workflow::stageOf, which the management screens get
+ * from the server (the requester endpoints do not send it). The barber waits for the barber until it answers, and its
+ * approval (11) ends the route; every other domain goes received → (רמ"ד תו"ב for הובלות) → גורם מטפל → מפקד תחום
+ * (or a supplier hold) → מימוש → closed.
+ */
+export function stageOf(statusId, bookingTypeId) {
+  if (bookingTypeId === BARBER_TYPE_ID) return TERMINAL_STATUS_IDS.includes(statusId) || statusId === 11 ? 'closed' : 'barber';
+  if (TERMINAL_STATUS_IDS.includes(statusId)) return 'closed';
+  switch (statusId) {
+    case 1:
+      return CONTROL_OFFICER_TYPE_IDS.includes(bookingTypeId) ? 'control_officer' : 'vice_approver';
+    case 14: case 17: case 18:
+      return 'vice_approver';
+    case 2: case 15: case 16:
+      return 'approver';
+    case 8:
+      return 'supplier_files';
+    case 9:
+      return 'supplier_approval';
+    case 10:
+      return 'supplier_number';
+    case 3:
+      return 'realization';
+    default:
+      return 'closed';
+  }
+}
+
+/** What routeFor needs to know of a domain (the management catalog, which a requester cannot read): the barber's and הובלות' statuses. */
+const ROUTE_CATALOG = {
+  booking_type_statuses: {
+    [BARBER_TYPE_ID]: [1, 6, 11, 12, 13],
+    ...Object.fromEntries(CONTROL_OFFICER_TYPE_IDS.map((id) => [id, [14, 17, 18]])),
+  },
+};
+
+/**
+ * A request's route, drawn exactly as the management screens draw it (features/bookings/route.js): the stations of its
+ * domain, the station it is at, and how (here, hold, stopped, finished).
+ */
+export function requestRoute(statusId, bookingTypeId) {
+  const booking = { booking_type_id: bookingTypeId, status_id: statusId, stage: stageOf(statusId, bookingTypeId) };
+  const stations = routeFor(booking, ROUTE_CATALOG);
+  const { here, mode } = routePosition(booking, stations);
+  return { stage: booking.stage, stations, here, mode };
 }

@@ -1,30 +1,43 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AnimatedText } from '@/components/ui/AnimatedText';
 import { Button } from '@/components/ui/Button';
-import { Chip, StatusChip } from '@/components/ui/Chips';
 import { DateRangePicker } from '@/components/ui/DateRangePicker';
 import { Field } from '@/components/ui/Field';
 import { Select } from '@/components/ui/Select';
-import { EmptyState, ErrorNotice, Loading } from '@/components/ui/Feedback';
+import { EmptyState, ErrorNotice, Loading, Notice } from '@/components/ui/Feedback';
 import { Icon } from '@/components/ui/Icon';
 import { Seg } from '@/components/ui/Controls';
 import { SearchField } from '@/components/ui/SearchField';
+import { usePresence } from '@/components/ui/usePresence';
 import { OPEN_STATUS_IDS } from '@/lib/api/endpoints';
 import { useDebounced } from '@/lib/useDebounced';
 import { useFitToWindow } from '@/lib/useFitToWindow';
 import { RequestDrawer } from './RequestDrawer';
-import { fetchMyRequests, fetchPermittedCategories, PROGRESS_STEPS, requestProgress, STATUS_LABEL } from './requesterData';
+import { RequestRow } from './RequestRow';
+import { isChanged, markCelebrated, markSeen, useSeen, wasCelebrated } from './seen';
+import { counterOf, stageOf } from './requesterData';
+import { STAGE_SHORT } from '@/lib/labels';
+import { useCatalog, useMyRequests } from './useRequester';
 
-const STATUS_TONE = { action: 'warn', handling: 'info', done: 'ok' };
+/** The home counters, as a filter on the full page (?bucket=): a counter's click lands here with it chosen. */
+const BUCKETS = [
+  { id: 'open', label: 'קריאות פתוחות' },
+  { id: 'action', label: 'נדרשת פעולה ממך' },
+  { id: 'handling', label: 'בטיפול אצל גורם' },
+  { id: 'done', label: 'הושלמו' },
+];
+const inBucket = (row, bucket) => (bucket === 'open' ? ['action', 'handling'].includes(counterOf(row)) : counterOf(row) === bucket);
+
+/** How long "סימון הכל כנקרא" takes to fade out (matches .rq-mark-all[data-closing] in requester.css). */
+const MARK_ALL_EXIT_MS = 220;
 
 /** Requests the home's side panel lists before "הצג עוד" (the full page lists them all). */
 const PANEL_ROWS = 5;
 
-/** Still open: a demo request until done, a real one by its status (the open statuses the API filters by). */
-const isOpen = (row) => (row.status ? row.status !== 'done' : OPEN_STATUS_IDS.includes(row.statusId));
+/** Still open, by its status (the open statuses the API filters by). */
+const isOpen = (row) => OPEN_STATUS_IDS.includes(row.statusId);
 
 /** Every word of the search is in the request's number or its category name. */
 const matches = (row, query) => {
@@ -52,37 +65,67 @@ const SORTS = [
   { value: 'status', label: 'לפי סטטוס', compare: (a, b) => (statusNameOf(a) ?? '').localeCompare(statusNameOf(b) ?? '', 'he') || byOpened(b, a) },
 ];
 
-/** The status name a row shows (demo or real). */
-const statusNameOf = (row) => (row.status ? STATUS_LABEL[row.status] : row.statusName);
+/** The status name a row shows. */
+const statusNameOf = (row) => row.statusName;
 
 /**
  * "הקריאות שלי": an icon and name for every category the user may open requests in (the new topics and the service
  * domains); picking one lists their requests in it. `full` is the whole-page version, otherwise the home's side panel.
  */
-export function MyRequestsPanel({ full = false, category, onCategory, onAll }) {
-  const categories = useQuery({ queryKey: ['requester-demo', 'categories'], queryFn: ({ signal }) => fetchPermittedCategories(signal) });
-  const list = categories.data ?? [];
+export function MyRequestsPanel({ full = false, category, onCategory, bucket: rawBucket = null, onBucket = () => {}, sent = null, onSentSeen = () => {}, onAll }) {
+  const bucket = BUCKETS.some((option) => option.id === rawBucket) ? rawBucket : null;
+  // the categories (topics and domains) come from GET /requester/catalog, already limited to what the user may open
+  const categories = useCatalog();
+  const list = categories.data?.categories ?? [];
+  // a ביטחון מידע / תקשוב type's own picture (by booking type id); other domains show their domain badge
+  const typeImg = Object.fromEntries((categories.data?.topics ?? []).flatMap((topic) => topic.groups.flatMap((group) => group.types.map((type) => [type.id, type.img]))));
   const current = list.find((candidate) => candidate.id === category) ?? null;
-  const requests = useQuery({
-    queryKey: ['requester-demo', 'requests', current?.id ?? 'all'],
-    queryFn: ({ signal }) => fetchMyRequests(current?.id ?? null, signal),
-    enabled: categories.isSuccess,
-  });
+  const requests = useMyRequests(current, { enabled: categories.isSuccess });
   // the full page filters (open / all, search by number or category), as the earlier "הקריאות שלי" screen did
   const [view, setView] = useState('all');
   // the request open in the side panel
   const [opened, setOpened] = useState(null);
+  // "changed since your last visit": opening a request marks it as seen in its current status
+  const seen = useSeen();
+  const open = (row) => {
+    markSeen([row]);
+    setOpened(row);
+  };
   // the full page ends at the window's bottom: only the list scrolls, never the page
   const card = useRef(null);
+  // the list is locked while a request is open (styles); a request reached with the stepper is brought into view
+  useEffect(() => {
+    if (!opened) return;
+    card.current?.querySelector('.rq-row.selected')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [opened]);
   useFitToWindow(card, 320, full);
   const [search, setSearch] = useState('');
   const query = useDebounced(search.trim(), 200);
   // the full page's "סינון" panel, as in the management requests screen: category, step, status, opening dates
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  // arriving from a home counter: the filters open, so the chosen "מצב" is in view
+  const [filtersOpen, setFiltersOpen] = useState(() => Boolean(bucket));
   const [stage, setStage] = useState('');
   const [status, setStatus] = useState('');
   const [range, setRange] = useState({ from: null, to: null });
   const allRows = requests.data ?? [];
+  const changedRows = allRows.filter((row) => isChanged(seen, row));
+  // a completion that is new since the last visit gets a one-time celebration; a played one is remembered
+  // once due it stays due until it has played, so opening the request (which marks it seen) does not cancel it
+  const [celebrated, setCelebrated] = useState(() => new Set());
+  const [due, setDue] = useState(() => new Set());
+  const newlyDue = typeof window === 'undefined' ? [] : allRows.filter((row) => counterOf(row) === 'done' && isChanged(seen, row) && !due.has(row.id) && !wasCelebrated(row.id));
+  if (newlyDue.length) setDue(new Set([...due, ...newlyDue.map((row) => row.id)]));
+  const celebrating = (row) => due.has(row.id) && !celebrated.has(row.id) && !wasCelebrated(row.id);
+  const finishCelebration = (id) => {
+    markCelebrated(id);
+    setCelebrated((previous) => new Set(previous).add(id));
+  };
+  // "סימון הכל כנקרא" fades out instead of vanishing (as the management "ניקוי הסינון"), keeping its last count meanwhile
+  const markAll = usePresence(changedRows.length > 0, MARK_ALL_EXIT_MS);
+  const [markAllCount, setMarkAllCount] = useState(changedRows.length);
+  if (changedRows.length && changedRows.length !== markAllCount) setMarkAllCount(changedRows.length);
+  const STAGE_ORDER = ['control_officer', 'vice_approver', 'approver', 'supplier_files', 'supplier_approval', 'supplier_number', 'barber', 'realization', 'closed'];
+  const stageOptions = STAGE_ORDER.filter((id) => allRows.some((row) => stageOf(row.statusId, row.bookingTypeId) === id));
   const statusNames = [...new Set(allRows.map(statusNameOf).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'he'));
   const inRange = (row) => {
     if (!range.from && !range.to) return true;
@@ -94,13 +137,15 @@ export function MyRequestsPanel({ full = false, category, onCategory, onAll }) {
         (row) =>
           (view === 'all' || isOpen(row)) &&
           matches(row, query) &&
-          (stage === '' || requestProgress(row.statusId, row.status).step === Number(stage)) &&
+          (!bucket || inBucket(row, bucket)) &&
+          (stage === '' || stageOf(row.statusId, row.bookingTypeId) === stage) &&
           (!status || statusNameOf(row) === status) &&
           inRange(row),
       )
     : allRows;
-  const advanced = (current ? 1 : 0) + (stage !== '' ? 1 : 0) + (status ? 1 : 0) + (range.from || range.to ? 1 : 0);
+  const advanced = (bucket ? 1 : 0) + (current ? 1 : 0) + (stage !== '' ? 1 : 0) + (status ? 1 : 0) + (range.from || range.to ? 1 : 0);
   const clearFilters = () => {
+    onBucket(null);
     onCategory(null);
     setStage('');
     setStatus('');
@@ -114,6 +159,12 @@ export function MyRequestsPanel({ full = false, category, onCategory, onAll }) {
     <section ref={card} className={`card rq-mine${full ? ' full fit-card' : ''}`} aria-label="הקריאות שלי">
       <div className="rq-mine-head">
         <h2>הקריאות שלי</h2>
+        {/* only while something changed since the last visit; clears every highlight in the list shown */}
+        {!full && markAll.mounted ? (
+          <Button size="sm" variant="ghost" icon="check" className="rq-mark-all" data-closing={markAll.closing || undefined} disabled={markAll.closing} onClick={() => markSeen(changedRows)}>
+            סימון הכל כנקרא ({markAllCount})
+          </Button>
+        ) : null}
         {onAll ? (
           <button type="button" className="rq-link" onClick={onAll}>
             לכל הקריאות
@@ -129,12 +180,18 @@ export function MyRequestsPanel({ full = false, category, onCategory, onAll }) {
         </button>
         {list.map((item) => (
           <button key={item.id} type="button" className="rq-cat" aria-pressed={current?.id === item.id} onClick={() => onCategory(item.id)}>
-            <span className="ic pic"><img src={item.img} alt="" /></span>
+            <span className="ic pic">{item.img ? <img src={item.img} alt="" /> : <Icon name="layers" />}</span>
             {item.name}
           </button>
         ))}
       </div>
       )}
+      {full && sent ? (
+        // just sent from a form (?sent=<serial>): its number, as the API guide asks
+        <Notice tone="ok" className="rq-sent" action={<Button size="sm" variant="ghost" icon="x" aria-label="סגירה" onClick={onSentSeen} />}>
+          הקריאה נשלחה בהצלחה. מספר הקריאה: <b className="serial">{sent}</b>
+        </Notice>
+      ) : null}
       {full ? (
         <>
         <div className="toolbar rq-toolbar">
@@ -146,6 +203,11 @@ export function MyRequestsPanel({ full = false, category, onCategory, onAll }) {
               <AnimatedText>{advanced ? `סינון (${advanced})` : 'סינון'}</AnimatedText>
             </Button>
             {advanced ? <Button size="sm" variant="ghost" icon="x" className="requests-clear" aria-label="ניקוי הסינון" data-tip="ניקוי הסינון" onClick={clearFilters} /> : null}
+            {markAll.mounted ? (
+              <Button size="sm" variant="ghost" icon="check" className="rq-mark-all" data-closing={markAll.closing || undefined} disabled={markAll.closing} onClick={() => markSeen(changedRows)}>
+                סימון הכל כנקרא ({markAllCount})
+              </Button>
+            ) : null}
           </div>
           <span className="grow" />
           {requests.isSuccess ? <span className="small muted">{rows.length} קריאות</span> : null}
@@ -165,10 +227,16 @@ export function MyRequestsPanel({ full = false, category, onCategory, onAll }) {
                 {list.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
               </Select>
             </Field>
+            <Field label="מצב">
+              <Select autoWidth className="input" value={bucket ?? ''} onChange={(event) => onBucket(event.target.value || null)}>
+                <option value="">כל המצבים</option>
+                {BUCKETS.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
+              </Select>
+            </Field>
             <Field label="שלב">
               <Select autoWidth className="input" value={stage} onChange={(event) => setStage(event.target.value)}>
                 <option value="">כל השלבים</option>
-                {PROGRESS_STEPS.map((name, index) => <option key={name} value={index}>{name}</option>)}
+                {stageOptions.map((id) => <option key={id} value={id}>{STAGE_SHORT[id]}</option>)}
               </Select>
             </Field>
             <Field label="סטטוס">
@@ -195,13 +263,15 @@ export function MyRequestsPanel({ full = false, category, onCategory, onAll }) {
         <ul className="rq-list">
           {rows.map((row) => (
             <li key={row.id}>
-              <button type="button" className="rq-row" onClick={() => setOpened(row)} aria-label={`פרטי קריאה ${row.serial}`}>
-              <div>
-                <b>{row.typeName}</b> <span className="serial">{row.serial}</span>
-                <div className="small muted">נפתחה {row.createdAt}</div>
-              </div>
-              {row.status ? <Chip tone={STATUS_TONE[row.status]}>{STATUS_LABEL[row.status]}</Chip> : <StatusChip statusId={row.statusId} label={row.statusName} />}
-              </button>
+              <RequestRow
+                row={row}
+                img={typeImg[row.bookingTypeId]}
+                changed={isChanged(seen, row)}
+                selected={opened?.id === row.id}
+                celebrating={celebrating(row)}
+                onOpen={() => open(row)}
+                onCelebrated={() => finishCelebration(row.id)}
+              />
             </li>
           ))}
         </ul>
@@ -219,7 +289,7 @@ export function MyRequestsPanel({ full = false, category, onCategory, onAll }) {
         <EmptyState title={current ? `אין לך קריאות ב${current.name}` : 'עוד לא פתחת קריאות'}>בחר סוג קריאה כדי לפתוח קריאה ראשונה</EmptyState>
       )
       )}
-      {opened ? <RequestDrawer row={opened} rows={rows} onGo={setOpened} onClose={() => setOpened(null)} /> : null}
+      {opened ? <RequestDrawer row={opened} rows={rows} onGo={open} onClose={() => setOpened(null)} celebrate={celebrating(opened)} onCelebrated={() => finishCelebration(opened.id)} /> : null}
     </section>
   );
 }

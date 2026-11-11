@@ -49,6 +49,14 @@ export function BookingDrawer({ serial, onClose, onGo }) {
     onClose();
   };
 
+  // A booking this panel was showing that is no longer the user's to see (a handler moved it on - from the panel or from
+  // its row in the list - so it left their scope): the panel closes instead of showing "cannot show". A booking that was
+  // never shown here (a link to one the user may not open) still shows the message.
+  const lostAccess = query.isError && Boolean(query.error?.denied) && shown?.serial_number === serial;
+  useEffect(() => {
+    if (lostAccess) onDecision();
+  }, [lostAccess]); // eslint-disable-line react-hooks/exhaustive-deps
+
   if (closing) return null;
 
   return (
@@ -70,7 +78,7 @@ export function BookingDrawer({ serial, onClose, onGo }) {
       ) : (
         // keyed by the booking shown: a new booking mounts and fades in; the old one fades out first
         <div key={shown.serial_number} className={`drawer-swap${leaving ? ' out' : ''}`} aria-busy={leaving || undefined}>
-          <Body booking={shown} onDecision={onDecision} />
+          <Body booking={shown} />
         </div>
       )}
       {query.isFetching && !query.isPending ? (

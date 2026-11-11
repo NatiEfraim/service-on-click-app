@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Chip, NeedsDecision, StatusChip } from '@/components/ui/Chips';
 import { Icon } from '@/components/ui/Icon';
@@ -25,12 +25,18 @@ export function Ticket({ booking, showActions = true, onAction, outcome, enterin
   const actions = bookingActions(booking.actions);
   const owner = booking.owner_name || booking.owner_personal_id || '—';
   const open = () => drawer.open(booking.serial_number);
+  // the booking open in the side panel: its row stands out above the panel's dimming (the same look as the requester's list)
+  const selected = drawer.serial === booking.serial_number && !outcome;
+  useEffect(() => {
+    if (selected) ref.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [selected]);
 
   // Card click is for mouse users; the heading is the real button (role="button" would hide inner buttons).
   return (
     <div
       ref={ref}
-      className={`ticket${outcome ? ` leaving ${outcome}` : ''}`}
+      className={`ticket${outcome ? ` leaving ${outcome}` : ''}${selected ? ' selected' : ''}`}
+      aria-current={selected ? 'true' : undefined}
       aria-hidden={outcome ? true : undefined}
       style={{ '--dc': domainColor(booking.booking_type_id), '--stamp-ms': `${ROW_STAMP_MS}ms` }}
       onClick={(event) => {

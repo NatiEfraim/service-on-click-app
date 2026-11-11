@@ -141,13 +141,14 @@ svg.chart text { fill: var(--mute); font-size: 13px; font-family: var(--font); }
 
 /* main screen: domain tiles (icon square + name, with counts) */
 /* tiles on the right (RTL start), the picked domain's column chart on the left */
-.home-top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: stretch; }
+.home-top { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr); gap: 18px; align-items: stretch; }
 /* balanced rows (--per-row / --rows from HomeScreen), a shorter last row centred */
 .home-top .tiles { display: flex; flex-wrap: wrap; justify-content: center; align-content: stretch; gap: 12px; }
 .home-top .tiles > .dtile {
   flex: 0 0 calc((100% - (var(--per-row) - 1) * 12px) / var(--per-row));
   height: calc((100% - (var(--rows) - 1) * 12px) / var(--rows));
 }
+.home-top .tiles[data-expand-last-row] > .dtile:nth-last-child(-n + 2) { flex-grow: 1; }
 /* group tile: hover or focus folds the group's face away and shows its domains side by side */
 .dgroup { position: relative; overflow: hidden; }
 /* no browser focus ring on the group: clicking it focuses it; keyboard focus still shows on the inner card */
@@ -177,8 +178,27 @@ svg.chart text { fill: var(--mute); font-size: 13px; font-family: var(--font); }
 .home .dtile, .home .dgroup-item { container-type: size; }
 .home .dtile-ic { width: clamp(44px, 30cqmin, 112px); height: clamp(44px, 30cqmin, 112px); border-radius: clamp(12px, 7cqmin, 26px); }
 .home .dtile-ic img { width: 60%; height: 60%; }
+.home .tiles > .dtile > .dtile-ic { width: clamp(28px, 44cqh, 96px); height: clamp(28px, 44cqh, 96px); }
+.home .tiles > .dtile > .dtile-ic img { width: 72%; height: 72%; }
 .home .dtile-name { font-size: clamp(14px, 8cqmin, 26px); }
 .home .dtile-meta { font-size: clamp(12px, 5cqmin, 17px); }
+.home .dgroup-item { gap: 2px; padding: 3px 4px; }
+.home .dgroup-item .dtile-ic { width: clamp(23px, 35cqh, 40px); height: clamp(23px, 35cqh, 40px); border-radius: 9px; }
+.home .dgroup-item .dtile-name { font-size: clamp(11px, 15cqh, 14px); overflow-wrap: anywhere; }
+.home .dgroup-item .dtile-meta { font-size: clamp(10px, 12cqh, 12px); }
+.home .dgroup-menu[data-members="2"] .dgroup-item { gap: clamp(2px, 3cqh, 8px); }
+.home .dgroup-menu[data-members="2"] .dtile-ic { width: clamp(24px, 39cqh, 80px); height: clamp(24px, 39cqh, 80px); border-radius: clamp(9px, 8cqh, 17px); }
+.home .dgroup-menu[data-members="2"] .dtile-ic img { width: 72%; height: 72%; }
+.home .dgroup-menu[data-members="2"] .dtile-name { font-size: clamp(11px, 14cqh, 20px); }
+.home .dgroup-menu[data-members="2"] .dtile-meta { font-size: clamp(10px, 10cqh, 15px); }
+.dgroup-menu[data-members="3"] { flex-direction: column; gap: 3px; padding: 4px; }
+.home .dgroup-menu[data-members="3"] .dgroup-item {
+  grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; justify-items: start;
+  align-content: center; gap: 5px; padding: 1px 5px; min-height: 0; border-radius: 8px; text-align: start;
+}
+.home .dgroup-menu[data-members="3"] .dtile-ic { width: 22px; height: 22px; border-radius: 6px; }
+.home .dgroup-menu[data-members="3"] .dtile-name { font-size: clamp(14px, 36cqh, 17px); }
+.home .dgroup-menu[data-members="3"] .dtile-meta { font-size: clamp(12px, 28cqh, 14px); text-align: end; white-space: nowrap; }
 .home-card { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 .home-card > :not(.card-head) { flex: 1; min-height: 0; }
 .home-card .card-head { padding: 10px 16px; }
@@ -225,17 +245,32 @@ span.chart-fade { flex-direction: row; align-items: center; gap: 8px; white-spac
 .panel > header { display: flex; align-items: baseline; gap: 10px; padding: 14px 18px 10px; border-bottom: 1px solid var(--line-2); }
 .panel > header h2 { font-size: 16px; margin: 0; font-weight: 700; }
 .panel .body { padding: 14px 18px; }
-.rail { display: flex; align-items: flex-start; padding: 6px 4px 2px; overflow-x: auto; }
+.booking-tag { position: relative; display: inline-flex; }
+.booking-tag-in, .booking-tag-out { display: inline-flex; }
+.booking-tag-in { animation: booking-tag-in 220ms var(--ease-out) 80ms both; }
+.booking-tag-out { animation: booking-tag-out 180ms var(--ease-in) both; pointer-events: none; }
+.booking-tag[data-replacing] .booking-tag-out { position: absolute; inset-block-start: 0; inset-inline-start: 0; width: max-content; }
+@keyframes booking-tag-in { from { opacity: 0; } }
+@keyframes booking-tag-out { to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .booking-tag .booking-tag-in, .booking-tag .booking-tag-out { animation-duration: 1ms; animation-delay: 0ms; }
+}
+.rail { padding: 6px 4px 2px; overflow-x: auto; }
+.rail-track { position: relative; isolation: isolate; display: flex; align-items: flex-start; min-width: var(--rail-min-width); --rail-duration: 360ms; }
+.rail-track::before, .rail-progress { content: ""; position: absolute; top: 10px; inset-inline-start: var(--rail-start); height: 3px; }
+.rail-track::before { inset-inline-end: var(--rail-start); background: var(--line); }
+.rail-progress { width: var(--rail-progress); background: var(--accent); transition: width var(--rail-duration) var(--ease-out); }
 .station { flex: 1 1 0; min-width: 86px; position: relative; text-align: center; padding-top: 24px; }
-.station::before { content: ""; position: absolute; top: 10px; inset-inline-start: 50%; width: 100%; height: 3px; background: var(--line); }
-.station:last-child::before { display: none; }
-.station .dot { position: absolute; top: 2px; inset-inline-start: calc(50% - 10px); width: 20px; height: 20px; border-radius: 50%; background: var(--surface); border: 3px solid var(--line); z-index: 1; }
-.station.done::before { background: var(--accent); }
+.station .dot, .rail-marker { position: absolute; top: 2px; width: 20px; height: 20px; border-radius: 50%; background: var(--surface); border: 3px solid var(--line); }
+.station .dot { inset-inline-start: calc(50% - 10px); z-index: 1; transition: background-color 200ms, border-color 200ms; }
 .station.done .dot { background: var(--accent); border-color: var(--accent); }
-.station.here .dot { border-color: var(--accent); box-shadow: 0 0 0 5px var(--accent-wash); }
-.station.hold .dot { border-color: var(--hold); box-shadow: 0 0 0 5px var(--hold-w); }
-.station.stopped .dot { border-color: var(--bad); background: var(--bad); }
-.station.finished .dot { border-color: var(--ok); background: var(--ok); }
+.rail-marker { z-index: 2; pointer-events: none; inset-inline-start: calc(var(--rail-start) + var(--rail-progress) - 10px); border-color: var(--accent); box-shadow: 0 0 0 5px var(--accent-wash); transition: inset-inline-start var(--rail-duration) var(--ease-out), background-color 200ms, border-color 200ms, box-shadow 200ms; }
+.rail-track.hold .rail-marker { border-color: var(--hold); box-shadow: 0 0 0 5px var(--hold-w); }
+.rail-track.stopped .rail-marker { border-color: var(--bad); background: var(--bad); box-shadow: none; }
+.rail-track.finished .rail-marker { border-color: var(--ok); background: var(--ok); box-shadow: none; }
+@media (prefers-reduced-motion: reduce) {
+  .rail-progress, .rail-marker, .station .dot { transition: none; }
+}
 .station .name { font-size: 13px; color: var(--ink-2); display: block; }
 .station.here .name, .station.hold .name { font-weight: 700; color: var(--ink); }
 .station .sub { font-size: 12px; color: var(--mute); display: block; }
@@ -510,3 +545,37 @@ span.chart-fade { flex-direction: row; align-items: center; gap: 8px; white-spac
 .drawer-stack { display: grid; gap: 16px; align-content: start; min-width: 0; }
 .drawer .scroll { scrollbar-width: none; }
 .drawer .scroll::-webkit-scrollbar { display: none; }
+
+/* the booking open in the side panel, in every management list (Ticket): the same look as the requester's list - it is
+   lifted above the panel's dimming (.scrim, z-index 60), floats out of the list as a card of its own (inset on every
+   side, no divider touching it, a soft shadow), drops its domain-colour edge and gets a soft green-to-violet border that
+   slowly flows around it. Everything eases both ways; the border is its own layer (::before) so it can fade */
+.ticket {
+  position: relative;
+  transition: margin 260ms var(--ease-out), box-shadow 260ms var(--ease-out), background-color 260ms var(--ease-out), border-radius 260ms var(--ease-out), border-color 260ms var(--ease-out);
+}
+.ticket::before {
+  content: ""; position: absolute; inset: 0; inset-inline-start: -4px; border-radius: inherit; padding: 2px; pointer-events: none;
+  background: conic-gradient(from var(--sel-angle, 0deg), #2FA85A, #8EE3A8, var(--accent-mid), var(--accent), #2FA85A);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  opacity: 0; transition: opacity 260ms var(--ease-out);
+}
+.ticket.selected {
+  z-index: 61; margin: 12px 10px; border-radius: 14px; background: var(--surface); border-bottom-color: transparent;
+  border-inline-start-color: transparent;
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--ink) 14%, transparent), 0 2px 6px color-mix(in srgb, #2FA85A 14%, transparent);
+}
+.ticket.selected::before { opacity: 1; animation: ticket-sel-flow 4s linear infinite; }
+.ticket.selected:hover { background: var(--surface); }
+/* the row above it drops its divider too, so the selected one touches nothing */
+.ticket:has(+ .ticket.selected) { border-bottom-color: transparent; }
+/* while a booking is open its list stays put (the row sits above the dimming, so the wheel would reach the list) */
+.queue-scroll:has(.ticket.selected), .scroll-y:has(.ticket.selected) { overflow: hidden; }
+@property --sel-angle { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+@keyframes ticket-sel-flow { to { --sel-angle: 360deg; } }
+@media (prefers-reduced-motion: reduce) { .ticket, .ticket::before { transition: none; } .ticket.selected::before { animation: none; } }
+/* the flowing border also covers the row's 1px bottom divider (outside the padding box, where ::before ends), so the
+   white of the selected row never shows below its frame */
+.ticket::before { inset-block-end: -1px; }
+.ticket:last-child::before { inset-block-end: 0; }
