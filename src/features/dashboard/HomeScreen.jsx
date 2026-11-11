@@ -11,9 +11,10 @@ import { EmptyState, ErrorNotice, Loading } from '@/components/ui/Feedback';
 import { PageHead } from '@/components/ui/PageHead';
 import { insightsApi } from '@/lib/api/endpoints';
 import { keys } from '@/lib/api/keys';
-import { domainColor } from '@/lib/labels';
+import { domainColor, STAGE_COLOR, STAGE_ORDER, STAGE_SHORT } from '@/lib/labels';
 import { useSession } from '@/providers/SessionProvider';
-import { StageBars, StageColumns } from './StageBars';
+import { StageDonut } from './StageDonut';
+import { StageColumns } from './StageBars';
 import { TileBody } from './TileBody';
 
 /** Matches the .chart-fade transition in screens.css. */
@@ -40,7 +41,7 @@ function homeFromOverview(overview, typeIds, typeName) {
   };
 }
 
-/** Home: domain tiles beside one domain's column chart, then open bookings by domain and stage. */
+/** Home: domain tiles beside the picked domain's doughnut by stage (domain picker in its head), then its columns by stage. */
 export function HomeScreen() {
   const router = useRouter();
   const { me, typeName } = useSession();
@@ -145,31 +146,75 @@ export function HomeScreen() {
         </section>
 
         <Card
-          className="home-card home-chart"
+          className="home-card home-chart home-donut"
           title={
             <span key={chartType ?? 'none'} className={`chart-fade${fading ? ' out' : ''}`}>
               {chartType === null ? 'קריאות פתוחות לפי שלב' : (
                 <>
                   <DomainIcon bookingTypeId={chartType} />
-                  {`${typeName(chartType)}: ${shownTotal} קריאות פתוחות לפי שלב`}
+                  {`${typeName(chartType)}: ${shownTotal} קריאות פתוחות`}
                 </>
               )}
             </span>
           }
-          hint="לחיצה על עמודה פותחת את הקריאות"
         >
           <div key={chartType ?? 'none'} className={`chart-fade${fading ? ' out' : ''}`}>
             {chartType === null ? (
               <EmptyState title="אין קריאות פתוחות" />
             ) : (
-              <StageColumns stages={shownStages} bookingTypeId={chartType} onPick={(id) => router.push(`/requests?view=open&types=${chartType}&stage=${id}`)} />
+              <StageDonut stages={shownStages} bookingTypeId={chartType} onPick={(id) => router.push(`/requests?view=open&types=${chartType}&stage=${id}`)} />
             )}
           </div>
         </Card>
       </div>
 
-      <Card className="home-card home-bars" title="קריאות פתוחות לפי תחום ושלב" hint="לחיצה על שם תחום מציגה את הגרף שלו למעלה, לחיצה על פס פותחת את הקריאות">
-        <StageBars byTypeStage={byTypeStage} onPickType={setPickedType} pickedType={shownType} />
+      <Card
+        className="home-card home-chart home-cols"
+        title={
+          <span key={chartType ?? 'none'} className={`chart-fade${fading ? ' out' : ''}`}>
+            {chartType === null ? 'קריאות פתוחות לפי שלב' : (
+              <>
+                <DomainIcon bookingTypeId={chartType} />
+                {`${typeName(chartType)}: ${shownTotal} קריאות פתוחות לפי שלב`}
+              </>
+            )}
+          </span>
+        }
+        hint="בחירת תחום למטה משנה את שני הגרפים, לחיצה על עמודה פותחת את הקריאות"
+      >
+        <div className="hcols">
+          <div className="hcols-main">
+            {/* first in the DOM, so in right-to-left it sits on the right */}
+            <div className="legend hcols-legend">
+              {STAGE_ORDER.filter((id) => shownStages[id] > 0).map((id) => (
+                <span key={id}>
+                  <i style={{ background: STAGE_COLOR[id] }} />
+                  {STAGE_SHORT[id]}
+                </span>
+              ))}
+            </div>
+            <div key={chartType ?? 'none'} className={`chart-fade hcols-chart${fading ? ' out' : ''}`}>
+              {chartType === null ? (
+                <EmptyState title="אין קריאות פתוחות" />
+              ) : (
+                <StageColumns stages={shownStages} bookingTypeId={chartType} onPick={(id) => router.push(`/requests?view=open&types=${chartType}&stage=${id}`)} />
+              )}
+            </div>
+          </div>
+          <div className="hcols-domains" role="group" aria-label="בחירת תחום">
+            {domains.map((domain) => (
+              <button
+                key={domain.booking_type_id}
+                type="button"
+                aria-pressed={shownType === domain.booking_type_id}
+                onClick={() => setPickedType(domain.booking_type_id)}
+              >
+                <DomainIcon bookingTypeId={domain.booking_type_id} />
+                {domain.name}
+              </button>
+            ))}
+          </div>
+        </div>
       </Card>
       </div>
     </FadeIn>

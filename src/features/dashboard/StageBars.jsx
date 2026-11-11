@@ -11,7 +11,7 @@ import { STAGE_COLOR, STAGE_ORDER, STAGE_SHORT } from '@/lib/labels';
 import { workflowColumns } from './constants';
 import { useSession } from '@/providers/SessionProvider';
 
-/** A bar per domain, split by the stage its open bookings are in (longest first); a segment opens those bookings. */
+/** A stacked column per domain (tallest first), split by the stage its open bookings are in, the stage legend beside it; a segment opens those bookings. */
 export function StageBars({ byTypeStage, onlyTypes, onPickType, pickedType }) {
   const router = useRouter();
   const { typeName } = useSession();
@@ -31,50 +31,52 @@ export function StageBars({ byTypeStage, onlyTypes, onPickType, pickedType }) {
 
   return (
     <>
-      <div style={{ padding: '8px 0' }}>
-        {rows.map((row) => (
-          <div className="hbar" key={row.type}>
-            <button
-              type="button"
-              className={`lab${pickedType === row.type ? ' on' : ''}`}
-              data-tip="הצגת גרף עמודות לפי שלב"
-              aria-pressed={onPickType ? pickedType === row.type : undefined}
-              onClick={() => (onPickType ? onPickType(row.type) : setChartType(row.type))}
-            >
-              <DomainIcon bookingTypeId={row.type} />
-              {typeName(row.type)}
-            </button>
-            <span className="track" style={{ width: `${Math.max(8, (row.total / widest) * 100)}%` }}>
-              {STAGE_ORDER.filter((id) => row.stages[id]).map((id) => (
-                <button
-                  key={id}
-                  type="button"
-                  style={{ flex: row.stages[id], background: STAGE_COLOR[id] }}
-                  {...tip.bind({
-                    color: STAGE_COLOR[id],
-                    title: STAGE_SHORT[id],
-                    value: row.stages[id],
-                    unit: 'קריאות',
-                    sub: `${typeName(row.type)} · ${Math.round((row.stages[id] / row.total) * 100)}% מהפתוחות · לחיצה פותחת אותן`,
-                  })}
-                  aria-label={`${typeName(row.type)} - ${STAGE_SHORT[id]}: ${row.stages[id]}`}
-                  onClick={() => router.push(`/requests?view=open&types=${row.type}&stage=${id}`)}
-                />
-              ))}
+      <div className="sbars">
+        <div className="sbars-plot">
+          {rows.map((row) => (
+            <div className="sbar" key={row.type}>
+              <b className="num">{row.total}</b>
+              <span className="stack" style={{ height: `${Math.max(4, (row.total / widest) * 100)}%` }}>
+                {STAGE_ORDER.filter((id) => row.stages[id]).map((id) => (
+                  <button
+                    key={id}
+                    type="button"
+                    style={{ flex: row.stages[id], background: STAGE_COLOR[id] }}
+                    {...tip.bind({
+                      color: STAGE_COLOR[id],
+                      title: STAGE_SHORT[id],
+                      value: row.stages[id],
+                      unit: 'קריאות',
+                      sub: `${typeName(row.type)} · ${Math.round((row.stages[id] / row.total) * 100)}% מהפתוחות · לחיצה פותחת אותן`,
+                    })}
+                    aria-label={`${typeName(row.type)} - ${STAGE_SHORT[id]}: ${row.stages[id]}`}
+                    onClick={() => router.push(`/requests?view=open&types=${row.type}&stage=${id}`)}
+                  />
+                ))}
+              </span>
+              <button
+                type="button"
+                className={`lab${pickedType === row.type ? ' on' : ''}`}
+                data-tip="הצגת גרף עמודות לפי שלב"
+                aria-pressed={onPickType ? pickedType === row.type : undefined}
+                onClick={() => (onPickType ? onPickType(row.type) : setChartType(row.type))}
+              >
+                <DomainIcon bookingTypeId={row.type} />
+                <span>{typeName(row.type)}</span>
+              </button>
+            </div>
+          ))}
+        </div>
+        <div className="legend sbars-legend">
+          {usedStages.map((id) => (
+            <span key={id}>
+              <i style={{ background: STAGE_COLOR[id] }} />
+              {STAGE_SHORT[id]}
             </span>
-            <b className="num">{row.total}</b>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
       {tip.node}
-      <div className="legend">
-        {usedStages.map((id) => (
-          <span key={id}>
-            <i style={{ background: STAGE_COLOR[id] }} />
-            {STAGE_SHORT[id]}
-          </span>
-        ))}
-      </div>
       {chartRow ? (
         <Modal title={`${typeName(chartRow.type)}: ${chartRow.total} קריאות פתוחות לפי שלב`} onClose={() => setChartType(null)} wide>
           <StageColumns

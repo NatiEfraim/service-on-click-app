@@ -33,6 +33,8 @@ export const OPEN_STATUS_IDS = [1, 2, 3, 8, 9, 10, 14, 15, 16, 17, 18];
 export const requesterApi = {
   /** The signed-in user (`full_name`, `personal_number`, ...). */
   user: (signal) => getData('/user', undefined, signal),
+  /** One of the user's own bookings in full (GET /bookings/{uuid}, ShowBookingResource): status, values, comments. */
+  booking: (uuid, signal) => getData(`/bookings/${uuid}`, undefined, signal),
   /** The user's own bookings, 20 a page, newest first; `statusIds` narrows them (sent as status_id[]). */
   myBookings: async (page, statusIds, signal, serialNumber = '') => {
     // axios writes an array as status_id[]=1&status_id[]=2, which the API reads (cleanParams would join it)
