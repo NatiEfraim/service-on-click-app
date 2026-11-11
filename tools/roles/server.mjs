@@ -17,7 +17,7 @@ const API_DIR = path.resolve(process.env.API_DIR ?? path.join(here, '..', '..', 
 const PORT = Number(process.env.ROLES_PORT ?? 3001);
 const HOST = '127.0.0.1'; // this machine only
 
-const ROLES = new Set(['super_admin', 'admin', 'approver', 'vice_approver', 'user', 'transportation_control_officer']);
+const ROLES = new Set(['super_admin', 'admin', 'approver', 'vice_approver', 'user', 'transportation_control_officer', 'infosec_officer', 'ict_handler']);
 
 /** Runs `php artisan users:permissions ...args --json` in the API folder (arguments passed as a list: no shell). */
 function artisan(args) {

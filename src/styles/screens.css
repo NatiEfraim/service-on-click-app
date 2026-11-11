@@ -141,7 +141,7 @@ svg.chart text { fill: var(--mute); font-size: 13px; font-family: var(--font); }
 
 /* main screen: domain tiles (icon square + name, with counts) */
 /* tiles on the right (RTL start), the picked domain's column chart on the left */
-.home-top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: stretch; }
+.home-top { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr); gap: 18px; align-items: stretch; }
 /* balanced rows (--per-row / --rows from HomeScreen), a shorter last row centred */
 .home-top .tiles { display: flex; flex-wrap: wrap; justify-content: center; align-content: stretch; gap: 12px; }
 .home-top .tiles > .dtile {
@@ -177,8 +177,27 @@ svg.chart text { fill: var(--mute); font-size: 13px; font-family: var(--font); }
 .home .dtile, .home .dgroup-item { container-type: size; }
 .home .dtile-ic { width: clamp(44px, 30cqmin, 112px); height: clamp(44px, 30cqmin, 112px); border-radius: clamp(12px, 7cqmin, 26px); }
 .home .dtile-ic img { width: 60%; height: 60%; }
+.home .tiles > .dtile > .dtile-ic { width: clamp(28px, 44cqh, 96px); height: clamp(28px, 44cqh, 96px); }
+.home .tiles > .dtile > .dtile-ic img { width: 72%; height: 72%; }
 .home .dtile-name { font-size: clamp(14px, 8cqmin, 26px); }
 .home .dtile-meta { font-size: clamp(12px, 5cqmin, 17px); }
+.home .dgroup-item { gap: 2px; padding: 3px 4px; }
+.home .dgroup-item .dtile-ic { width: clamp(23px, 35cqh, 40px); height: clamp(23px, 35cqh, 40px); border-radius: 9px; }
+.home .dgroup-item .dtile-name { font-size: clamp(11px, 15cqh, 14px); overflow-wrap: anywhere; }
+.home .dgroup-item .dtile-meta { font-size: clamp(10px, 12cqh, 12px); }
+.home .dgroup-menu[data-members="2"] .dgroup-item { gap: clamp(2px, 3cqh, 8px); }
+.home .dgroup-menu[data-members="2"] .dtile-ic { width: clamp(24px, 39cqh, 80px); height: clamp(24px, 39cqh, 80px); border-radius: clamp(9px, 8cqh, 17px); }
+.home .dgroup-menu[data-members="2"] .dtile-ic img { width: 72%; height: 72%; }
+.home .dgroup-menu[data-members="2"] .dtile-name { font-size: clamp(11px, 14cqh, 20px); }
+.home .dgroup-menu[data-members="2"] .dtile-meta { font-size: clamp(10px, 10cqh, 15px); }
+.dgroup-menu[data-members="3"] { flex-direction: column; gap: 3px; padding: 4px; }
+.home .dgroup-menu[data-members="3"] .dgroup-item {
+  grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; justify-items: start;
+  align-content: center; gap: 5px; padding: 1px 5px; min-height: 0; border-radius: 8px; text-align: start;
+}
+.home .dgroup-menu[data-members="3"] .dtile-ic { width: 22px; height: 22px; border-radius: 6px; }
+.home .dgroup-menu[data-members="3"] .dtile-name { font-size: clamp(13px, 32cqh, 16px); }
+.home .dgroup-menu[data-members="3"] .dtile-meta { font-size: clamp(11px, 25cqh, 13px); text-align: end; white-space: nowrap; }
 .home-card { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 .home-card > :not(.card-head) { flex: 1; min-height: 0; }
 .home-card .card-head { padding: 10px 16px; }

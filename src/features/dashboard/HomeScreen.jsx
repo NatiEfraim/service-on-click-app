@@ -28,6 +28,8 @@ const TILE_GROUPS = [
   { name: 'רכב', types: [1, 2], iconType: 1, iconSrc: '/icons/groups/car.svg' },
   { name: 'ציוד', types: [3, 4], iconType: 3, iconSrc: '/icons/groups/equipment.svg' },
   { name: 'מזון', types: [10, 11], iconType: 10, iconSrc: '/icons/groups/food.svg' },
+  { name: 'ביטחון מידע', types: [14, 15, 16], iconType: 14, iconSrc: '/icons/requester/infosec.svg' },
+  { name: 'תקשוב', types: [17, 18, 19], iconType: 17, iconSrc: '/icons/requester/it.svg' },
 ];
 
 /**
@@ -133,13 +135,13 @@ export function HomeScreen() {
               // Hover (or focus) opens the group into its domains; each one links to its own dashboard.
               <div key={tile.key} className="dtile dgroup" tabIndex={0} aria-label={`${tile.name}: ${tile.members.map((m) => m.name).join(', ')}`} style={{ '--dc': domainColor(tile.members[0].booking_type_id), '--i': index }}>
                 <TileBody iconType={tile.iconType} iconSrc={tile.iconSrc} name={tile.name} open={tile.open} overdue={tile.overdue} />
-                <span className="dgroup-menu">
+                <div className="dgroup-menu" data-members={tile.members.length}>
                   {tile.members.map((domain) => (
                     <Link key={domain.booking_type_id} href={`/dashboard?types=${domain.booking_type_id}`} className="dgroup-item" style={{ '--dc': domainColor(domain.booking_type_id) }}>
                       <TileBody iconType={domain.booking_type_id} name={domain.name} open={domain.open} overdue={domain.overdue} />
                     </Link>
                   ))}
-                </span>
+                </div>
               </div>
             ),
           )}

@@ -6,25 +6,12 @@
 
 import { OPEN_STATUS_IDS, requesterApi } from '@/lib/api/endpoints';
 import { routeFor, routePosition } from '@/features/bookings/route';
-import { domainIconSrc } from '@/lib/labels';
+import { domainIconSrc, requesterIconSrc } from '@/lib/labels';
 
 /** Files a form accepts as attachments (POST /bookings/{id}: jpg, jpeg, png, gif, webp, pdf; up to 10, 10 MB each). */
 export const ATTACH_ACCEPT = 'image/jpeg,image/png,image/gif,image/webp,application/pdf';
 export const MAX_FILES = 10;
 export const MAX_FILE_BYTES = 10 * 1024 * 1024;
-
-/** The colour picture of a topic or a request type (public/icons/requester), by its server name. */
-const PICTURE = {
-  infosec: 'infosec',
-  ict: 'it',
-  clearance_grant: 'clearance-grant',
-  removable_media: 'removable-media',
-  security_incident: 'security-incident',
-  folder_permission: 'folder-permission',
-  manta_permission: 'manta-permission',
-  network_folder: 'network-folder',
-};
-export const iconSrc = (name) => (PICTURE[name] ? `/icons/requester/${PICTURE[name]}.svg` : null);
 
 /**
  * GET /requester/catalog, shaped for the screens. The server already keeps only what the user may open
@@ -38,7 +25,7 @@ export async function fetchCatalog(signal) {
   const topics = [...(data?.topics ?? [])].sort(byPosition).map((topic) => ({
     id: topic.name,
     name: topic.display_name,
-    img: iconSrc(topic.name),
+    img: requesterIconSrc(topic.name),
     groups: [...(topic.groups ?? [])].sort(byPosition).map((group) => ({
       id: group.id,
       name: group.display_name,
@@ -47,7 +34,7 @@ export async function fetchCatalog(signal) {
         key: type.name,
         name: type.display_name,
         description: type.description ?? '',
-        img: iconSrc(type.name) ?? domainIconSrc(type.id),
+        img: domainIconSrc(type.id, type.name),
       })),
     })),
   }));
