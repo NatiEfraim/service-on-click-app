@@ -613,3 +613,32 @@ span.chart-fade { flex-direction: row; align-items: center; gap: 8px; white-spac
 /* while a booking is open its list stays put (the row sits above the dimming, so the wheel would reach the list) */
 .queue-scroll:has(.ticket.selected), .scroll-y:has(.ticket.selected) { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) { .ticket { transition: none; } }
+
+/* the history row whose eye opened the booking's side panel, brought forward (AuditRowPreview): a copy of the row above
+   the panel's dimming, joined to the panel's edge as the selected row in "קריאות" - the panel's background, a little
+   taller than the row, rounded on its far end - with all the row's columns fitted into the room the panel leaves. It
+   floats in toward the panel as the panel slides in, and back out as it slides away (240ms = DRAWER_EXIT_MS); the row
+   underneath hides its own content meanwhile, and gets it back as the copy goes */
+.audit-row-preview {
+  position: fixed; z-index: 61; pointer-events: none;
+  top: calc(var(--row-top) - 8px); height: calc(var(--row-height) + 16px);
+  left: max(12px, var(--row-left)); right: var(--drawer-width);
+  display: grid; grid-template-columns: var(--row-columns); align-items: center; font-size: 14px; text-align: start;
+  background: var(--bg); border-start-end-radius: 14px; border-end-end-radius: 14px;
+  will-change: transform, opacity; backface-visibility: hidden;
+  animation: audit-row-in 300ms var(--ease-drawer) both;
+}
+.audit-row-preview > span { min-width: 0; padding-inline: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.audit-row-preview[data-closing] { animation: audit-row-out 240ms var(--ease-drawer) both; }
+@keyframes audit-row-in { from { opacity: 0; transform: translateX(-18px); } to { opacity: 1; transform: none; } }
+@keyframes audit-row-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(-18px); } }
+/* the row under it: its content fades out while the copy is up, and back in as the copy leaves */
+.audit-scroll tbody tr > td { transition: opacity 240ms var(--ease-drawer); }
+.audit-scroll tr.audit-row-peek > td { opacity: 0; transition-duration: 300ms; }
+.audit-scroll tr.audit-row-peek[data-closing] > td { opacity: 1; transition-duration: 240ms; }
+/* while it is open the table stays put (the copy sits over the row, so the row must not scroll away) */
+.audit-scroll:has(tr.audit-row-peek) { overflow: hidden; }
+@media (prefers-reduced-motion: reduce) {
+  .audit-row-preview, .audit-row-preview[data-closing] { animation: none; }
+  .audit-scroll tbody tr > td { transition: none; }
+}
