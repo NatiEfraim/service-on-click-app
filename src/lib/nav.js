@@ -21,10 +21,11 @@ export function can(me, capability) {
 
 export function buildNav(me) {
   const handlerOnly = me.is_handler_only;
-  const entries = [];
+  // every user starts at the requester home (open a request, "הקריאות שלי"); the management dashboard follows it
+  const entries = [{ kind: 'link', id: 'start', href: '/', label: 'דף הבית' }];
 
   if (can(me, 'dashboard.view') && !handlerOnly) {
-    entries.push({ kind: 'link', id: 'home', href: '/', label: 'מסך ראשי', also: ['/dashboard'] });
+    entries.push({ kind: 'link', id: 'home', href: '/overview', label: 'מסך ראשי', also: ['/dashboard'] });
   }
 
   entries.push({ kind: 'link', id: 'requests', href: requestsHref(me), also: ['/requests', '/queue'], label: 'קריאות', ...(canAct(me) || handlerOnly ? { counter: 'queue' } : {}) });

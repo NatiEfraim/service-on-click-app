@@ -1,30 +1,17 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { useSearchParams } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Logo } from '@/components/layout/Logo';
 import { Button } from '@/components/ui/Button';
-import { FadeIn } from '@/components/ui/FadeIn';
-import { EmptyState, ErrorNotice, Loading } from '@/components/ui/Feedback';
+import { Loading } from '@/components/ui/Feedback';
 import { Icon } from '@/components/ui/Icon';
 import { requesterApi } from '@/lib/api/endpoints';
 import { APP_NAME } from '@/lib/config';
 import { initials } from '@/lib/format';
-import { useSetSearchParams } from '@/lib/useSetSearchParams';
-import { MyRequestsPanel } from './MyRequestsPanel';
-import { RequestForm } from './RequestForm';
-import { counterOf, findType } from './requesterData';
-import { isChanged, rememberFirstVisit, useSeen } from './seen';
-import { useCatalog, useCounters, useMyRequests } from './useRequester';
+import { RequesterContent, useRequesterView } from './RequesterContent';
+import { useCatalog } from './useRequester';
 import './requester.css';
-
-const COUNTERS = [
-  { id: 'open', label: 'קריאות פתוחות', icon: 'inbox' },
-  { id: 'action', label: 'נדרשת פעולה ממך', icon: 'alert' },
-  { id: 'handling', label: 'בטיפול אצל גורם', icon: 'sync' },
-  { id: 'done', label: 'הושלמו', icon: 'check' },
-];
 
 /** A topic's or a type's picture; a plain icon when the server's name has none. */
 function Picture({ src }) {
@@ -78,42 +65,27 @@ function TypeSearch({ topics, onPick }) {
   );
 }
 
+/** The signed-in user's name and role (GET /user); the personal number only if there is no name. */
+export function useRequesterUser() {
+  const user = useQuery({ queryKey: ['requester', 'user'], queryFn: ({ signal }) => requesterApi.user(signal), retry: false });
+  // GET /user (website API, UserResource) sends the full name as `name`
+  const name = user.data?.name || user.data?.full_name || user.data?.personal_number || '';
+  const role = user.data?.roles?.[0]?.display_name || 'משתמש';
+  return { user, name, role };
+}
+
 /**
- * What a plain user (no management role) sees: open a request by topic, and their own requests.
- * The screen (home / my requests / a form) lives in the URL (`?rq=`, `?type=<booking type id>`), so Back works.
- * Topics and types come from GET /requester/catalog, the counters from GET /requester/counters, the name from GET /user.
+ * What a plain user (no management role) sees: the requester screen inside a top bar of its own (home, "הקריאות שלי",
+ * a form search, the user, sign out). `fallback` is shown when even GET /user fails (the account is not a known user).
  */
 export function RequesterHome({ onSignOut, fallback }) {
-  const search = useSearchParams();
-  const setParams = useSetSearchParams();
-  const user = useQuery({ queryKey: ['requester', 'user'], queryFn: ({ signal }) => requesterApi.user(signal), retry: false });
+  const { user, name, role } = useRequesterUser();
+  const { view, go, openType } = useRequesterView();
   const catalog = useCatalog();
-  const counters = useCounters();
-  // the user's requests (shared with the "הקריאות שלי" panel's cache): which of them changed since the last visit
-  const mine = useMyRequests(null);
-  const seen = useSeen();
-  useEffect(() => {
-    if (mine.data) rememberFirstVisit(mine.data);
-  }, [mine.data]);
-  const changedIn = (counterId) =>
-    (mine.data ?? []).filter((row) => isChanged(seen, row) && (counterId === 'open' ? ['action', 'handling'].includes(counterOf(row)) : counterOf(row) === counterId)).length;
-  // topic cards the user folded (the chevron in each card's head)
-  const [closed, setClosed] = useState([]);
 
   if (user.isError) return fallback;
   if (user.isPending) return <div className="login-wrap"><Loading rows={3} /></div>;
-
-  // GET /user (website API, UserResource) sends the full name as `name`; the personal number only if there is no name
-  const name = user.data?.name || user.data?.full_name || user.data?.personal_number || '';
-  const role = user.data?.roles?.[0]?.display_name || 'משתמש';
   const topics = catalog.data?.topics ?? [];
-  const typeId = search.get('type');
-  const found = typeId && catalog.data ? findType(catalog.data, typeId) : null;
-  const view = typeId ? 'form' : search.get('rq') === 'mine' ? 'mine' : 'home';
-  const counts = counters.data;
-
-  const go = (patch) => setParams({ rq: null, type: null, cat: null, bucket: null, sent: null, ...patch }, 'push');
-  const openType = (id) => go({ type: String(id) });
 
   return (
     <>
@@ -152,107 +124,7 @@ export function RequesterHome({ onSignOut, fallback }) {
         </div>
       </header>
       <main className="page">
-        {view === 'form' ? (
-          <FadeIn key={typeId}>
-            {catalog.isPending ? (
-              <Loading rows={8} />
-            ) : catalog.isError ? (
-              <ErrorNotice error={catalog.error} title="לא ניתן לפתוח את הטופס." onRetry={() => void catalog.refetch()} />
-            ) : found ? (
-              <RequestForm found={found} onHome={() => go({})} onDone={(serial) => go({ rq: 'mine', sent: serial || null })} />
-            ) : (
-              <EmptyState title="סוג הקריאה אינו זמין לך">
-                ייתכן שאין לך הרשאה לפתוח אותו, או שהוא אינו פעיל ביחידה שלך.{' '}
-                <button type="button" className="rq-link" onClick={() => go({})}>חזרה לדף הבית</button>
-              </EmptyState>
-            )}
-          </FadeIn>
-        ) : view === 'mine' ? (
-          <FadeIn key="mine">
-            <MyRequestsPanel full category={search.get('cat')} onCategory={(cat) => setParams({ cat })} bucket={search.get('bucket')} onBucket={(bucket) => setParams({ bucket })} sent={search.get('sent')} onSentSeen={() => setParams({ sent: null })} />
-          </FadeIn>
-        ) : (
-          <FadeIn key="home">
-            <div className="rq-hello">
-              <h1>שלום, {name}</h1>
-              <p>באיזה נושא תרצה לפתוח קריאה?</p>
-            </div>
-            <div className="rq-counters">
-              {COUNTERS.map((counter) => (
-                // a counter opens "הקריאות שלי" filtered to its requests (?bucket=)
-                <button
-                  key={counter.id}
-                  type="button"
-                  className={`card rq-counter ${counter.id}`}
-                  onClick={() => go({ rq: 'mine', bucket: counter.id })}
-                  aria-label={`${counter.label}: ${counts ? counts[counter.id] : ''}. הצגת הקריאות`}
-                >
-                  <span className="ic"><Icon name={counter.icon} /></span>
-                  <span className="rq-counter-txt">
-                    <b>{counts ? counts[counter.id] ?? 0 : '–'}</b>
-                    <span className="lbl">{counter.label}</span>
-                    {changedIn(counter.id) ? <span className="rq-changed-count">{changedIn(counter.id)} עודכנו מאז הביקור האחרון</span> : null}
-                  </span>
-                </button>
-              ))}
-            </div>
-            <div className="rq-home">
-              <div className="rq-topics">
-                {catalog.isPending ? (
-                  <div className="card"><Loading rows={6} /></div>
-                ) : catalog.isError ? (
-                  <ErrorNotice error={catalog.error} title="לא ניתן להציג את סוגי הקריאות." onRetry={() => void catalog.refetch()} />
-                ) : !topics.length ? (
-                  <section className="card"><EmptyState title="אין נושאים זמינים לך לפתיחת קריאה">ההרשאות לפתיחת קריאות נקבעות לפי התפקיד והיחידה שלך.</EmptyState></section>
-                ) : (
-                  topics.map((topic) => {
-                    const open = !closed.includes(topic.id);
-                    const count = topic.groups.reduce((sum, group) => sum + group.types.length, 0);
-                    return (
-                      <section key={topic.id} className={`card rq-topic${open ? '' : ' closed'}`} aria-label={topic.name}>
-                        <button
-                          type="button"
-                          className="rq-topic-head"
-                          aria-expanded={open}
-                          onClick={() => setClosed((previous) => (open ? [...previous, topic.id] : previous.filter((id) => id !== topic.id)))}
-                        >
-                          <span className="pic"><Picture src={topic.img} /></span>
-                          <span className="txt">
-                            <b>{topic.name}</b>
-                            <span>{count} סוגי קריאות</span>
-                          </span>
-                          <Icon name="down" className="chev" />
-                        </button>
-                        {open ? (
-                          <div className="rq-topic-body">
-                            {topic.groups.map((group) => (
-                              <div key={group.id} className="rq-group">
-                                <h3>{group.name}</h3>
-                                <div className="rq-types">
-                                  {group.types.map((type) => (
-                                    <button key={type.id} type="button" className="rq-type" onClick={() => openType(type.id)}>
-                                      <Picture src={type.img} />
-                                      <span className="txt">
-                                        <b>{type.name}</b>
-                                        {type.description ? <span>{type.description}</span> : null}
-                                      </span>
-                                      <Icon name="left" className="go" />
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : null}
-                      </section>
-                    );
-                  })
-                )}
-              </div>
-              <MyRequestsPanel category={search.get('cat')} onCategory={(cat) => setParams({ cat })} onAll={() => go({ rq: 'mine', cat: search.get('cat') })} />
-            </div>
-          </FadeIn>
-        )}
+        <RequesterContent name={name} />
       </main>
     </>
   );

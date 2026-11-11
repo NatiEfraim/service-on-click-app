@@ -1,8 +1,8 @@
+import { StartScreen } from '@/features/requester/StartScreen';
 
-import { HomeRouter } from '@/features/dashboard/HomeRouter';
+export const metadata = { title: 'דף הבית' };
 
-export const metadata = { title: 'מסך ראשי' };
-
+/** Where every user starts: open a request and follow your own (the management dashboard is at /overview). */
 export default function HomePage() {
-  return <HomeRouter />;
+  return <StartScreen />;
 }

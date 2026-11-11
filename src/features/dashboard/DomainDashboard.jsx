@@ -93,7 +93,7 @@ export function DomainDashboard() {
       <div className="page-head">
         <div>
           {canGoBack ? (
-            <Link href="/" className="btn sm ghost back">
+            <Link href="/overview" className="btn sm ghost back">
               <Icon name="right" />
               חזרה למסך הראשי
             </Link>
