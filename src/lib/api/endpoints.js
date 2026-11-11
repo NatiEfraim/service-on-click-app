@@ -30,6 +30,14 @@ export const requesterApi = {
   user: (signal) => getData('/user', undefined, signal),
   /** One of the user's own bookings in full (GET /bookings/{uuid}, ShowBookingResource): status, values, comments. */
   booking: (uuid, signal) => getData(`/bookings/${uuid}`, undefined, signal),
+  /** What the user may open (GET /requester/catalog): `topics` (infosec / ICT → groups → booking types) and plain `domains`; permission + unit filtered. */
+  catalog: (signal) => getData('/requester/catalog', undefined, signal),
+  /** One booking type's form fields (GET /requester/form/{id}), with select `options` and `children`; filtered to the user's unit. */
+  form: (bookingTypeId, signal) => getData(`/requester/form/${bookingTypeId}`, undefined, signal),
+  /** The four home counters of the user's own bookings (GET /requester/counters): open, action, handling, done. */
+  counters: (signal) => getData('/requester/counters', undefined, signal),
+  /** Opens a booking (POST /bookings/{id}, multipart): `values[<field id>]`, optional `files[]`. Not idempotent. */
+  create: async (bookingTypeId, formData) => (await http.post(`/bookings/${bookingTypeId}`, formData)).data?.data,
   /** The user's own bookings, 20 a page, newest first; `statusIds` narrows them (sent as status_id[]). */
   myBookings: async (page, statusIds, signal, serialNumber = '') => {
     // axios writes an array as status_id[]=1&status_id[]=2, which the API reads (cleanParams would join it)

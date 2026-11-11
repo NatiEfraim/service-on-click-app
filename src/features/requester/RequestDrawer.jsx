@@ -10,9 +10,8 @@ import { ErrorNotice, Loading, Notice } from '@/components/ui/Feedback';
 import { Icon } from '@/components/ui/Icon';
 import { holdDescription, isHoldStatus } from '@/lib/booking-workflow';
 import { fmtDateTime } from '@/lib/format';
-import { fetchRequestDetails, iconSrc, PROGRESS_STEPS, requestProgress, STATUS_LABEL } from './requesterData';
-
-const STATUS_TONE = { action: 'warn', handling: 'info', done: 'ok' };
+import { fetchRequestDetails, PROGRESS_STEPS, requestProgress } from './requesterData';
+import { REQUESTER_KEY, useCatalog } from './useRequester';
 
 /** A form value as text: plain values as they are, a list joined, an object by its name. */
 function valueText(value) {
@@ -69,8 +68,8 @@ function RequestStepper({ row, rows, onGo }) {
 }
 
 /** The request's steps as a row of dots: done ones filled, the current one marked (on hold, stopped or finished in its colour). */
-function ProgressRail({ statusId, demoStatus, label }) {
-  const { step, mode } = requestProgress(statusId, demoStatus);
+function ProgressRail({ statusId, label }) {
+  const { step, mode } = requestProgress(statusId);
   return (
     <div className="rail" role="img" aria-label={`הקריאה בשלב ${PROGRESS_STEPS[step]}: ${label}`}>
       {PROGRESS_STEPS.map((name, index) => (
@@ -91,11 +90,13 @@ function ProgressRail({ statusId, demoStatus, label }) {
  */
 export function RequestDrawer({ row, rows = [], onGo, onClose }) {
   const query = useQuery({
-    queryKey: ['requester-demo', 'request', row.id],
+    queryKey: [...REQUESTER_KEY, 'request', row.id],
     queryFn: ({ signal }) => fetchRequestDetails(row, signal),
     retry: false,
   });
   const details = query.data;
+  const catalog = useCatalog();
+  const typeImg = (catalog.data?.topics ?? []).flatMap((topic) => topic.groups.flatMap((group) => group.types)).find((type) => type.id === row.bookingTypeId)?.img ?? null;
 
   return (
     <Drawer
@@ -116,22 +117,19 @@ export function RequestDrawer({ row, rows = [], onGo, onClose }) {
       ) : (
         <div className="rq-drawer">
           <div className="rq-drawer-top">
-            {row.bookingTypeId ? <DomainBadge bookingTypeId={row.bookingTypeId} /> : <span className="rq-drawer-pic"><img src={iconSrc(row.typeId)} alt="" /></span>}
-            {row.status ? (
-              <Chip tone={STATUS_TONE[row.status]}>{STATUS_LABEL[row.status]}</Chip>
-            ) : (
-              <StatusChip statusId={details.statusId} label={details.statusName} />
-            )}
+            {/* a ביטחון מידע / תקשוב type has its own picture (catalog); every other domain its domain badge */}
+            {typeImg ? <span className="rq-drawer-pic"><img src={typeImg} alt="" /></span> : <DomainBadge bookingTypeId={row.bookingTypeId} />}
+            <StatusChip statusId={details.statusId} label={details.statusName} />
             <Chip>{row.typeName}</Chip>
           </div>
 
           <section className="panel">
             <header>
               <h2>איפה הקריאה עומדת</h2>
-              <span className="hint">{row.status ? STATUS_LABEL[row.status] : details.statusName}</span>
+              <span className="hint">{details.statusName}</span>
             </header>
             <div className="body">
-              <ProgressRail statusId={details.statusId} demoStatus={row.status} label={row.status ? STATUS_LABEL[row.status] : details.statusName} />
+              <ProgressRail statusId={details.statusId} label={details.statusName} />
             </div>
           </section>
 

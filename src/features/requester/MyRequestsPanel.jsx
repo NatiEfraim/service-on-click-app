@@ -1,23 +1,24 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AnimatedText } from '@/components/ui/AnimatedText';
 import { Button } from '@/components/ui/Button';
-import { Chip, StatusChip } from '@/components/ui/Chips';
+import { StatusChip } from '@/components/ui/Chips';
 import { DateRangePicker } from '@/components/ui/DateRangePicker';
 import { Field } from '@/components/ui/Field';
 import { Select } from '@/components/ui/Select';
-import { EmptyState, ErrorNotice, Loading } from '@/components/ui/Feedback';
+import { EmptyState, ErrorNotice, Loading, Notice } from '@/components/ui/Feedback';
 import { Icon } from '@/components/ui/Icon';
 import { Seg } from '@/components/ui/Controls';
 import { SearchField } from '@/components/ui/SearchField';
+import { usePresence } from '@/components/ui/usePresence';
 import { OPEN_STATUS_IDS } from '@/lib/api/endpoints';
 import { useDebounced } from '@/lib/useDebounced';
 import { useFitToWindow } from '@/lib/useFitToWindow';
 import { RequestDrawer } from './RequestDrawer';
 import { isChanged, markSeen, useSeen } from './seen';
-import { counterOf, fetchMyRequests, fetchPermittedCategories, PROGRESS_STEPS, requestProgress, STATUS_LABEL } from './requesterData';
+import { counterOf, PROGRESS_STEPS, requestProgress } from './requesterData';
+import { useCatalog, useMyRequests } from './useRequester';
 
 /** The home counters, as a filter on the full page (?bucket=): a counter's click lands here with it chosen. */
 const BUCKETS = [
@@ -28,13 +29,30 @@ const BUCKETS = [
 ];
 const inBucket = (row, bucket) => (bucket === 'open' ? ['action', 'handling'].includes(counterOf(row)) : counterOf(row) === bucket);
 
-const STATUS_TONE = { action: 'warn', handling: 'info', done: 'ok' };
+/**
+ * The "updated since your last visit" mark: a mint "עדכון חדש" pill that pops in and bobs now and then, with tiny
+ * bubbles and sparkles rising out of the text and fading.
+ */
+const RISING = ['', '✦', '', '✧'];
+function UpdateMark() {
+  return (
+    <span className="rq-new" data-tip="יש עדכון בקריאה מאז שצפית בה" aria-hidden="true">
+      עדכון חדש
+      <span className="fx">
+        {RISING.map((glyph, index) => <i key={index} className={glyph ? 'spark' : 'bub'}>{glyph}</i>)}
+      </span>
+    </span>
+  );
+}
+
+/** How long "סימון הכל כנקרא" takes to fade out (matches .rq-mark-all[data-closing] in requester.css). */
+const MARK_ALL_EXIT_MS = 220;
 
 /** Requests the home's side panel lists before "הצג עוד" (the full page lists them all). */
 const PANEL_ROWS = 5;
 
-/** Still open: a demo request until done, a real one by its status (the open statuses the API filters by). */
-const isOpen = (row) => (row.status ? row.status !== 'done' : OPEN_STATUS_IDS.includes(row.statusId));
+/** Still open, by its status (the open statuses the API filters by). */
+const isOpen = (row) => OPEN_STATUS_IDS.includes(row.statusId);
 
 /** Every word of the search is in the request's number or its category name. */
 const matches = (row, query) => {
@@ -62,23 +80,20 @@ const SORTS = [
   { value: 'status', label: 'לפי סטטוס', compare: (a, b) => (statusNameOf(a) ?? '').localeCompare(statusNameOf(b) ?? '', 'he') || byOpened(b, a) },
 ];
 
-/** The status name a row shows (demo or real). */
-const statusNameOf = (row) => (row.status ? STATUS_LABEL[row.status] : row.statusName);
+/** The status name a row shows. */
+const statusNameOf = (row) => row.statusName;
 
 /**
  * "הקריאות שלי": an icon and name for every category the user may open requests in (the new topics and the service
  * domains); picking one lists their requests in it. `full` is the whole-page version, otherwise the home's side panel.
  */
-export function MyRequestsPanel({ full = false, category, onCategory, bucket: rawBucket = null, onBucket = () => {}, onAll }) {
+export function MyRequestsPanel({ full = false, category, onCategory, bucket: rawBucket = null, onBucket = () => {}, sent = null, onSentSeen = () => {}, onAll }) {
   const bucket = BUCKETS.some((option) => option.id === rawBucket) ? rawBucket : null;
-  const categories = useQuery({ queryKey: ['requester-demo', 'categories'], queryFn: ({ signal }) => fetchPermittedCategories(signal) });
-  const list = categories.data ?? [];
+  // the categories (topics and domains) come from GET /requester/catalog, already limited to what the user may open
+  const categories = useCatalog();
+  const list = categories.data?.categories ?? [];
   const current = list.find((candidate) => candidate.id === category) ?? null;
-  const requests = useQuery({
-    queryKey: ['requester-demo', 'requests', current?.id ?? 'all'],
-    queryFn: ({ signal }) => fetchMyRequests(current?.id ?? null, signal),
-    enabled: categories.isSuccess,
-  });
+  const requests = useMyRequests(current, { enabled: categories.isSuccess });
   // the full page filters (open / all, search by number or category), as the earlier "הקריאות שלי" screen did
   const [view, setView] = useState('all');
   // the request open in the side panel
@@ -91,6 +106,11 @@ export function MyRequestsPanel({ full = false, category, onCategory, bucket: ra
   };
   // the full page ends at the window's bottom: only the list scrolls, never the page
   const card = useRef(null);
+  // the list is locked while a request is open (styles); a request reached with the stepper is brought into view
+  useEffect(() => {
+    if (!opened) return;
+    card.current?.querySelector('.rq-row.selected')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [opened]);
   useFitToWindow(card, 320, full);
   const [search, setSearch] = useState('');
   const query = useDebounced(search.trim(), 200);
@@ -102,6 +122,10 @@ export function MyRequestsPanel({ full = false, category, onCategory, bucket: ra
   const [range, setRange] = useState({ from: null, to: null });
   const allRows = requests.data ?? [];
   const changedRows = allRows.filter((row) => isChanged(seen, row));
+  // "סימון הכל כנקרא" fades out instead of vanishing (as the management "ניקוי הסינון"), keeping its last count meanwhile
+  const markAll = usePresence(changedRows.length > 0, MARK_ALL_EXIT_MS);
+  const [markAllCount, setMarkAllCount] = useState(changedRows.length);
+  if (changedRows.length && changedRows.length !== markAllCount) setMarkAllCount(changedRows.length);
   const statusNames = [...new Set(allRows.map(statusNameOf).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'he'));
   const inRange = (row) => {
     if (!range.from && !range.to) return true;
@@ -114,7 +138,7 @@ export function MyRequestsPanel({ full = false, category, onCategory, bucket: ra
           (view === 'all' || isOpen(row)) &&
           matches(row, query) &&
           (!bucket || inBucket(row, bucket)) &&
-          (stage === '' || requestProgress(row.statusId, row.status).step === Number(stage)) &&
+          (stage === '' || requestProgress(row.statusId).step === Number(stage)) &&
           (!status || statusNameOf(row) === status) &&
           inRange(row),
       )
@@ -135,6 +159,12 @@ export function MyRequestsPanel({ full = false, category, onCategory, bucket: ra
     <section ref={card} className={`card rq-mine${full ? ' full fit-card' : ''}`} aria-label="הקריאות שלי">
       <div className="rq-mine-head">
         <h2>הקריאות שלי</h2>
+        {/* only while something changed since the last visit; clears every highlight in the list shown */}
+        {!full && markAll.mounted ? (
+          <Button size="sm" variant="ghost" icon="check" className="rq-mark-all" data-closing={markAll.closing || undefined} disabled={markAll.closing} onClick={() => markSeen(changedRows)}>
+            סימון הכל כנקרא ({markAllCount})
+          </Button>
+        ) : null}
         {onAll ? (
           <button type="button" className="rq-link" onClick={onAll}>
             לכל הקריאות
@@ -150,12 +180,18 @@ export function MyRequestsPanel({ full = false, category, onCategory, bucket: ra
         </button>
         {list.map((item) => (
           <button key={item.id} type="button" className="rq-cat" aria-pressed={current?.id === item.id} onClick={() => onCategory(item.id)}>
-            <span className="ic pic"><img src={item.img} alt="" /></span>
+            <span className="ic pic">{item.img ? <img src={item.img} alt="" /> : <Icon name="layers" />}</span>
             {item.name}
           </button>
         ))}
       </div>
       )}
+      {full && sent ? (
+        // just sent from a form (?sent=<serial>): its number, as the API guide asks
+        <Notice tone="ok" className="rq-sent" action={<Button size="sm" variant="ghost" icon="x" aria-label="סגירה" onClick={onSentSeen} />}>
+          הקריאה נשלחה בהצלחה. מספר הקריאה: <b className="serial">{sent}</b>
+        </Notice>
+      ) : null}
       {full ? (
         <>
         <div className="toolbar rq-toolbar">
@@ -167,12 +203,12 @@ export function MyRequestsPanel({ full = false, category, onCategory, bucket: ra
               <AnimatedText>{advanced ? `סינון (${advanced})` : 'סינון'}</AnimatedText>
             </Button>
             {advanced ? <Button size="sm" variant="ghost" icon="x" className="requests-clear" aria-label="ניקוי הסינון" data-tip="ניקוי הסינון" onClick={clearFilters} /> : null}
+            {markAll.mounted ? (
+              <Button size="sm" variant="ghost" icon="check" className="rq-mark-all" data-closing={markAll.closing || undefined} disabled={markAll.closing} onClick={() => markSeen(changedRows)}>
+                סימון הכל כנקרא ({markAllCount})
+              </Button>
+            ) : null}
           </div>
-          {changedRows.length ? (
-            <Button size="sm" variant="ghost" icon="check" onClick={() => markSeen(changedRows)}>
-              סימון הכל כנקרא ({changedRows.length})
-            </Button>
-          ) : null}
           <span className="grow" />
           {requests.isSuccess ? <span className="small muted">{rows.length} קריאות</span> : null}
           <div className="requests-sort-control">
@@ -229,7 +265,8 @@ export function MyRequestsPanel({ full = false, category, onCategory, bucket: ra
             <li key={row.id}>
               <button
                 type="button"
-                className={`rq-row${isChanged(seen, row) ? ' changed' : ''}`}
+                className={`rq-row${isChanged(seen, row) ? ' changed' : ''}${opened?.id === row.id ? ' selected' : ''}`}
+                aria-current={opened?.id === row.id ? 'true' : undefined}
                 onClick={() => open(row)}
                 aria-label={`פרטי קריאה ${row.serial}${isChanged(seen, row) ? ', עודכנה מאז הביקור האחרון' : ''}`}
               >
@@ -238,8 +275,9 @@ export function MyRequestsPanel({ full = false, category, onCategory, bucket: ra
                 <div className="small muted">נפתחה {row.createdAt}</div>
               </div>
               <span className="rq-row-side">
-                {isChanged(seen, row) ? <span className="rq-new" data-tip="הסטטוס השתנה מאז שצפית בקריאה">עודכנה</span> : null}
-                {row.status ? <Chip tone={STATUS_TONE[row.status]}>{STATUS_LABEL[row.status]}</Chip> : <StatusChip statusId={row.statusId} label={row.statusName} />}
+                <StatusChip statusId={row.statusId} label={row.statusName} />
+                {/* changed since the last visit: a friendly mark at the row's left end (its name for screen readers is on the row) */}
+                {isChanged(seen, row) ? <UpdateMark /> : null}
               </span>
               </button>
             </li>
