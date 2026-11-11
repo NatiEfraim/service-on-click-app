@@ -78,7 +78,7 @@ export function BookingDrawer({ serial, onClose, onGo }) {
       ) : (
         // keyed by the booking shown: a new booking mounts and fades in; the old one fades out first
         <div key={shown.serial_number} className={`drawer-swap${leaving ? ' out' : ''}`} aria-busy={leaving || undefined}>
-          <Body booking={shown} onDecision={onDecision} />
+          <Body booking={shown} />
         </div>
       )}
       {query.isFetching && !query.isPending ? (

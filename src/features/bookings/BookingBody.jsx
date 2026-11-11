@@ -18,10 +18,10 @@ import { AttachmentsPanel } from './Attachments';
 import { ResolveConflictDialog } from './ResolveConflictDialog';
 import { useStatusAction } from './useStatusAction';
 
-export function Body({ booking, onDecision }) {
+export function Body({ booking }) {
   const session = useSession();
   const { catalog, can, canAct, unitName, typeName, departmentName } = session;
-  const status = useStatusAction({ onDone: onDecision });
+  const status = useStatusAction();
   const [resolving, setResolving] = useState(null);
 
   const lines = describeValues(booking.booking_values);
