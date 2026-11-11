@@ -510,3 +510,37 @@ span.chart-fade { flex-direction: row; align-items: center; gap: 8px; white-spac
 .drawer-stack { display: grid; gap: 16px; align-content: start; min-width: 0; }
 .drawer .scroll { scrollbar-width: none; }
 .drawer .scroll::-webkit-scrollbar { display: none; }
+
+/* the booking open in the side panel, in every management list (Ticket): the same look as the requester's list - it is
+   lifted above the panel's dimming (.scrim, z-index 60), floats out of the list as a card of its own (inset on every
+   side, no divider touching it, a soft shadow), drops its domain-colour edge and gets a soft green-to-violet border that
+   slowly flows around it. Everything eases both ways; the border is its own layer (::before) so it can fade */
+.ticket {
+  position: relative;
+  transition: margin 260ms var(--ease-out), box-shadow 260ms var(--ease-out), background-color 260ms var(--ease-out), border-radius 260ms var(--ease-out), border-color 260ms var(--ease-out);
+}
+.ticket::before {
+  content: ""; position: absolute; inset: 0; inset-inline-start: -4px; border-radius: inherit; padding: 2px; pointer-events: none;
+  background: conic-gradient(from var(--sel-angle, 0deg), #2FA85A, #8EE3A8, var(--accent-mid), var(--accent), #2FA85A);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  opacity: 0; transition: opacity 260ms var(--ease-out);
+}
+.ticket.selected {
+  z-index: 61; margin: 12px 10px; border-radius: 14px; background: var(--surface); border-bottom-color: transparent;
+  border-inline-start-color: transparent;
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--ink) 14%, transparent), 0 2px 6px color-mix(in srgb, #2FA85A 14%, transparent);
+}
+.ticket.selected::before { opacity: 1; animation: ticket-sel-flow 4s linear infinite; }
+.ticket.selected:hover { background: var(--surface); }
+/* the row above it drops its divider too, so the selected one touches nothing */
+.ticket:has(+ .ticket.selected) { border-bottom-color: transparent; }
+/* while a booking is open its list stays put (the row sits above the dimming, so the wheel would reach the list) */
+.queue-scroll:has(.ticket.selected), .scroll-y:has(.ticket.selected) { overflow: hidden; }
+@property --sel-angle { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+@keyframes ticket-sel-flow { to { --sel-angle: 360deg; } }
+@media (prefers-reduced-motion: reduce) { .ticket, .ticket::before { transition: none; } .ticket.selected::before { animation: none; } }
+/* the flowing border also covers the row's 1px bottom divider (outside the padding box, where ::before ends), so the
+   white of the selected row never shows below its frame */
+.ticket::before { inset-block-end: -1px; }
+.ticket:last-child::before { inset-block-end: 0; }

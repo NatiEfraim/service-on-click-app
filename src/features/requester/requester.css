@@ -237,3 +237,84 @@ button.rq-counter:focus-visible { outline: 2px solid var(--accent); outline-offs
 @property --sel-angle { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
 @keyframes rq-sel-flow { to { --sel-angle: 360deg; } }
 @media (prefers-reduced-motion: reduce) { .rq-row, .rq-row::before, .rq-list li { transition: none; } .rq-row.selected::before { animation: none; } }
+
+/* "כבר 3 ימים" under the current step of a request's progress */
+.rq-waited { display: inline-block; margin-top: 4px; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; color: var(--accent); background: var(--accent-wash); }
+.station.hold .rq-waited { color: var(--hold); background: var(--hold-w); }
+
+/* a request that has just become completed: a one-time celebration at its status. A green checkmark pops in, a small
+   burst of soft confetti flies out of it and falls away, then it all fades (1.7s = CELEBRATION_MS) */
+.rq-celebrate { position: relative; flex: none; width: 22px; height: 22px; display: grid; place-items: center; pointer-events: none; }
+.rq-celebrate .check {
+  width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; color: #fff;
+  background: radial-gradient(circle at 35% 30%, #6FD893, #2FA85A 70%);
+  box-shadow: 0 0 0 4px color-mix(in srgb, #2FA85A 18%, transparent);
+  opacity: 0;
+}
+.rq-celebrate.play .check { animation: rq-check 1.7s cubic-bezier(.34, 1.56, .64, 1) both; }
+.rq-celebrate .check svg { width: 13px; height: 13px; }
+.rq-celebrate i {
+  position: absolute; left: 50%; top: 50%; width: 6px; height: 4px; margin: -2px 0 0 -3px; border-radius: 1px;
+  background: var(--c); opacity: 0;
+}
+.rq-celebrate.play i { animation: rq-confetti 1.25s cubic-bezier(.2, .7, .3, 1) both; }
+.rq-celebrate i.round { width: 5px; height: 5px; border-radius: 50%; }
+@keyframes rq-check {
+  0% { transform: scale(0); opacity: 0; }
+  18% { transform: scale(1.15); opacity: 1; }
+  28%, 75% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(.9); opacity: 0; }
+}
+@keyframes rq-confetti {
+  0% { transform: translate(0, 0) rotate(0) scale(.4); opacity: 0; }
+  12% { opacity: 1; }
+  55% { transform: translate(var(--x), var(--y)) rotate(var(--r)) scale(1); opacity: 1; }
+  100% { transform: translate(var(--x), calc(var(--y) + 18px)) rotate(calc(var(--r) + 90deg)) scale(.8); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .rq-celebrate { display: none; } }
+
+/* a request in the list, laid out like the management list's row (.ticket), minus the decisions: the domain's picture
+   with its colour on the edge, the domain and number over the opening day / progress dots / status, and at the end the
+   days at this step and in total (or the status once closed) */
+.rq-ticket {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: center; width: 100%;
+  padding: 12px 14px; border-inline-start: 4px solid var(--dc, var(--line));
+}
+.rq-ticket-main { display: block; min-width: 0; }
+.rq-ticket .t1 { font-weight: 700; font-size: 15px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.rq-ticket .t2 { font-size: 13px; color: var(--mute); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 2px; }
+.rq-ticket-side { display: flex; align-items: center; gap: 12px; flex: none; }
+/* the home's narrow panel: no room for the days block, the status stands in for it */
+.rq-mine:not(.full) .rq-ticket .age { display: none; }
+
+/* the selected request drops its domain-colour edge (only the flowing border marks it); it eases back when it closes */
+.rq-ticket { transition: margin 260ms var(--ease-out), box-shadow 260ms var(--ease-out), background-color 260ms var(--ease-out), border-radius 260ms var(--ease-out), border-color 260ms var(--ease-out); }
+.rq-ticket.selected { border-inline-start-color: transparent; }
+@media (prefers-reduced-motion: reduce) { .rq-ticket { transition: none; } }
+/* in the side panel the celebration sits on the route's "סגירה" station, so it is where the user looks */
+.station { position: relative; }
+.rq-celebrate.on-station { position: absolute; top: -8px; left: 50%; margin-left: -11px; z-index: 2; }
+/* the flowing border covers the 4px domain-colour edge too (it sits outside the padding box, where ::before starts),
+   so the white of the selected row never shows outside its frame */
+.rq-ticket::before { inset-inline-start: -4px; }
+
+/* a request that has just become completed, in the list: the whole row glows softly in green (a light tint and a thin
+   glowing frame inside its edges) and light confetti drifts across it, then it all fades (2.6s = CELEBRATION_MS.row).
+   It is a layer over the row that takes no room, so nothing in the row moves */
+.rq-celebrate-row { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; overflow: hidden; z-index: 1; opacity: 0; }
+.rq-celebrate-row.play { animation: rq-row-glow 2.6s ease-in-out both; }
+.rq-celebrate-row i { position: absolute; width: 6px; height: 4px; border-radius: 1px; background: var(--c); opacity: 0; }
+.rq-celebrate-row i.round { width: 5px; height: 5px; border-radius: 50%; }
+.rq-celebrate-row.play i { animation: rq-row-confetti 1.6s cubic-bezier(.2, .7, .3, 1) both; }
+@keyframes rq-row-glow {
+  0% { opacity: 0; background: transparent; box-shadow: inset 0 0 0 0 transparent; }
+  20%, 70% { opacity: 1; background: color-mix(in srgb, #2FA85A 9%, transparent); box-shadow: inset 0 0 0 2px color-mix(in srgb, #2FA85A 45%, transparent), inset 0 0 22px color-mix(in srgb, #2FA85A 20%, transparent); }
+  100% { opacity: 0; background: transparent; box-shadow: inset 0 0 0 0 transparent; }
+}
+@keyframes rq-row-confetti {
+  0% { transform: translate(0, -8px) rotate(0) scale(.5); opacity: 0; }
+  15% { opacity: 1; }
+  70% { opacity: .9; }
+  100% { transform: translate(var(--x), var(--y)) rotate(var(--r)) scale(.9); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .rq-celebrate-row { display: none; } }

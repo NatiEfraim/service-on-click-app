@@ -4,12 +4,10 @@ import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Ticket } from '@/components/booking/Ticket';
-import { AgeColumnsHeader } from '@/components/booking/RouteViz';
 import { AnimatedText } from '@/components/ui/AnimatedText';
 import { usePresence } from '@/components/ui/usePresence';
 import { Button } from '@/components/ui/Button';
 import { Seg } from '@/components/ui/Controls';
-import { DomainFilter } from '@/features/queue/DomainFilter';
 import { insightsApi } from '@/lib/api/endpoints';
 import { LOAD_AHEAD_PX, MIN_LIST_HEIGHT, PAGE_SIZE } from '@/features/queue/constants';
 
@@ -153,7 +151,8 @@ export function RequestsScreen() {
 
   return (
     <div>
-      <PageHead title="קריאות" hideTitle center={me.is_handler_only ? <DomainFilter picked={filters.types && !filters.types.includes(',') ? Number(filters.types) : null} /> : null} />
+      {/* no domain strip here (even for a handler): the "סינון" panel already filters by "תחום" */}
+      <PageHead title="קריאות" hideTitle />
       <section ref={card} className="card fit-card">
         <div className="toolbar">
           <Seg label="תצוגה" value={filters.view} onChange={(view) => update({ view })} options={views.map((view) => ({ value: view.id, label: view.label, count: view.count }))} />
@@ -168,7 +167,6 @@ export function RequestsScreen() {
           ) : null}
           </div>
           <span className="grow" />
-          <AgeColumnsHeader />
           <div className="requests-sort-control">
           <label className="small muted" htmlFor="requests-sort">
             מיון

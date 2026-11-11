@@ -4,7 +4,6 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Ticket } from '@/components/booking/Ticket';
-import { AgeColumnsHeader } from '@/components/booking/RouteViz';
 import { DateRangePicker } from '@/components/ui/DateRangePicker';
 import { Seg } from '@/components/ui/Controls';
 import { EmptyState, ErrorNotice, Loading } from '@/components/ui/Feedback';
@@ -123,7 +122,6 @@ export function QueueScreen() {
             }}
           />
           <span className="grow" />
-          <AgeColumnsHeader />
           {query.isSuccess ? <span className="small muted">{filtered ? `${total} תוצאות` : 'ממוין לפי זמן ההמתנה בשלב'}</span> : null}
         </div>
 

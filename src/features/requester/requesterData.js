@@ -5,6 +5,7 @@
  */
 
 import { OPEN_STATUS_IDS, requesterApi } from '@/lib/api/endpoints';
+import { routeFor, routePosition } from '@/features/bookings/route';
 import { domainIconSrc } from '@/lib/labels';
 
 /** Files a form accepts as attachments (POST /bookings/{id}: jpg, jpeg, png, gif, webp, pdf; up to 10, 10 MB each). */
@@ -142,7 +143,7 @@ const MAX_PAGES = 10;
 
 /**
  * The user's requests from GET /bookings/my-bookings (up to 200, newest first), limited to `typeIds` when given
- * (a category of "הקריאות שלי"). Row shape: id (uuid), typeName, bookingTypeId, serial, createdAt, statusId, statusName.
+ * (a category of "הקריאות שלי"). Row shape: id (uuid), typeName, bookingTypeId, serial, createdAt, updatedAt, statusId, statusName.
  */
 export async function fetchMyRequests(typeIds, signal) {
   // the API sends 20 a page with no paging meta: a short page is the last one
@@ -160,6 +161,7 @@ export async function fetchMyRequests(typeIds, signal) {
       bookingTypeId: booking.booking_type?.id,
       serial: booking.serial_number,
       createdAt: booking.created_at,
+      updatedAt: booking.updated_at,
       statusId: booking.status?.id,
       statusName: booking.status?.display_name ?? '',
     }));
@@ -238,42 +240,88 @@ export function counterOf(row) {
   return OPEN_STATUS_IDS.includes(row.statusId) ? 'handling' : null;
 }
 
-/** The four steps a request goes through, as the requester sees them. */
-export const PROGRESS_STEPS = ['נשלחה', 'בטיפול', 'אושרה', 'הושלמה'];
+
+/** A date from the requester endpoints as a local day: they send "d/m/Y" (day first); an ISO date also works. Null if unreadable. */
+export function parseDay(value) {
+  const text = String(value ?? '').trim();
+  const dmy = /^(\d{1,2})[/.](\d{1,2})[/.](\d{2,4})/.exec(text);
+  if (dmy) {
+    const year = dmy[3].length === 2 ? 2000 + Number(dmy[3]) : Number(dmy[3]);
+    const date = new Date(year, Number(dmy[2]) - 1, Number(dmy[1]));
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+  const date = text ? new Date(text) : null;
+  return date && !Number.isNaN(date.getTime()) ? new Date(date.getFullYear(), date.getMonth(), date.getDate()) : null;
+}
+
+/** Whole days from a date until today (0 = today); null if the date cannot be read. */
+export function daysSince(value, today = new Date()) {
+  const day = parseDay(value);
+  if (!day) return null;
+  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  return Math.max(0, Math.round((start - day) / 86_400_000));
+}
+
+/** "כבר 3 ימים" in Hebrew: today, a day, two days, N days. */
+export function waitedLabel(days) {
+  if (days === null || days === undefined) return '';
+  if (days === 0) return 'מהיום';
+  if (days === 1) return 'כבר יום';
+  if (days === 2) return 'כבר יומיים';
+  return `כבר ${days} ימים`;
+}
+
+
+/** The barber (BookingTypeEnum::BARBER_BOOKING) and the one domain whose route starts at the control officer (הובלות). */
+const BARBER_TYPE_ID = 5;
+const CONTROL_OFFICER_TYPE_IDS = [8];
+/** The statuses that end a request (StatusBookingEnum::isTerminal). */
+const TERMINAL_STATUS_IDS = [4, 5, 6, 7, 12, 13];
 
 /**
- * Where a request stands, from its status (StatusBookingEnum on the API): the step it is at and how (here: waiting there,
- * hold: waiting for something, stopped: rejected or cancelled, finished: done).
+ * Who or what a request is waiting for: the same answer as the API's Workflow::stageOf, which the management screens get
+ * from the server (the requester endpoints do not send it). The barber waits for the barber until it answers, and its
+ * approval (11) ends the route; every other domain goes received → (רמ"ד תו"ב for הובלות) → גורם מטפל → מפקד תחום
+ * (or a supplier hold) → מימוש → closed.
  */
-export function requestProgress(statusId) {
+export function stageOf(statusId, bookingTypeId) {
+  if (bookingTypeId === BARBER_TYPE_ID) return TERMINAL_STATUS_IDS.includes(statusId) || statusId === 11 ? 'closed' : 'barber';
+  if (TERMINAL_STATUS_IDS.includes(statusId)) return 'closed';
   switch (statusId) {
-    case 1: // received
-      return { step: 0, mode: 'here' };
-    case 2: // processing
-    case 14: // with the control officer
-    case 15: // vice approver approved
-    case 16: // vice approver rejected (back to the approver)
-    case 17: // control officer approved
-      return { step: 1, mode: 'here' };
-    case 8: // waiting for a file
-    case 9: // waiting during processing
-      return { step: 1, mode: 'hold' };
-    case 3: // approved
-    case 11: // approved by the barber
-      return { step: 2, mode: 'here' };
-    case 10: // waiting after approval
-      return { step: 2, mode: 'hold' };
-    case 5: // completed
-      return { step: 3, mode: 'finished' };
-    case 4: // rejected
-    case 7: // cancelled by the approver
-    case 12: // cancelled by the barber
-    case 18: // rejected by the control officer
-      return { step: 1, mode: 'stopped' };
-    case 6: // cancelled by the user
-    case 13: // cancelled by a change of time
-      return { step: 0, mode: 'stopped' };
+    case 1:
+      return CONTROL_OFFICER_TYPE_IDS.includes(bookingTypeId) ? 'control_officer' : 'vice_approver';
+    case 14: case 17: case 18:
+      return 'vice_approver';
+    case 2: case 15: case 16:
+      return 'approver';
+    case 8:
+      return 'supplier_files';
+    case 9:
+      return 'supplier_approval';
+    case 10:
+      return 'supplier_number';
+    case 3:
+      return 'realization';
     default:
-      return { step: 0, mode: 'here' };
+      return 'closed';
   }
+}
+
+/** What routeFor needs to know of a domain (the management catalog, which a requester cannot read): the barber's and הובלות' statuses. */
+const ROUTE_CATALOG = {
+  booking_type_statuses: {
+    [BARBER_TYPE_ID]: [1, 6, 11, 12, 13],
+    ...Object.fromEntries(CONTROL_OFFICER_TYPE_IDS.map((id) => [id, [14, 17, 18]])),
+  },
+};
+
+/**
+ * A request's route, drawn exactly as the management screens draw it (features/bookings/route.js): the stations of its
+ * domain, the station it is at, and how (here, hold, stopped, finished).
+ */
+export function requestRoute(statusId, bookingTypeId) {
+  const booking = { booking_type_id: bookingTypeId, status_id: statusId, stage: stageOf(statusId, bookingTypeId) };
+  const stations = routeFor(booking, ROUTE_CATALOG);
+  const { here, mode } = routePosition(booking, stations);
+  return { stage: booking.stage, stations, here, mode };
 }

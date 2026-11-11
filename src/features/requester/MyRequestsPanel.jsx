@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatedText } from '@/components/ui/AnimatedText';
 import { Button } from '@/components/ui/Button';
-import { StatusChip } from '@/components/ui/Chips';
 import { DateRangePicker } from '@/components/ui/DateRangePicker';
 import { Field } from '@/components/ui/Field';
 import { Select } from '@/components/ui/Select';
@@ -16,8 +15,10 @@ import { OPEN_STATUS_IDS } from '@/lib/api/endpoints';
 import { useDebounced } from '@/lib/useDebounced';
 import { useFitToWindow } from '@/lib/useFitToWindow';
 import { RequestDrawer } from './RequestDrawer';
-import { isChanged, markSeen, useSeen } from './seen';
-import { counterOf, PROGRESS_STEPS, requestProgress } from './requesterData';
+import { RequestRow } from './RequestRow';
+import { isChanged, markCelebrated, markSeen, useSeen, wasCelebrated } from './seen';
+import { counterOf, stageOf } from './requesterData';
+import { STAGE_SHORT } from '@/lib/labels';
 import { useCatalog, useMyRequests } from './useRequester';
 
 /** The home counters, as a filter on the full page (?bucket=): a counter's click lands here with it chosen. */
@@ -28,22 +29,6 @@ const BUCKETS = [
   { id: 'done', label: 'הושלמו' },
 ];
 const inBucket = (row, bucket) => (bucket === 'open' ? ['action', 'handling'].includes(counterOf(row)) : counterOf(row) === bucket);
-
-/**
- * The "updated since your last visit" mark: a mint "עדכון חדש" pill that pops in and bobs now and then, with tiny
- * bubbles and sparkles rising out of the text and fading.
- */
-const RISING = ['', '✦', '', '✧'];
-function UpdateMark() {
-  return (
-    <span className="rq-new" data-tip="יש עדכון בקריאה מאז שצפית בה" aria-hidden="true">
-      עדכון חדש
-      <span className="fx">
-        {RISING.map((glyph, index) => <i key={index} className={glyph ? 'spark' : 'bub'}>{glyph}</i>)}
-      </span>
-    </span>
-  );
-}
 
 /** How long "סימון הכל כנקרא" takes to fade out (matches .rq-mark-all[data-closing] in requester.css). */
 const MARK_ALL_EXIT_MS = 220;
@@ -92,6 +77,8 @@ export function MyRequestsPanel({ full = false, category, onCategory, bucket: ra
   // the categories (topics and domains) come from GET /requester/catalog, already limited to what the user may open
   const categories = useCatalog();
   const list = categories.data?.categories ?? [];
+  // a ביטחון מידע / תקשוב type's own picture (by booking type id); other domains show their domain badge
+  const typeImg = Object.fromEntries((categories.data?.topics ?? []).flatMap((topic) => topic.groups.flatMap((group) => group.types.map((type) => [type.id, type.img]))));
   const current = list.find((candidate) => candidate.id === category) ?? null;
   const requests = useMyRequests(current, { enabled: categories.isSuccess });
   // the full page filters (open / all, search by number or category), as the earlier "הקריאות שלי" screen did
@@ -122,10 +109,23 @@ export function MyRequestsPanel({ full = false, category, onCategory, bucket: ra
   const [range, setRange] = useState({ from: null, to: null });
   const allRows = requests.data ?? [];
   const changedRows = allRows.filter((row) => isChanged(seen, row));
+  // a completion that is new since the last visit gets a one-time celebration; a played one is remembered
+  // once due it stays due until it has played, so opening the request (which marks it seen) does not cancel it
+  const [celebrated, setCelebrated] = useState(() => new Set());
+  const [due, setDue] = useState(() => new Set());
+  const newlyDue = typeof window === 'undefined' ? [] : allRows.filter((row) => counterOf(row) === 'done' && isChanged(seen, row) && !due.has(row.id) && !wasCelebrated(row.id));
+  if (newlyDue.length) setDue(new Set([...due, ...newlyDue.map((row) => row.id)]));
+  const celebrating = (row) => due.has(row.id) && !celebrated.has(row.id) && !wasCelebrated(row.id);
+  const finishCelebration = (id) => {
+    markCelebrated(id);
+    setCelebrated((previous) => new Set(previous).add(id));
+  };
   // "סימון הכל כנקרא" fades out instead of vanishing (as the management "ניקוי הסינון"), keeping its last count meanwhile
   const markAll = usePresence(changedRows.length > 0, MARK_ALL_EXIT_MS);
   const [markAllCount, setMarkAllCount] = useState(changedRows.length);
   if (changedRows.length && changedRows.length !== markAllCount) setMarkAllCount(changedRows.length);
+  const STAGE_ORDER = ['control_officer', 'vice_approver', 'approver', 'supplier_files', 'supplier_approval', 'supplier_number', 'barber', 'realization', 'closed'];
+  const stageOptions = STAGE_ORDER.filter((id) => allRows.some((row) => stageOf(row.statusId, row.bookingTypeId) === id));
   const statusNames = [...new Set(allRows.map(statusNameOf).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'he'));
   const inRange = (row) => {
     if (!range.from && !range.to) return true;
@@ -138,7 +138,7 @@ export function MyRequestsPanel({ full = false, category, onCategory, bucket: ra
           (view === 'all' || isOpen(row)) &&
           matches(row, query) &&
           (!bucket || inBucket(row, bucket)) &&
-          (stage === '' || requestProgress(row.statusId).step === Number(stage)) &&
+          (stage === '' || stageOf(row.statusId, row.bookingTypeId) === stage) &&
           (!status || statusNameOf(row) === status) &&
           inRange(row),
       )
@@ -236,7 +236,7 @@ export function MyRequestsPanel({ full = false, category, onCategory, bucket: ra
             <Field label="שלב">
               <Select autoWidth className="input" value={stage} onChange={(event) => setStage(event.target.value)}>
                 <option value="">כל השלבים</option>
-                {PROGRESS_STEPS.map((name, index) => <option key={name} value={index}>{name}</option>)}
+                {stageOptions.map((id) => <option key={id} value={id}>{STAGE_SHORT[id]}</option>)}
               </Select>
             </Field>
             <Field label="סטטוס">
@@ -263,23 +263,15 @@ export function MyRequestsPanel({ full = false, category, onCategory, bucket: ra
         <ul className="rq-list">
           {rows.map((row) => (
             <li key={row.id}>
-              <button
-                type="button"
-                className={`rq-row${isChanged(seen, row) ? ' changed' : ''}${opened?.id === row.id ? ' selected' : ''}`}
-                aria-current={opened?.id === row.id ? 'true' : undefined}
-                onClick={() => open(row)}
-                aria-label={`פרטי קריאה ${row.serial}${isChanged(seen, row) ? ', עודכנה מאז הביקור האחרון' : ''}`}
-              >
-              <div>
-                <b>{row.typeName}</b> <span className="serial">{row.serial}</span>
-                <div className="small muted">נפתחה {row.createdAt}</div>
-              </div>
-              <span className="rq-row-side">
-                <StatusChip statusId={row.statusId} label={row.statusName} />
-                {/* changed since the last visit: a friendly mark at the row's left end (its name for screen readers is on the row) */}
-                {isChanged(seen, row) ? <UpdateMark /> : null}
-              </span>
-              </button>
+              <RequestRow
+                row={row}
+                img={typeImg[row.bookingTypeId]}
+                changed={isChanged(seen, row)}
+                selected={opened?.id === row.id}
+                celebrating={celebrating(row)}
+                onOpen={() => open(row)}
+                onCelebrated={() => finishCelebration(row.id)}
+              />
             </li>
           ))}
         </ul>
@@ -297,7 +289,7 @@ export function MyRequestsPanel({ full = false, category, onCategory, bucket: ra
         <EmptyState title={current ? `אין לך קריאות ב${current.name}` : 'עוד לא פתחת קריאות'}>בחר סוג קריאה כדי לפתוח קריאה ראשונה</EmptyState>
       )
       )}
-      {opened ? <RequestDrawer row={opened} rows={rows} onGo={open} onClose={() => setOpened(null)} /> : null}
+      {opened ? <RequestDrawer row={opened} rows={rows} onGo={open} onClose={() => setOpened(null)} celebrate={celebrating(opened)} onCelebrated={() => finishCelebration(opened.id)} /> : null}
     </section>
   );
 }
