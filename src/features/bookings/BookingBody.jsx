@@ -140,6 +140,8 @@ export function Body({ booking, onDecision }) {
           </div>
         </section>
 
+        {/* comments with the status history under them: they fill the column beside the (taller) details */}
+        <div className="drawer-stack">
         <section className="panel">
           <header>
             <h2>הערות</h2>
@@ -160,39 +162,40 @@ export function Body({ booking, onDecision }) {
             )}
           </div>
         </section>
+
+        <section className="panel">
+          <header>
+            <h2>היסטוריית סטטוסים</h2>
+            <span className="hint">כולל פעולות שבוצעו באפליקציה</span>
+          </header>
+          <div className="body">
+            <ol className="timeline">
+              {history.map((entry, index) => {
+                const next = history[index + 1];
+                const dwell = next ? (Date.parse(next.occurred_at) - Date.parse(entry.occurred_at)) / 36e5 : null;
+                const actor = entry.actor_name || entry.actor_id;
+                return (
+                  <li key={index}>
+                    <div className="t1">
+                      <b>{entry.status_label}</b>
+                      <SourceTag source={entry.source} />
+                      <span className="when">{fmtDateTime(entry.occurred_at)}</span>
+                    </div>
+                    <div className="small muted">
+                      {entry.action_label ?? ''}
+                      {actor ? ` · ${actor}` : ''}
+                      {dwell !== null && dwell > 0 ? ` · שהתה בסטטוס ${fmtHours(dwell)}` : ''}
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+        </section>
+        </div>
       </div>
 
       {booking.attachments.length > 0 ? <AttachmentsPanel attachments={booking.attachments} /> : null}
-
-      <section className="panel">
-        <header>
-          <h2>היסטוריית סטטוסים</h2>
-          <span className="hint">כולל פעולות שבוצעו באפליקציה</span>
-        </header>
-        <div className="body">
-          <ol className="timeline">
-            {history.map((entry, index) => {
-              const next = history[index + 1];
-              const dwell = next ? (Date.parse(next.occurred_at) - Date.parse(entry.occurred_at)) / 36e5 : null;
-              const actor = entry.actor_name || entry.actor_id;
-              return (
-                <li key={index}>
-                  <div className="t1">
-                    <b>{entry.status_label}</b>
-                    <SourceTag source={entry.source} />
-                    <span className="when">{fmtDateTime(entry.occurred_at)}</span>
-                  </div>
-                  <div className="small muted">
-                    {entry.action_label ?? ''}
-                    {actor ? ` · ${actor}` : ''}
-                    {dwell !== null && dwell > 0 ? ` · שהתה בסטטוס ${fmtHours(dwell)}` : ''}
-                  </div>
-                </li>
-              );
-            })}
-          </ol>
-        </div>
-      </section>
 
       {booking.audit ? (
         <section className="panel">

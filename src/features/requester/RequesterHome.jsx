@@ -1,78 +1,98 @@
 'use client';
 
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { matchesRequesterSearch } from './search';
-import { isHoldStatus, holdDescription } from '@/lib/booking-workflow';
+import { useQuery } from '@tanstack/react-query';
+import { useSearchParams } from 'next/navigation';
+import { useMemo, useState } from 'react';
 import { Logo } from '@/components/layout/Logo';
-import { DomainBadge } from '@/components/booking/DomainBadge';
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { StatusChip } from '@/components/ui/Chips';
-import { Seg } from '@/components/ui/Controls';
-import { SearchField } from '@/components/ui/SearchField';
-import { useDebounced } from '@/lib/useDebounced';
-import { EmptyState, ErrorNotice, Loading } from '@/components/ui/Feedback';
 import { FadeIn } from '@/components/ui/FadeIn';
-import { PageHead } from '@/components/ui/PageHead';
-import { LOAD_AHEAD_PX } from '@/features/queue/constants';
-import { OPEN_STATUS_IDS, requesterApi } from '@/lib/api/endpoints';
+import { Loading } from '@/components/ui/Feedback';
+import { Icon } from '@/components/ui/Icon';
+import { requesterApi } from '@/lib/api/endpoints';
 import { APP_NAME } from '@/lib/config';
 import { initials } from '@/lib/format';
-import { useFitToWindow } from '@/lib/useFitToWindow';
+import { useSetSearchParams } from '@/lib/useSetSearchParams';
+import { MyRequestsPanel } from './MyRequestsPanel';
+import { RequestForm } from './RequestForm';
+import { fetchCounters, findType, iconSrc, TOPICS } from './requesterData';
+import './requester.css';
 
-/** GET /bookings/my-bookings pages (PaginationEnum::PER_PAGE on the API). */
-const REQUESTER_PAGE_SIZE = 20;
+const COUNTERS = [
+  { id: 'open', label: 'קריאות פתוחות', icon: 'inbox' },
+  { id: 'action', label: 'נדרשת פעולה ממך', icon: 'alert' },
+  { id: 'handling', label: 'בטיפול אצל גורם', icon: 'sync' },
+  { id: 'done', label: 'הושלמו', icon: 'check' },
+];
+
+/** Every request type, flat, for the top-bar search. */
+const ALL_TYPES = TOPICS.flatMap((topic) => topic.groups.flatMap((group) => group.types.map((type) => ({ ...type, path: `${topic.name} › ${group.name}` }))));
+
+/** The search box: finds a form by its name, group or topic. */
+function TypeSearch({ onPick }) {
+  const [text, setText] = useState('');
+  const [open, setOpen] = useState(false);
+  const term = text.trim();
+  const hits = useMemo(() => (term ? ALL_TYPES.filter((type) => `${type.name} ${type.path}`.includes(term)) : []), [term]);
+  const pick = (id) => {
+    setText('');
+    setOpen(false);
+    onPick(id);
+  };
+  return (
+    <div className="search" onBlur={(event) => !event.currentTarget.contains(event.relatedTarget) && setOpen(false)}>
+      <Icon name="search" className="ico" />
+      <input
+        value={text}
+        onChange={(event) => { setText(event.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape') setOpen(false);
+          if (event.key === 'Enter' && hits[0]) pick(hits[0].id);
+        }}
+        placeholder="חיפוש טופס או סוג קריאה"
+        aria-label="חיפוש טופס או סוג קריאה"
+      />
+      {open && term ? (
+        <div className="search-results">
+          {hits.length ? hits.map((type) => (
+            <button key={type.id} type="button" onClick={() => pick(type.id)}>
+              <Icon name={type.icon} />
+              <span>
+                <b>{type.name}</b>
+                <span className="small muted rq-hit-path">{type.path}</span>
+              </span>
+            </button>
+          )) : <div className="rq-no-hits small muted">לא נמצא טופס מתאים</div>}
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 /**
- * What a plain user (no management role) sees: the bookings they opened in the mobile app, open ones first.
- * Built on the requester endpoints the mobile app uses (GET /user, GET /bookings/my-bookings), so the API is unchanged.
- * `fallback` is shown when even GET /user fails (the account is not a known user).
+ * What a plain user (no management role) sees: open a request by topic, and their own requests.
+ * The screen (home / my requests / a form) lives in the URL (`?rq=`, `?type=`), so Back works.
+ * Data comes from requesterData.js (demo until the backend exists); only the name comes from GET /user.
  */
 export function RequesterHome({ onSignOut, fallback }) {
-  const [view, setView] = useState('open');
-  const [search, setSearch] = useState('');
-  const query = useDebounced(search.trim(), 300);
+  const search = useSearchParams();
+  const setParams = useSetSearchParams();
   const user = useQuery({ queryKey: ['requester', 'user'], queryFn: ({ signal }) => requesterApi.user(signal), retry: false });
-
-  const bookings = useInfiniteQuery({
-    queryKey: ['requester', 'bookings', view, 'free-text'],
-    queryFn: ({ pageParam, signal }) => requesterApi.myBookings(pageParam, view === 'open' ? OPEN_STATUS_IDS : null, signal),
-    initialPageParam: 1,
-    // the API wraps the page as {data: [...]} without paging meta: a full page means more may exist, a short one is the end
-    getNextPageParam: (last, pages) => ((last.data?.length ?? 0) >= REQUESTER_PAGE_SIZE ? pages.length + 1 : undefined),
-    enabled: user.isSuccess,
-    placeholderData: (previous) => previous,
-  });
-  const loadedRows = useMemo(() => bookings.data?.pages.flatMap((page) => page.data ?? []) ?? [], [bookings.data]);
-  const rows = useMemo(() => loadedRows.filter((row) => matchesRequesterSearch(row, query)), [loadedRows, query]);
-  const countLabel = `${rows.length}${bookings.hasNextPage ? '+' : ''} קריאות`;
-
-  // the card ends at the window's bottom; the next 20 load as the bottom of the list scrolls into view
-  const card = useRef(null);
-  useFitToWindow(card, 240, user.isSuccess);
-  const scroller = useRef(null);
-  const sentinel = useRef(null);
-  const { hasNextPage, isFetchingNextPage, fetchNextPage } = bookings;
-  useEffect(() => {
-    if (query && hasNextPage && !bookings.isFetching && !bookings.isError && !bookings.isPlaceholderData) {
-      void fetchNextPage();
-    }
-  }, [query, hasNextPage, bookings.isFetching, bookings.isError, bookings.isPlaceholderData, loadedRows.length, fetchNextPage]);
-  useEffect(() => {
-    const el = sentinel.current;
-    if (!el || !hasNextPage || query) return;
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting && !isFetchingNextPage) void fetchNextPage();
-    }, { root: scroller.current, rootMargin: `0px 0px ${LOAD_AHEAD_PX}px 0px` });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage, view, query, bookings.isPending, rows.length]);
+  const counters = useQuery({ queryKey: ['requester-demo', 'counters'], queryFn: fetchCounters });
+  // topic cards the user folded (the chevron in each card's head)
+  const [closed, setClosed] = useState([]);
 
   if (user.isError) return fallback;
   if (user.isPending) return <div className="login-wrap"><Loading rows={3} /></div>;
 
-  const name = user.data?.full_name ?? user.data?.personal_number ?? '';
+  // GET /user (website API, UserResource) sends the full name as `name`; the personal number only if there is no name
+  const name = user.data?.name || user.data?.full_name || user.data?.personal_number || '';
+  const role = user.data?.roles?.[0]?.display_name || 'משתמש';
+  const typeId = search.get('type');
+  const view = typeId && findType(typeId) ? 'form' : search.get('rq') === 'mine' ? 'mine' : 'home';
+
+  const go = (patch) => setParams({ rq: null, type: null, cat: null, ...patch }, 'push');
+  const openType = (id) => go({ type: id });
 
   return (
     <>
@@ -82,15 +102,26 @@ export function RequesterHome({ onSignOut, fallback }) {
             <Logo />
             <div>
               <b>{APP_NAME}</b>
-              <span>הקריאות שלי</span>
+              <span>פתיחת קריאה</span>
             </div>
           </span>
+          <nav className="tabs-nav" aria-label="ניווט ראשי">
+            <a href="?" aria-current={view === 'home' ? 'page' : undefined} onClick={(event) => { event.preventDefault(); go({}); }}>
+              <Icon name="home" />
+              דף הבית
+            </a>
+            <a href="?rq=mine" aria-current={view === 'mine' ? 'page' : undefined} onClick={(event) => { event.preventDefault(); go({ rq: 'mine' }); }}>
+              <Icon name="list" />
+              הקריאות שלי
+            </a>
+          </nav>
           <div className="top-tools">
+            <TypeSearch onPick={openType} />
             <span className="userbtn" style={{ cursor: 'default' }}>
               <span className="avatar">{initials(name)}</span>
               <span className="nm">
                 {name}
-                <small>משתמש</small>
+                <small>{role}</small>
               </span>
             </span>
             <Button size="sm" icon="logout" onClick={() => void onSignOut()}>
@@ -100,70 +131,80 @@ export function RequesterHome({ onSignOut, fallback }) {
         </div>
       </header>
       <main className="page">
-        <FadeIn>
-          <PageHead title="הקריאות שלי" sub="הקריאות שפתחת באפליקציה. פתיחת קריאה חדשה וביטול נעשים באפליקציה בלבד." />
-          <section ref={card} className="card fit-card">
-            <div className="toolbar">
-              <Seg
-                label="תצוגה"
-                value={view}
-                onChange={setView}
-                options={[
-                  { value: 'open', label: 'פתוחות' },
-                  { value: 'all', label: 'הכל' },
-                ]}
-              />
-              <SearchField width={240} value={search} onChange={setSearch} placeholder="מספר קריאה או קטגוריה" aria-label="חיפוש בקריאות שלי לפי מספר קריאה או קטגוריה" />
-              <span className="grow" />
-              {bookings.isSuccess ? <span className="small muted">{countLabel}</span> : null}
+        {view === 'form' ? (
+          <FadeIn key={typeId}>
+            <RequestForm typeId={typeId} onHome={() => go({})} onDone={() => go({ rq: 'mine' })} />
+          </FadeIn>
+        ) : view === 'mine' ? (
+          <FadeIn key="mine">
+            <MyRequestsPanel full category={search.get('cat')} onCategory={(cat) => setParams({ cat })} onOpenType={openType} />
+          </FadeIn>
+        ) : (
+          <FadeIn key="home">
+            <div className="rq-hello">
+              <h1>שלום, {name}</h1>
+              <p>באיזה נושא תרצה לפתוח קריאה?</p>
             </div>
-            <FadeIn key={view} className={`fit-fill${bookings.isPlaceholderData ? ' is-stale' : ''}`}>
-              {bookings.isPending || (query && hasNextPage && !rows.length && !bookings.isError) ? (
-                <div className="card-body">
-                  <Loading rows={6} />
+            <div className="rq-counters">
+              {COUNTERS.map((counter) => (
+                <div key={counter.id} className={`card rq-counter ${counter.id}`}>
+                  <span className="ic"><Icon name={counter.icon} /></span>
+                  <span>
+                    <b>{counters.data ? counters.data[counter.id] : '–'}</b>
+                    <span>{counter.label}</span>
+                  </span>
                 </div>
-              ) : bookings.isError && !rows.length ? (
-                <div className="card-body">
-                  <ErrorNotice error={bookings.error} onRetry={() => void bookings.refetch()} />
-                </div>
-              ) : rows.length === 0 ? (
-                <EmptyState title={query ? 'לא נמצאו קריאות התואמות לחיפוש' : view === 'open' ? 'אין לך קריאות פתוחות' : 'עדיין לא פתחת קריאות'}>
-                  {query ? 'נסה מספר קריאה או קטגוריה אחרים, או נקה את החיפוש. לחיפוש גם בקריאות סגורות, בחר הכל.' : 'קריאות נפתחות באפליקציה.'}
-                </EmptyState>
-              ) : (
-                <div ref={scroller} className="queue-scroll">
-                  {bookings.isError ? <ErrorNotice error={bookings.error} onRetry={() => void fetchNextPage()} /> : null}
-                  <div className="tickets">
-                    {rows.map((row) => (
-                      <div key={row.uuid} className="ticket" style={{ cursor: 'default' }}>
-                        <DomainBadge bookingTypeId={row.booking_type?.id} />
-                        <div>
-                          <div className="t1">
-                            {row.booking_type?.display_name} <span className="serial">{row.serial_number}</span>
-                          </div>
-                          {isHoldStatus(row.status?.id) ? <p className="requester-hold-message">{holdDescription(row.status.id)}</p> : null}
-                          <div className="t2">
-                            <span>נפתחה {row.created_at}</span>
-                            {row.updated_at && row.updated_at !== row.created_at ? <span>· עודכנה {row.updated_at}</span> : null}
-                          </div>
+              ))}
+            </div>
+            <div className="rq-home">
+              <div className="rq-topics">
+                {TOPICS.map((topic) => {
+                  const open = !closed.includes(topic.id);
+                  const count = topic.groups.reduce((sum, group) => sum + group.types.length, 0);
+                  return (
+                    <section key={topic.id} className={`card rq-topic${open ? '' : ' closed'}`} aria-label={topic.name}>
+                      <button
+                        type="button"
+                        className="rq-topic-head"
+                        aria-expanded={open}
+                        onClick={() => setClosed((previous) => (open ? [...previous, topic.id] : previous.filter((id) => id !== topic.id)))}
+                      >
+                        <span className="pic"><img src={iconSrc(topic.id)} alt="" /></span>
+                        <span className="txt">
+                          <b>{topic.name}</b>
+                          <span>{count} סוגי קריאות</span>
+                        </span>
+                        <Icon name="down" className="chev" />
+                      </button>
+                      {open ? (
+                        <div className="rq-topic-body">
+                          {topic.groups.map((group) => (
+                            <div key={group.id} className="rq-group">
+                              <h3>{group.name}</h3>
+                              <div className="rq-types">
+                                {group.types.map((type) => (
+                                  <button key={type.id} type="button" className="rq-type" onClick={() => openType(type.id)}>
+                                    <img src={iconSrc(type.id)} alt="" />
+                                    <span className="txt">
+                                      <b>{type.name}</b>
+                                      <span>{type.description}</span>
+                                    </span>
+                                    <Icon name="left" className="go" />
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                        <div className="side">
-                          <StatusChip statusId={row.status?.id} label={row.status?.display_name ?? ''} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div ref={sentinel} />
-                  {isFetchingNextPage ? (
-                    <div className="card-body">
-                      <Loading rows={2} />
-                    </div>
-                  ) : null}
-                </div>
-              )}
-            </FadeIn>
-          </section>
-        </FadeIn>
+                      ) : null}
+                    </section>
+                  );
+                })}
+              </div>
+              <MyRequestsPanel category={search.get('cat')} onCategory={(cat) => setParams({ cat })} onAll={() => go({ rq: 'mine', cat: search.get('cat') })} onOpenType={openType} />
+            </div>
+          </FadeIn>
+        )}
       </main>
     </>
   );
