@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatedText } from '@/components/ui/AnimatedText';
 import { Button } from '@/components/ui/Button';
+import { ClearFilters } from '@/components/ui/ClearFilters';
 import { DateRangePicker } from '@/components/ui/DateRangePicker';
 import { Field } from '@/components/ui/Field';
 import { Select } from '@/components/ui/Select';
@@ -208,7 +209,7 @@ export function MyRequestsPanel({ full = false, category, onCategory, bucket: ra
             <Button size="sm" icon="sliders" aria-expanded={filtersOpen} onClick={() => setFiltersOpen((open) => !open)}>
               <AnimatedText>{advanced ? `סינון (${advanced})` : 'סינון'}</AnimatedText>
             </Button>
-            {advanced ? <Button size="sm" variant="ghost" icon="x" className="requests-clear" aria-label="ניקוי הסינון" data-tip="ניקוי הסינון" onClick={clearFilters} /> : null}
+            {advanced ? <ClearFilters onClick={clearFilters} /> : null}
             {markAll.mounted ? (
               <Button size="sm" variant="ghost" icon="check" className="rq-mark-all" data-closing={markAll.closing || undefined} disabled={markAll.closing} onClick={() => markSeen(changedRows)}>
                 סימון הכל כנקרא ({markAllCount})

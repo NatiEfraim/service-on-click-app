@@ -1,8 +1,6 @@
 'use client';
 
-import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { Button } from '@/components/ui/Button';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { DateRangePicker } from '@/components/ui/DateRangePicker';
 import { ExpandRow } from '@/components/ui/ExpandRow';
 import { EmptyState, ErrorNotice, Loading } from '@/components/ui/Feedback';
@@ -16,10 +14,10 @@ import { useSession } from '@/providers/SessionProvider';
 import { ACTION_GROUPS, actionLabel, changedFields, fieldLabel, listChange, mergeOneSave, RESULT } from './labels';
 import { VerifyButton } from './VerifyButton';
 import { AuditTarget } from './AuditTarget';
-import { usePresence } from '@/components/ui/usePresence';
+import { useRowPreview } from '@/components/booking/useRowPreview';
+import { ClearFilters } from '@/components/ui/ClearFilters';
 import { usePublishDrawerList } from '@/features/bookings/drawerList';
 import { useBookingDrawer } from '@/features/bookings/useBookingDrawer';
-import { DRAWER_EXIT_MS } from '@/lib/motion';
 import { useShowValue, useAuditPages } from './useAuditData';
 import { AuditPeople } from './AuditPeople';
 
@@ -27,65 +25,6 @@ import { AuditPeople } from './AuditPeople';
 const MIN_TABLE_HEIGHT = 320;
 
 const EMPTY = { q: '', action: '', type: '', result: '', from: '', to: '' };
-
-/**
- * The history row whose eye opened the booking's side panel, brought forward: a copy of the row above the panel's
- * dimming, joined to the panel's edge, with all its columns fitted into the part of the page the panel leaves (the row
- * itself runs on under the panel). It floats in toward the panel as the panel slides in and back out as it slides away.
- */
-function AuditRowPreview({ rowId, cells, closing }) {
-  const [box, setBox] = useState(null);
-  // while it leaves it keeps its last place, whatever the page does, so it never vanishes mid-way
-  const closingRef = useRef(closing);
-  useEffect(() => {
-    closingRef.current = closing;
-  });
-  useLayoutEffect(() => {
-    const measure = () => {
-      const tr = document.querySelector(`tr[data-audit-row="${rowId}"]`);
-      const scroller = tr?.closest('.audit-scroll');
-      if (!tr || !scroller) return closingRef.current ? undefined : setBox(null);
-      const bounds = tr.getBoundingClientRect();
-      const view = scroller.getBoundingClientRect();
-      const headerBottom = scroller.querySelector('thead')?.getBoundingClientRect().bottom ?? view.top;
-      // out of the table's view: no copy (the row itself is not visible either)
-      if (bounds.top < headerBottom || bounds.bottom > view.bottom) return closingRef.current ? undefined : setBox(null);
-      const widths = Array.from(tr.cells, (cell) => cell.getBoundingClientRect().width);
-      const next = {
-        '--row-top': `${bounds.top}px`,
-        '--row-left': `${bounds.left}px`,
-        '--row-height': `${bounds.height}px`,
-        // the row's own proportions, squeezed into the room the panel leaves
-        '--row-columns': widths.map((width) => `minmax(0, ${width}fr)`).join(' '),
-      };
-      // a new object only when something moved, so a still row never re-renders (and never restarts anything)
-      setBox((previous) => (previous && Object.keys(next).every((key) => previous[key] === next[key]) ? previous : next));
-    };
-    measure();
-    // the panel's arrival can shift the page a frame or two later: follow the row for the length of the opening
-    let frame = 0;
-    const started = performance.now();
-    const follow = () => {
-      measure();
-      if (performance.now() - started < 450) frame = requestAnimationFrame(follow);
-    };
-    frame = requestAnimationFrame(follow);
-    window.addEventListener('resize', measure);
-    window.addEventListener('scroll', measure, true);
-    return () => {
-      cancelAnimationFrame(frame);
-      window.removeEventListener('resize', measure);
-      window.removeEventListener('scroll', measure, true);
-    };
-  }, [rowId]);
-  if (!box) return null;
-  return createPortal(
-    <div className="audit-row-preview" data-closing={closing || undefined} style={box} dir="rtl" aria-hidden="true">
-      {cells.map((cell, index) => <span key={index}>{cell}</span>)}
-    </div>,
-    document.body,
-  );
-}
 
 export function AuditScreen() {
   const { catalog } = useSession();
@@ -132,11 +71,8 @@ export function AuditScreen() {
   const peekRowId = drawer.serial
     ? (rows.find((row) => row.id === peekId && Number(row.booking_serial) === drawer.serial) ?? rows.find((row) => Number(row.booking_serial) === drawer.serial))?.id ?? null
     : null;
-  // it stays up while the panel slides out, so it fades back with the panel instead of dropping under the dimming at once
-  const peek = usePresence(peekRowId !== null, DRAWER_EXIT_MS);
-  const [lastPeek, setLastPeek] = useState(null);
-  if (peekRowId !== null && peekRowId !== lastPeek) setLastPeek(peekRowId);
-  const peekedId = peekRowId ?? (peek.mounted ? lastPeek : null);
+  // that row pops out and joins the panel; it fades back as the panel leaves, and cross-fades on ‹ › (useRowPreview)
+  const preview = useRowPreview(peekRowId);
   // the side panel steps through the bookings of this list ("‹ 3 מתוך 12 ›", ↑ / ↓): each booking once, in the table's order
   // at the last loaded one, "next" first loads the table's next page (as in "קריאות")
   usePublishDrawerList([...new Set(rows.map((row) => Number(row.booking_serial)).filter(Boolean))], { hasMore: query.hasNextPage, loadMore: query.fetchNextPage });
@@ -153,21 +89,6 @@ export function AuditScreen() {
       <span key="result" className={`chip ${result.tone}`}>{result.label}</span>,
     ];
   };
-  const peekedRow = peekedId === null ? null : rows.find((row) => row.id === peekedId) ?? null;
-  // stepping to another booking (‹ › or ↑ ↓): the previous copy plays its exit while the next one comes in, so the two
-  // cross-fade instead of one vanishing at once
-  const [shownPeekId, setShownPeekId] = useState(null);
-  const [leavingId, setLeavingId] = useState(null);
-  if (peekedId !== shownPeekId) {
-    if (shownPeekId !== null && peekedId !== null) setLeavingId(shownPeekId);
-    setShownPeekId(peekedId);
-  }
-  useEffect(() => {
-    if (leavingId === null) return undefined;
-    const timer = window.setTimeout(() => setLeavingId(null), DRAWER_EXIT_MS);
-    return () => window.clearTimeout(timer);
-  }, [leavingId]);
-  const leavingRow = leavingId === null || leavingId === peekedId ? null : rows.find((row) => row.id === leavingId) ?? null;
   const total = lists.reduce((sum, list) => sum + (list.data?.pages[0]?.meta.total ?? 0), 0);
 
   // the card ends at the window's bottom and only the table scrolls inside it
@@ -222,9 +143,7 @@ export function AuditScreen() {
           </Select>
           <DateRangePicker value={{ from: filters.from, to: filters.to }} onChange={(range) => update(range)} />
           {filtered ? (
-            <Button size="sm" variant="ghost" icon="x" onClick={() => { setFilters(EMPTY); setSearchText(''); }}>
-              ניקוי
-            </Button>
+            <ClearFilters onClick={() => { setFilters(EMPTY); setSearchText(''); }} />
           ) : null}
           {/* the count and the integrity check close the bar */}
           <span className="report-export">
@@ -241,8 +160,7 @@ export function AuditScreen() {
           <div className="card-body"><EmptyState title={filtered ? 'אין רשומות שמתאימות לסינון.' : 'עדיין אין רשומות בהיסטוריה.'} /></div>
         ) : (
           <div className={`fit-fill${query.isPlaceholderData ? ' is-stale' : ''}`}>
-          {leavingRow ? <AuditRowPreview key={leavingRow.id} rowId={leavingRow.id} cells={rowCells(leavingRow)} closing /> : null}
-          {peekedRow ? <AuditRowPreview key={peekedRow.id} rowId={peekedRow.id} cells={rowCells(peekedRow)} closing={peek.closing} /> : null}
+          {preview.node}
           <div ref={scroller} className="queue-scroll audit-scroll">
             <table className="t">
               <thead>
@@ -261,7 +179,7 @@ export function AuditScreen() {
                   const changes = changedFields(row.before, row.after);
                   return (
                     <Fragment key={row.id}>
-                      <tr data-audit-row={row.id} className={`clk${isOpen ? ' audit-open' : ''}${peekedId === row.id ? ' audit-row-peek' : ''}`} data-closing={peekedId === row.id && peek.closing ? true : undefined} aria-expanded={isOpen} tabIndex={0} onClick={() => setOpen(isOpen ? null : row.id)} onKeyDown={(event) => (event.key === 'Enter' || event.key === ' ') && (event.preventDefault(), setOpen(isOpen ? null : row.id))}>
+                      <tr {...preview.rowAttrs(row.id)} className={`clk${isOpen ? ' audit-open' : ''}${preview.rowClass(row.id)}`} aria-expanded={isOpen} tabIndex={0} onClick={() => setOpen(isOpen ? null : row.id)} onKeyDown={(event) => (event.key === 'Enter' || event.key === ' ') && (event.preventDefault(), setOpen(isOpen ? null : row.id))}>
                         {rowCells(row).map((cell, index) => <td key={index} style={index === 0 ? { whiteSpace: 'nowrap' } : undefined}>{cell}</td>)}
                       </tr>
                       <ExpandRow open={isOpen} colSpan={6}>

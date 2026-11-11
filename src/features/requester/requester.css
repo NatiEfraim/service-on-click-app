@@ -80,7 +80,8 @@
 .rq-no-hits { padding: 12px; }
 
 /* ---------- form */
-.rq-form { max-width: 860px; }
+/* the request form takes the page's whole width, as the other screens */
+.rq-form { max-width: none; }
 .rq-crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 14px; color: var(--mute); }
 .rq-crumbs b { color: var(--ink); }
 .rq-form-head { display: flex; gap: 14px; align-items: center; padding: 18px 20px; border-bottom: 1px solid var(--line-2); }
@@ -329,3 +330,10 @@ button.rq-counter:focus-visible { outline: 2px solid var(--accent); outline-offs
 @media (prefers-reduced-motion: reduce) {
   .rq-celebrate-row.rejected, .play > .rq-sad-face { animation: none; }
 }
+/* "הקריאות שלי" keeps its scroll bar's room when it locks for an open request, so nothing shifts when one is picked */
+.rq-mine.full .rq-list { scrollbar-gutter: stable; }
+
+/* "עדכון חדש" for a negative update (the request was rejected or cancelled): the same pill in soft red, its bubbles too */
+.rq-new.bad { background: var(--bad-w); color: var(--bad); border-color: color-mix(in srgb, var(--bad) 30%, transparent); }
+.rq-new.bad .fx .bub { background: radial-gradient(circle at 35% 30%, #F6B8AE, #D2553F 75%); }
+.rq-new.bad .fx .spark { color: var(--bad); }

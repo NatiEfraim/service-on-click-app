@@ -13,9 +13,10 @@ import { daysSince, isRejectedRequest, requestRoute } from './requesterData';
  * bubbles and sparkles rising out of the text and fading.
  */
 const RISING = ['', '✦', '', '✧'];
-function UpdateMark() {
+function UpdateMark({ negative = false }) {
+  // a negative update (the request was rejected or cancelled) shows in red; any other in green
   return (
-    <span className="rq-new" data-tip="יש עדכון בקריאה מאז שצפית בה" aria-hidden="true">
+    <span className={`rq-new${negative ? ' bad' : ''}`} data-tip={negative ? 'הקריאה נדחתה או בוטלה מאז שצפית בה' : 'יש עדכון בקריאה מאז שצפית בה'} aria-hidden="true">
       עדכון חדש
       <span className="fx">
         {RISING.map((glyph, index) => <i key={index} className={glyph ? 'spark' : 'bub'}>{glyph}</i>)}
@@ -99,7 +100,7 @@ export function RequestRow({ row, img, changed, selected, celebrating, onOpen, o
         </span>
       </span>
       <span className="rq-ticket-side">
-        {changed ? <UpdateMark /> : null}
+        {changed ? <UpdateMark negative={route.mode === 'stopped'} /> : null}
         {closed ? <StatusChip statusId={row.statusId} label={row.statusName} /> : <AgeDays updatedAt={row.updatedAt} createdAt={row.createdAt} />}
       </span>
       {/* status changed since the last visit: the whole row glows green once, with light confetti */}

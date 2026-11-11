@@ -8,6 +8,8 @@ import { EmptyState, ErrorNotice, Loading, Notice } from '@/components/ui/Feedba
 import { PageHead } from '@/components/ui/PageHead';
 import { Select } from '@/components/ui/Select';
 import { useBookingDrawer } from '@/features/bookings/useBookingDrawer';
+import { useRowPreview } from '@/components/booking/useRowPreview';
+import { ClearFilters } from '@/components/ui/ClearFilters';
 import { ApiError } from '@/lib/api/client';
 import { bookingsReportApi } from '@/lib/api/endpoints';
 import { fmtDateTime } from '@/lib/format';
@@ -45,6 +47,8 @@ function saveFile(blob, fileName) {
 export function BookingsReportScreen() {
   const { catalog } = useSession();
   const drawer = useBookingDrawer();
+  // the row whose booking is open in the side panel pops out and joins the panel (as in the history and "קריאות")
+  const preview = useRowPreview(drawer.serial);
   const [filters, setFilters] = useState(EMPTY);
   const update = (patch) => setFilters((current) => ({ ...current, ...patch }));
 
@@ -119,9 +123,7 @@ export function BookingsReportScreen() {
             onChange={(range) => update({ from_created_at: range.from, to_created_at: range.to })}
           />
           {filtered ? (
-            <Button size="sm" variant="ghost" icon="x" onClick={() => update(EMPTY)}>
-              ניקוי
-            </Button>
+            <ClearFilters onClick={() => update(EMPTY)} />
           ) : null}
           {/* the export sits with the filters it applies: the count of what will be exported, then the button */}
           <span className="report-export">
@@ -142,6 +144,7 @@ export function BookingsReportScreen() {
           <div className="card-body"><EmptyState title={filtered ? 'אין קריאות שמתאימות לסינון.' : 'אין קריאות להצגה.'} /></div>
         ) : (
           <div className={`fit-fill${query.isPlaceholderData ? ' is-stale' : ''}`}>
+            {preview.node}
             <div ref={scroller} className="queue-scroll audit-scroll">
               <table className="t">
                 <thead>
@@ -158,7 +161,7 @@ export function BookingsReportScreen() {
                 </thead>
                 <tbody>
                   {rows.map((row) => (
-                    <tr key={row.uuid ?? row.serial_number} className="clk" tabIndex={0} onClick={() => drawer.open(row.serial_number)} onKeyDown={(event) => event.key === 'Enter' && drawer.open(row.serial_number)}>
+                    <tr key={row.uuid ?? row.serial_number} {...preview.rowAttrs(Number(row.serial_number))} className={`clk${preview.rowClass(Number(row.serial_number))}`} tabIndex={0} onClick={() => drawer.open(row.serial_number)} onKeyDown={(event) => event.key === 'Enter' && drawer.open(row.serial_number)}>
                       <td><b>{row.serial_number}</b></td>
                       <td>{row.booking_type_label}</td>
                       <td>{row.status_label}</td>
