@@ -148,6 +148,7 @@ svg.chart text { fill: var(--mute); font-size: 13px; font-family: var(--font); }
   flex: 0 0 calc((100% - (var(--per-row) - 1) * 12px) / var(--per-row));
   height: calc((100% - (var(--rows) - 1) * 12px) / var(--rows));
 }
+.home-top .tiles[data-expand-last-row] > .dtile:nth-last-child(-n + 2) { flex-grow: 1; }
 /* group tile: hover or focus folds the group's face away and shows its domains side by side */
 .dgroup { position: relative; overflow: hidden; }
 /* no browser focus ring on the group: clicking it focuses it; keyboard focus still shows on the inner card */
@@ -196,8 +197,8 @@ svg.chart text { fill: var(--mute); font-size: 13px; font-family: var(--font); }
   align-content: center; gap: 5px; padding: 1px 5px; min-height: 0; border-radius: 8px; text-align: start;
 }
 .home .dgroup-menu[data-members="3"] .dtile-ic { width: 22px; height: 22px; border-radius: 6px; }
-.home .dgroup-menu[data-members="3"] .dtile-name { font-size: clamp(13px, 32cqh, 16px); }
-.home .dgroup-menu[data-members="3"] .dtile-meta { font-size: clamp(11px, 25cqh, 13px); text-align: end; white-space: nowrap; }
+.home .dgroup-menu[data-members="3"] .dtile-name { font-size: clamp(14px, 36cqh, 17px); }
+.home .dgroup-menu[data-members="3"] .dtile-meta { font-size: clamp(12px, 28cqh, 14px); text-align: end; white-space: nowrap; }
 .home-card { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 .home-card > :not(.card-head) { flex: 1; min-height: 0; }
 .home-card .card-head { padding: 10px 16px; }
