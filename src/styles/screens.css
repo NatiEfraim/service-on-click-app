@@ -642,3 +642,12 @@ span.chart-fade { flex-direction: row; align-items: center; gap: 8px; white-spac
   .audit-row-preview, .audit-row-preview[data-closing] { animation: none; }
   .audit-scroll tbody tr > td { transition: none; }
 }
+
+/* the main screen's domain tiles (every role's home): a bigger picture, name and count, sized from the tile's height and
+   with a little less padding, so all three still fit a short tile (a picture of 46% of the height, the name 14%, the
+   count 11%) */
+.home .tiles > .dtile { gap: 4px; padding: 6px; }
+.home .tiles > .dtile > .dtile-ic { width: clamp(32px, 46cqh, 110px); height: clamp(32px, 46cqh, 110px); border-radius: clamp(10px, 9cqh, 24px); }
+.home .tiles > .dtile > .dtile-ic img { width: 74%; height: 74%; }
+.home .tiles > .dtile > .dtile-name { font-size: clamp(15px, 14cqh, 28px); line-height: 1.25; }
+.home .tiles > .dtile > .dtile-meta { font-size: clamp(13px, 11cqh, 19px); line-height: 1.25; }

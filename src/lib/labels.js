@@ -51,6 +51,9 @@ export const ROLE_NAME = {
   approver: 'מפקד תחום',
   vice_approver: 'גורם מטפל',
   transportation_control_officer: 'רמ"ד תו"ב',
+  // the ביטחון מידע and תקשוב handlers (RoleEnum on the API)
+  infosec_officer: 'קצין ביטחון מידע',
+  ict_handler: 'מנהל תקשוב',
   user: 'משתמש',
 };
 

@@ -11,7 +11,8 @@
 .tag.int { background: var(--accent-wash); color: var(--accent-ink); }
 .tag.sys { background: var(--hold-w); color: var(--hold); }
 .code { display: inline-grid; place-items: center; min-width: 30px; height: 26px; padding: 0 8px; border-radius: 6px; background: var(--accent-soft); color: var(--accent-ink); font-weight: 700; font-family: ui-monospace, Consolas, monospace; }
-.serial { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 13px; color: var(--mute); font-weight: 400; letter-spacing: .02em; }
+/* request, personal and ID numbers: the regular font (no monospace), with even-width digits so columns of numbers line up */
+.serial { font-size: 13px; color: var(--mute); font-weight: 400; font-variant-numeric: tabular-nums; }
 .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
 .dot.bad { background: var(--bad); } .dot.warn { background: var(--warn); } .dot.info { background: var(--info); } .dot.ok { background: var(--ok); }
 

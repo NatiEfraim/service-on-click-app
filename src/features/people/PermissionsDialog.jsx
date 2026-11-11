@@ -3,7 +3,7 @@
 import { SHOW_DEPARTMENTS } from '@/lib/labels';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Select } from '@/components/ui/Select';
-import { useId, useMemo, useState } from 'react';
+import { useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { DomainIcon } from '@/components/booking/DomainBadge';
 import { EmptyState, ErrorNotice, FormError, Loading, Notice } from '@/components/ui/Feedback';
 import { Field } from '@/components/ui/Field';
@@ -193,6 +193,39 @@ export function PermissionsDialog({ target, onClose }) {
   const busy = mutation.isPending;
   const reasonErrorId = `${ids}-reason-error`;
 
+  // The domains table's box gets the room the window has left: the window's cap (88% of the screen) minus all its other
+  // parts. Those do not depend on the box's own height, so setting it never changes the sum again (no loop), and the
+  // window itself never needs to scroll. Measured again when the window size changes or a part above / below grows.
+  const matrixWrap = useRef(null);
+  useLayoutEffect(() => {
+    const wrap = matrixWrap.current;
+    const modal = wrap?.closest('.modal');
+    if (!wrap || !modal) return undefined;
+    let frame = 0;
+    const fit = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        // the parts' own heights (not the window's, which SmoothSize may be gliding at that moment): title, body
+        // (its natural height, inside SmoothSize) without the table's box, and the buttons
+        const part = (selector) => modal.querySelector(selector)?.offsetHeight ?? 0;
+        const others = part(':scope > header') + part('.mb') - wrap.offsetHeight + part(':scope > footer');
+        const room = Math.floor(window.innerHeight * 0.88 - others);
+        const next = `${Math.max(160, room)}px`;
+        if (wrap.style.maxHeight !== next) wrap.style.maxHeight = next;
+      });
+    };
+    fit();
+    window.addEventListener('resize', fit);
+    // a part other than the table changing height (the change summary, an error line) refits; the table does not count
+    const observer = new ResizeObserver(fit);
+    for (const part of modal.querySelectorAll(':scope > header, :scope > footer, .ppl-head, .ppl-summary, .ppl-reason')) observer.observe(part);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('resize', fit);
+      observer.disconnect();
+    };
+  }, [Boolean(matrix)]); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <FormDialog
       dirty={changes.length > 0 || (departmentEdit !== null && departmentEdit !== (currentDepartment === null ? '' : String(currentDepartment))) || reason.trim() !== ''}
@@ -217,13 +250,13 @@ export function PermissionsDialog({ target, onClose }) {
               <span>
                 {personData.personal_number ? (
                   <>
-                    מספר אישי <bdi className="serial">{personData.personal_number}</bdi>
+                    מספר אישי <bdi>{personData.personal_number}</bdi>
                   </>
                 ) : null}
                 {personData.personal_number && personData.personal_id ? ' · ' : null}
                 {personData.personal_id ? (
                   <>
-                    ת״ז <bdi className="serial">{personData.personal_id}</bdi>
+                    ת״ז <bdi>{personData.personal_id}</bdi>
                   </>
                 ) : null}
               </span>
@@ -253,7 +286,7 @@ export function PermissionsDialog({ target, onClose }) {
           {ownRowClosed ? <Notice tone="warn">לא ניתן לשנות את ההרשאות של עצמך.</Notice> : null}
 
           {matrix.rows.length ? (
-            <div className="ppl-matrix-wrap">
+            <div ref={matrixWrap} className="ppl-matrix-wrap">
               <table className="t ppl-matrix">
                 <caption className="sr">הרשאות של {displayName} לפי תחום ותפקיד</caption>
                 <thead>
@@ -329,7 +362,8 @@ export function PermissionsDialog({ target, onClose }) {
             {changeCount ? `${changeCount} שינויים ממתינים לשמירה.` : 'לא סומנו שינויים.'}
           </p>
 
-          <div>
+          {/* stays in view above the buttons while the table scrolls */}
+          <div className="ppl-reason">
             <Field label="סיבת שינוי ההרשאות (חובה כשמשנים הרשאות)">
               <input
                 className="input"
