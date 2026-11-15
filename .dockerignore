@@ -30,3 +30,9 @@ README.md
 
 # Claude Code: personal local instructions
 CLAUDE.local.md
+
+# Claude Code skills and agent files: for this machine only, never in the image
+.claude
+**/.claude
+.agents
+**/.agents

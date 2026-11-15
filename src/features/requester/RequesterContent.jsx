@@ -45,7 +45,7 @@ export function useRequesterView() {
  * user sees it inside its own top bar (RequesterHome); every management role sees it as its home, inside the app's frame.
  * Topics and types come from GET /requester/catalog, the counters from GET /requester/counters.
  */
-export function RequesterContent({ name }) {
+export function RequesterContent({ name, extraCategories = null }) {
   const { search, setParams, typeId, view, go, openType } = useRequesterView();
   const catalog = useCatalog();
   const counters = useCounters();
@@ -83,7 +83,7 @@ export function RequesterContent({ name }) {
       </FadeIn>
     ) : view === 'mine' ? (
       <FadeIn key="mine">
-        <MyRequestsPanel full category={search.get('cat')} onCategory={(cat) => setParams({ cat })} bucket={search.get('bucket')} onBucket={(bucket) => setParams({ bucket })} sent={search.get('sent')} onSentSeen={() => setParams({ sent: null })} />
+        <MyRequestsPanel full extraCategories={extraCategories} category={search.get('cat')} onCategory={(cat) => setParams({ cat })} bucket={search.get('bucket')} onBucket={(bucket) => setParams({ bucket })} sent={search.get('sent')} onSentSeen={() => setParams({ sent: null })} />
       </FadeIn>
     ) : (
       <FadeIn key="home">
@@ -166,7 +166,7 @@ export function RequesterContent({ name }) {
               })
             )}
           </div>
-          <MyRequestsPanel category={search.get('cat')} onCategory={(cat) => setParams({ cat })} onAll={() => go({ rq: 'mine', cat: search.get('cat') })} />
+          <MyRequestsPanel extraCategories={extraCategories} category={search.get('cat')} onCategory={(cat) => setParams({ cat })} onAll={() => go({ rq: 'mine', cat: search.get('cat') })} />
         </div>
       </FadeIn>
     )}

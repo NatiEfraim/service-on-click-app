@@ -4,7 +4,6 @@ import { SHOW_DEPARTMENTS } from '@/lib/labels';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Select } from '@/components/ui/Select';
 import { useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { DomainIcon } from '@/components/booking/DomainBadge';
 import { EmptyState, ErrorNotice, FormError, Loading, Notice } from '@/components/ui/Feedback';
 import { Field } from '@/components/ui/Field';
 import { FormDialog } from '@/components/ui/FormDialog';
@@ -23,10 +22,9 @@ import {
   pendingChanges,
   reasonError,
   REASON_MAX,
-  roleLabel,
-  shownValue,
 } from './permissions';
 import { invalidatePeople, usePerson } from './queries';
+import { PermissionsCards } from './PermissionsPicker';
 import { SAVED_PART_LABEL } from './constants';
 
 
@@ -77,6 +75,17 @@ export function PermissionsDialog({ target, onClose }) {
   });
 
   const [edits, setEdits] = useState({});
+  /** Sets a domain to one role (or none): that role on, every other open role of the domain off (one role per domain). */
+  const setRole = (row, role) => {
+    setEdits((current) => {
+      const updated = { ...current };
+      for (const [other, cell] of Object.entries(row.cells)) {
+        if (cell.lock === null) updated[cellKey(other, row.bookingTypeId)] = other === role;
+      }
+      return updated;
+    });
+    setFormError('');
+  };
   const [departmentEdit, setDepartmentEdit] = useState(null);
   const [reason, setReason] = useState('');
   const [reasonProblem, setReasonProblem] = useState('');
@@ -218,7 +227,7 @@ export function PermissionsDialog({ target, onClose }) {
     window.addEventListener('resize', fit);
     // a part other than the table changing height (the change summary, an error line) refits; the table does not count
     const observer = new ResizeObserver(fit);
-    for (const part of modal.querySelectorAll(':scope > header, :scope > footer, .ppl-head, .ppl-summary, .ppl-reason')) observer.observe(part);
+    for (const part of modal.querySelectorAll(':scope > header, :scope > footer, .ppl-head, .ppl-summary, .ppl-reason-reveal')) observer.observe(part);
     return () => {
       cancelAnimationFrame(frame);
       window.removeEventListener('resize', fit);
@@ -286,73 +295,8 @@ export function PermissionsDialog({ target, onClose }) {
           {ownRowClosed ? <Notice tone="warn">לא ניתן לשנות את ההרשאות של עצמך.</Notice> : null}
 
           {matrix.rows.length ? (
-            <div ref={matrixWrap} className="ppl-matrix-wrap">
-              <table className="t ppl-matrix">
-                <caption className="sr">הרשאות של {displayName} לפי תחום ותפקיד</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">תחום</th>
-                    {matrix.roles.map((role) => (
-                      <th key={role} scope="col" className="ppl-c">
-                        {roleLabel(role)}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {matrix.rows.map((row) => (
-                    <tr key={row.bookingTypeId}>
-                      <th scope="row">
-                        <span className="ppl-domain">
-                          <DomainIcon bookingTypeId={row.bookingTypeId} />
-                          {typeName(row.bookingTypeId)}
-                        </span>
-                      </th>
-                      {matrix.roles.map((role) => {
-                        const cell = row.cells[role];
-                        if (!cell) {
-                          return (
-                            <td key={role} className="ppl-c">
-                              <span className="ppl-na" data-tip="התפקיד אינו רלוונטי לתחום זה" aria-hidden="true">
-                                —
-                              </span>
-                              <span className="sr">התפקיד אינו רלוונטי לתחום זה</span>
-                            </td>
-                          );
-                        }
-                        const label = `${roleLabel(role)}: ${typeName(row.bookingTypeId)}`;
-                        const isChanged = changed.has(cellKey(role, row.bookingTypeId));
-                        return (
-                          <td key={role} className="ppl-c">
-                            <label className={`ppl-cell${cell.lock ? ' locked' : ''}${isChanged ? ' changed' : ''}`} data-tip={cell.lock ?? undefined}>
-                              <input
-                                type="checkbox"
-                                checked={shownValue(row, role, edits) ?? false}
-                                disabled={cell.lock !== null || busy}
-                                aria-label={cell.lock ? `${label}. ${cell.lock}` : label}
-                                onChange={(event) => {
-                                  const next = event.target.checked;
-                                  setEdits((current) => {
-                                    const updated = { ...current, [cellKey(role, row.bookingTypeId)]: next };
-                                    // one role per domain: checking a role clears the other ones of the row
-                                    if (next) {
-                                      for (const [other, otherCell] of Object.entries(row.cells)) {
-                                        if (other !== role && otherCell.lock === null && shownValue(row, other, current)) updated[cellKey(other, row.bookingTypeId)] = false;
-                                      }
-                                    }
-                                    return updated;
-                                  });
-                                  setFormError('');
-                                }}
-                              />
-                            </label>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div ref={matrixWrap} className="ppl-matrix-wrap pp-wrap">
+              <PermissionsCards matrix={matrix} edits={edits} busy={busy} changed={changed} onSetRole={setRole} typeName={typeName} />
             </div>
           ) : (
             <EmptyState title="אין תחומים לשיבוץ">אין תחומים שניתן לשבץ בהם את המשתמש הזה.</EmptyState>
@@ -362,7 +306,9 @@ export function PermissionsDialog({ target, onClose }) {
             {changeCount ? `${changeCount} שינויים ממתינים לשמירה.` : 'לא סומנו שינויים.'}
           </p>
 
-          {/* stays in view above the buttons while the table scrolls */}
+          {/* shown only once a permission was changed; stays mounted (keeps the typed text) and fades / folds away when
+              the changes are undone. Stays in view above the buttons while the table scrolls. */}
+          <div className="ppl-reason-reveal" data-open={changes.length > 0 ? '' : undefined} inert={changes.length > 0 ? undefined : true}>
           <div className="ppl-reason">
             <Field label="סיבת שינוי ההרשאות (חובה כשמשנים הרשאות)">
               <input
@@ -383,6 +329,7 @@ export function PermissionsDialog({ target, onClose }) {
             <div id={reasonErrorId} className="err" aria-live="polite">
               {reasonProblem}
             </div>
+          </div>
           </div>
 
           {alreadySaved ? <Notice tone="warn">{alreadySaved}</Notice> : null}

@@ -17,6 +17,7 @@ import { useDebounced } from '@/lib/useDebounced';
 import { useFitToWindow } from '@/lib/useFitToWindow';
 import { RequestDrawer } from './RequestDrawer';
 import { RequestRow } from './RequestRow';
+import { RowBridge } from './RowBridge';
 import { celebrationKey, isChanged, markCelebrated, markSeen, useSeen, wasCelebrated } from './seen';
 import { counterOf, stageOf } from './requesterData';
 import { STAGE_SHORT } from '@/lib/labels';
@@ -73,11 +74,13 @@ const statusNameOf = (row) => row.statusName;
  * "הקריאות שלי": an icon and name for every category the user may open requests in (the new topics and the service
  * domains); picking one lists their requests in it. `full` is the whole-page version, otherwise the home's side panel.
  */
-export function MyRequestsPanel({ full = false, category, onCategory, bucket: rawBucket = null, onBucket = () => {}, sent = null, onSentSeen = () => {}, onAll }) {
+export function MyRequestsPanel({ full = false, extraCategories = null, category, onCategory, bucket: rawBucket = null, onBucket = () => {}, sent = null, onSentSeen = () => {}, onAll }) {
   const bucket = BUCKETS.some((option) => option.id === rawBucket) ? rawBucket : null;
   // the categories (topics and domains) come from GET /requester/catalog, already limited to what the user may open
   const categories = useCatalog();
-  const list = categories.data?.categories ?? [];
+  // a management role passes its own list (the domains it manages - the super admin: all); a regular user gets the
+  // catalog's categories (what they may open). In domain order, so nothing moves or swaps once data arrives.
+  const list = [...(extraCategories ?? categories.data?.categories ?? [])].sort((a, b) => a.typeIds[0] - b.typeIds[0]);
   // a ביטחון מידע / תקשוב type's own picture (by booking type id); other domains show their domain badge
   const typeImg = Object.fromEntries((categories.data?.topics ?? []).flatMap((topic) => topic.groups.flatMap((group) => group.types.map((type) => [type.id, type.img]))));
   const current = list.find((candidate) => candidate.id === category) ?? null;
@@ -267,7 +270,7 @@ export function MyRequestsPanel({ full = false, category, onCategory, bucket: ra
         <ErrorNotice error={requests.error} title="לא ניתן להציג את הקריאות." onRetry={() => void requests.refetch()} />
       ) : rows.length ? (
         <>
-        <ul className="rq-list">
+        <ul className="rq-list" data-loading={requests.isPlaceholderData ? '' : undefined} aria-busy={requests.isPlaceholderData || undefined}>
           {rows.map((row) => (
             <li key={row.id}>
               <RequestRow
@@ -296,6 +299,7 @@ export function MyRequestsPanel({ full = false, category, onCategory, bucket: ra
         <EmptyState title={current ? `אין לך קריאות ב${current.name}` : 'עוד לא פתחת קריאות'}>בחר סוג קריאה כדי לפתוח קריאה ראשונה</EmptyState>
       )
       )}
+      {opened ? <RowBridge key={opened.id} /> : null}
       {opened ? <RequestDrawer row={opened} rows={rows} onGo={open} onClose={() => setOpened(null)} celebrate={celebrating(opened) ? celebrationKey(opened) : null} onCelebrated={() => finishCelebration(opened)} /> : null}
     </section>
   );

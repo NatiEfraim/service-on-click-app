@@ -109,8 +109,11 @@
 .btn.rq-send:hover:not(:disabled) { filter: brightness(0.92); }
 /* a category with a colour picture: white tile, the picture keeps its own colours (also when picked) */
 .rq-cat .ic.pic, .rq-cat[aria-pressed="true"] .ic.pic { background: var(--surface); border: 1px solid var(--line); }
-.rq-cat .ic.pic img { width: 26px; height: 26px; }
-.rq-cat[aria-pressed="true"] .ic.pic { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.rq-cat .ic.pic img { width: 32px; height: 32px; }
+/* a new category's list on its way: the previous one stays, dimmed, so nothing jumps */
+.rq-list { transition: opacity var(--dur-base) ease; }
+.rq-list[data-loading] { opacity: .55; }
+/* the selected button itself is outlined; its picture keeps its plain frame */
 .rq-more { display: flex; margin: 12px auto 0; }
 /* a request row opens its side panel */
 .rq-list li { padding: 0; }
@@ -337,3 +340,11 @@ button.rq-counter:focus-visible { outline: 2px solid var(--accent); outline-offs
 .rq-new.bad { background: var(--bad-w); color: var(--bad); border-color: color-mix(in srgb, var(--bad) 30%, transparent); }
 .rq-new.bad .fx .bub { background: radial-gradient(circle at 35% 30%, #F6B8AE, #D2553F 75%); }
 .rq-new.bad .fx .spark { color: var(--bad); }
+
+/* the strip that joins the open row to the side panel when the list stops short of it (RowBridge); the row's colour,
+   above the dimming */
+.rq-row-bridge { position: fixed; z-index: 61; pointer-events: none; background: var(--bg); animation: rq-bridge-in 320ms var(--ease-out) both; }
+/* it grows out of the row (its left edge) toward the panel */
+@keyframes rq-bridge-in { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@media (prefers-reduced-motion: reduce) { .rq-row-bridge { animation: rq-bridge-fade 200ms ease both; } }
+@keyframes rq-bridge-fade { from { opacity: 0; } }
