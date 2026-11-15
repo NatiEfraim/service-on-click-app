@@ -13,6 +13,7 @@ import { EmptyState, ErrorNotice, Loading } from '@/components/ui/Feedback';
 import { Icon } from '@/components/ui/Icon';
 import { SmoothSize } from '@/components/ui/SmoothSize';
 import { Stat } from '@/components/ui/Stat';
+import { usePublishDrawerList } from '@/features/bookings/drawerList';
 import { useStatusAction } from '@/features/bookings/useStatusAction';
 import { TargetDialog } from '@/features/targets/TargetDialog';
 import { insightsApi } from '@/lib/api/endpoints';
@@ -97,6 +98,8 @@ export function DomainDashboard() {
   const overview = useQuery({ queryKey: keys.overview, queryFn: ({ signal }) => insightsApi.overview(signal), staleTime: 60_000 });
   // a booking that moves up into "the oldest" after a decision opens its room and fades in
   const arrivals = useArrivals((query.data?.oldest ?? []).map((row) => row.serial_number));
+  // the side panel's ‹ › step through the requests listed here (the oldest ones)
+  usePublishDrawerList((query.data?.oldest ?? []).map((row) => row.serial_number));
   // the card keeps its size: when a row leaves, the ones below move up and the next fills the bottom
   const holdOldest = useHeldHeight();
 
