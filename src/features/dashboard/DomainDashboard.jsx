@@ -20,7 +20,7 @@ import { keys } from '@/lib/api/keys';
 
 import { fmtAgo, fmtDateTime, fmtLongHours } from '@/lib/format';
 import { DEFAULT_TARGET_HOURS } from '@/lib/targets';
-import { STAGE_ORDER, STAGE_SHORT } from '@/lib/labels';
+import { STAGE_COLOR, STAGE_ORDER, STAGE_SHORT } from '@/lib/labels';
 import { homeKind } from '@/lib/nav';
 import { useArrivals } from '@/lib/useArrivals';
 import { useHeldHeight } from '@/lib/useHeldHeight';
@@ -31,6 +31,14 @@ import { BarberStatusSummary } from './BarberStatusSummary';
 import { StageBars } from './StageBars';
 import { FullAnalysis } from './FullAnalysis';
 import { StatusBars } from './StatusBars';
+
+/** The holds on a third party (the API's supplier stages) and the statuses behind them, for the overdue card's second half. */
+const THIRD_PARTY_STAGES = [
+  { id: 'supplier_files', label: 'קבצים מהלקוח' },
+  { id: 'supplier_approval', label: 'אישור ספק' },
+  { id: 'supplier_number', label: 'מספר ספק' },
+];
+const THIRD_PARTY_STATUSES = [8, 9, 10];
 
 const ACTIVITY_ROLES = [
   { id: 'approver', label: 'מפקד תחום' },
@@ -103,8 +111,19 @@ export function DomainDashboard() {
   const worst = worstStage(data.stages);  const scale = Math.max(1, ...ordered.map((s) => s.p90_hours ?? 0)) * 1.15;
   const pct = (hours) => `${Math.min(100, ((hours ?? 0) / scale) * 100)}%`;
   const awaitingApproval = APPROVAL_STAGES.reduce((sum, id) => sum + (data.by_stage[id] ?? 0), 0);
+  // waiting on someone outside: files from the customer, the supplier's approval or its number (statuses 8, 9, 10)
+  const thirdPartyCounts = THIRD_PARTY_STAGES.map(({ id, label }) => ({ label, count: data.by_stage[id] ?? 0 }));
+  const thirdParty = {
+    total: thirdPartyCounts.reduce((sum, part) => sum + part.count, 0),
+    parts: thirdPartyCounts.filter((part) => part.count > 0).map((part) => `${part.count} ${part.label}`),
+  };
 
   const canGoBack = homeKind(me) === 'tiles';
+  // the camp commander and the system admin review the system; the others see their work only (see the return)
+  const isManager = Boolean(me.is_super_admin || me.is_admin);
+  // the vice approver: their work only, the count in the list's title
+  const handlerView = !isManager && Boolean(me.is_handler_only);
+  const myCount = data.by_stage.vice_approver ?? 0;
   const canSetTarget = single !== null && me.capabilities['targets.manage'] && (me.is_super_admin || me.permissions.includes(`admin_${single}`));
   const targetText = data.target ? `יעד טיפול: ${fmtLongHours(data.target.target_hours)} מפתיחה ועד סגירה` : `יעד טיפול: ${fmtLongHours(DEFAULT_TARGET_HOURS)} מפתיחה ועד סגירה (ברירת מחדל)`;
 
@@ -152,6 +171,10 @@ export function DomainDashboard() {
 
       {single === 5 ? <BarberStatusSummary /> : null}
 
+      {/* the system review (numbers, stages, analysis, trend) is for the camp commander and the system admin; the domain
+          commander and the vice approver get their work: the bookings waiting, oldest first, and what needs attention */}
+      {isManager ? (
+      <>
       {/* 1. headline numbers */}
       <div className="card stats stagger">
         <Stat index={0} icon="list" color={STAT_COLOR.open} label="קריאות פתוחות" value={data.totals.open} foot={`מתוך ${data.totals.total} בתחומים שלך`} onClick={() => router.push(`/requests?view=open${typesParam}`)} />
@@ -165,6 +188,18 @@ export function DomainDashboard() {
           value={data.totals.overdue}
           foot={data.target ? `מעל ${fmtLongHours(data.target.target_hours)} מפתיחה` : 'נספרות רק לפי יעד שהוגדר'}
           onClick={() => router.push(`/requests?view=overdue${typesParam}`)}
+          side={
+            me.is_handler_only
+              ? null
+              : {
+                  icon: 'clip',
+                  color: STAGE_COLOR.supplier_approval,
+                  label: 'ממתינות לצד שלישי',
+                  value: thirdParty.total,
+                  foot: thirdParty.parts.length ? thirdParty.parts.join(' · ') : 'ספק או לקוח',
+                  onClick: thirdParty.total ? () => router.push(`/requests?view=open&statuses=${THIRD_PARTY_STATUSES.join(',')}${typesParam}`) : undefined,
+                }
+          }
         />
         <Stat index={3} icon="pulse" color={STAT_COLOR.stale} label="ללא התקדמות" value={data.totals.stale} foot="יותר משבוע באותו שלב" />
       </div>
@@ -207,10 +242,42 @@ export function DomainDashboard() {
       ) : null}
 
       <SmoothSize>{full ? <FullAnalysis data={data} ordered={ordered} pct={pct} goIds={goIds} /> : null}</SmoothSize>
+      </>
+      ) : null}
 
-      <div className="grid g-7-5 mt">
+      {/* the domain commander: where the bookings of their domains stand, by stage; a click lists them */}
+      {!isManager && !me.is_handler_only ? (
+        <div className="card stats stagger">
+          {/* in route order, right to left: yours, the vice approver's, a third party's, realization */}
+          <Stat index={0} icon="shield" color={STAGE_COLOR.approver} label="בטיפולך" value={data.by_stage.approver ?? 0} foot="ממתינות להחלטתך" onClick={() => goStage('approver')} />
+          <Stat index={1} icon="users" color={STAGE_COLOR.vice_approver} label="בטיפול גורם מטפל" value={data.by_stage.vice_approver ?? 0} foot="ממתינות לגורם המטפל" onClick={() => goStage('vice_approver')} />
+          <Stat index={2} icon="clip" color={STAGE_COLOR.supplier_approval} label="בטיפול גורם צד שלישי" value={thirdParty.total} foot={thirdParty.parts.length ? thirdParty.parts.join(' · ') : 'ספק או לקוח'} onClick={() => router.push(`/requests?view=open&statuses=${THIRD_PARTY_STATUSES.join(',')}${typesParam}`)} />
+          <Stat index={3} icon="check" color={STAGE_COLOR.realization} label="בשלב מימוש וסגירה" value={data.by_stage.realization ?? 0} foot="אושרו וממתינות למימוש" onClick={() => goStage('realization')} />
+        </div>
+      ) : null}
+
+      {/* the vice approver has no cards: the count of the bookings in their hands is in the list's title */}
+      <div className={handlerView ? 'grid g-7-5' : 'grid g-7-5 mt'}>
         {/* 3. oldest */}
-        <Card title="הקריאות הוותיקות בתחומים שלך" hint="הוותיקות קודם">
+        <Card
+          title={
+            handlerView ? (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                הקריאות שממתינות לך
+                <span className="count" aria-label={`${myCount} קריאות בטיפולך`}>{myCount}</span>
+              </span>
+            ) : isManager ? 'הקריאות הוותיקות בתחומים שלך' : 'הקריאות שממתינות לך'
+          }
+          hint="הוותיקות קודם"
+          tools={
+            handlerView ? (
+              <Button size="sm" variant="ghost" onClick={() => goStage('vice_approver')}>
+                לכל הקריאות
+                <Icon name="left" />
+              </Button>
+            ) : undefined
+          }
+        >
           {data.oldest.length ? (
             <div className="tickets" ref={holdOldest}>
               {data.oldest.map((row) => (
@@ -249,6 +316,7 @@ export function DomainDashboard() {
 
       {/* one domain: the stage cards above already give its count per stage, so the by-domain bars would repeat them with
           a single bar - the chart takes the whole row instead; several domains: the bars compare them, beside the chart */}
+      {isManager ? (
       <div className={single ? 'mt' : 'grid g-7-5 mt'}>
         {/* 5. open bookings by domain and stage (several domains only) */}
         {single ? null : (
@@ -268,6 +336,7 @@ export function DomainDashboard() {
           </CardBody>
         </Card>
       </div>
+      ) : null}
 
       {action.dialog}
       {targetOpen && single !== null ? <TargetDialog bookingTypeId={single} current={data.target} onClose={() => setTargetOpen(false)} /> : null}
