@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { DomainBadge } from '@/components/booking/DomainBadge';
 import { Button } from '@/components/ui/Button';
-import { Loading } from '@/components/ui/Feedback';
 import { SmoothSize } from '@/components/ui/SmoothSize';
 import { domainColor } from '@/lib/labels';
 import { useSession } from '@/providers/SessionProvider';
@@ -40,7 +39,8 @@ export function DomainCard({ unitId, bookingTypeId, index }) {
 
   const managers = query.data?.managers ?? [];
   const admins = campCommanders(managers);
-  const stations = query.data ? stationsForType(bookingTypeId, catalog, managers) : [];
+  // while loading, the same stages with no names yet: the placeholder is the card's final height, so nothing shifts
+  const stations = stationsForType(bookingTypeId, catalog, managers);
 
   return (
     <section className="card dcard dcard-link" style={{ '--dc': domainColor(bookingTypeId), animationDelay: `${index * 40}ms` }} aria-label={name}>
@@ -53,6 +53,9 @@ export function DomainCard({ unitId, bookingTypeId, index }) {
             <span className="hint">
               {admins.length ? <>מפקד מחנה: <ShortNames names={admins} /></> : 'לא שובץ מפקד מחנה'}
             </span>
+          ) : query.isPending ? (
+            // the line's room is kept while loading (a shimmer), so the head does not grow when it arrives
+            <span className="hint"><span className="skel st-skel-inline" style={{ width: 150 }} /></span>
           ) : null}
         </div>
         {query.data ? (
@@ -66,9 +69,15 @@ export function DomainCard({ unitId, bookingTypeId, index }) {
 
       <SmoothSize className="st-card-body">
         {query.isPending ? (
-          <div className="st-card-skel">
-            <Loading rows={4} />
-          </div>
+          <ol className="st-lines" role="status" aria-label="טוען">
+            {stations.map((station, i) => (
+              <li key={station.id}>
+                <span className="pt" aria-hidden="true" />
+                <b>{station.label}</b>
+                <span className="skel st-skel-inline" style={{ width: `${70 - i * 12}%` }} />
+              </li>
+            ))}
+          </ol>
         ) : query.isError ? (
           <div className="st-card-msg">
             לא ניתן לטעון את התחום.
