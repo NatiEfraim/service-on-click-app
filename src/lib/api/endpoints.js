@@ -15,6 +15,11 @@ export const authApi = {
     const response = await http.post('/login', { personal_number: personalNumber });
     return response.data;
   },
+  /** ADFS mode: exchanges the token the ADFS iframe posts for a session cookie. */
+  async loginWithToken(token) {
+    const response = await http.post('/login', { token });
+    return response.data;
+  },
   async logout() {
     await http.post('/logout');
   },
