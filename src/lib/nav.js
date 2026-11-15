@@ -24,7 +24,8 @@ export function buildNav(me) {
   // every user starts at the requester home (open a request, "הקריאות שלי"); the management dashboard follows it
   const entries = [{ kind: 'link', id: 'start', href: '/', label: 'דף הבית' }];
 
-  if (can(me, 'dashboard.view') && !handlerOnly) {
+  // a vice approver (handler only) also gets the dashboard of their own domains, limited to their stage
+  if (can(me, 'dashboard.view')) {
     entries.push({ kind: 'link', id: 'home', href: '/overview', label: 'מסך ראשי', also: ['/dashboard'] });
   }
 
@@ -58,7 +59,6 @@ export function buildNav(me) {
  * GET overview, see HomeScreen), over a single domain that domain's dashboard.
  */
 export function homeKind(me) {
-  if (me.is_handler_only) return 'requests';
   if (!can(me, 'dashboard.view')) return me.is_super_admin || me.is_admin ? 'requests' : 'requests';
   return me.dashboard_booking_types.length > 1 ? 'tiles' : 'dashboard';
 }

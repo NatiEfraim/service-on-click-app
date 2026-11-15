@@ -18,7 +18,7 @@ import { TargetDialog } from '@/features/targets/TargetDialog';
 import { insightsApi } from '@/lib/api/endpoints';
 import { keys } from '@/lib/api/keys';
 
-import { fmtLongHours } from '@/lib/format';
+import { fmtAgo, fmtDateTime, fmtLongHours } from '@/lib/format';
 import { DEFAULT_TARGET_HOURS } from '@/lib/targets';
 import { STAGE_ORDER, STAGE_SHORT } from '@/lib/labels';
 import { homeKind } from '@/lib/nav';
@@ -31,6 +31,38 @@ import { BarberStatusSummary } from './BarberStatusSummary';
 import { StageBars } from './StageBars';
 import { FullAnalysis } from './FullAnalysis';
 import { StatusBars } from './StatusBars';
+
+const ACTIVITY_ROLES = [
+  { id: 'approver', label: 'מפקד תחום' },
+  { id: 'vice_approver', label: 'גורם מטפל' },
+];
+
+/** What the last action was, in words: a status change names the new status, an edit says the details were updated. */
+function actionText(action, statusLabel) {
+  if (action.action === 'booking.status_change' && action.status_id) return `העביר את קריאה ${action.serial} ל"${statusLabel(action.status_id)}"`;
+  if (action.action === 'booking.values.update') return `עדכן פרטים בקריאה ${action.serial}`;
+  return `פעל בקריאה ${action.serial}`;
+}
+
+/** Camp commander only (the API sends it to no one else): when the domain's approver and vice approver last looked and acted. */
+function LastActivity({ activity, statusLabel }) {
+  return (
+    <ul className="last-activity" style={{ listStyle: 'none', margin: '6px 0 0', padding: 0, display: 'grid', gap: 2, fontSize: 13, color: 'var(--ink-2)' }}>
+      {ACTIVITY_ROLES.map(({ id, label }) => {
+        const { last_view: view, last_action: action } = activity[id] ?? {};
+        return (
+          <li key={id}>
+            <strong style={{ color: 'var(--ink)' }}>{label}</strong>
+            {' · '}
+            {view ? <span title={fmtDateTime(view.at)}>{view.name} צפה {fmtAgo(view.at)}</span> : 'עדיין לא צפה בתחום'}
+            {' · '}
+            {action ? <span title={fmtDateTime(action.at)}>פעולה אחרונה: {action.name} {actionText(action, statusLabel)}, {fmtAgo(action.at)}</span> : 'אין פעולות בתחום'}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
 
 function parseTypes(raw) {
   return (raw ?? '')
@@ -106,6 +138,7 @@ export function DomainDashboard() {
             {single ? '' : `${data.booking_type_ids.map((id) => typeName(id)).join(', ')}. `}
             {targetText}.
           </p>
+          {data.last_activity ? <LastActivity activity={data.last_activity} statusLabel={(id) => catalog?.statuses?.find((status) => status.id === id)?.display_name ?? `סטטוס ${id}`} /> : null}
         </div>
         <div className="actions">
           <Seg label="חלון זמן" options={WINDOWS} value={String(data.window_days)} onChange={(value) => setParams({ days: value })} />

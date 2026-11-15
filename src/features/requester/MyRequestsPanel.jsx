@@ -71,8 +71,8 @@ const SORTS = [
 const statusNameOf = (row) => row.statusName;
 
 /**
- * "הקריאות שלי": an icon and name for every category the user may open requests in (the new topics and the service
- * domains); picking one lists their requests in it. `full` is the whole-page version, otherwise the home's side panel.
+ * "הקריאות שלי": an icon and name for every category the user has an open request in (of those the user may open
+ * or manage); picking one lists their requests in it. `full` is the whole-page version, otherwise the home's side panel.
  */
 export function MyRequestsPanel({ full = false, extraCategories = null, category, onCategory, bucket: rawBucket = null, onBucket = () => {}, sent = null, onSentSeen = () => {}, onAll }) {
   const bucket = BUCKETS.some((option) => option.id === rawBucket) ? rawBucket : null;
@@ -85,6 +85,11 @@ export function MyRequestsPanel({ full = false, extraCategories = null, category
   const typeImg = Object.fromEntries((categories.data?.topics ?? []).flatMap((topic) => topic.groups.flatMap((group) => group.types.map((type) => [type.id, type.img]))));
   const current = list.find((candidate) => candidate.id === category) ?? null;
   const requests = useMyRequests(current, { enabled: categories.isSuccess });
+  // the chips show only the categories the user has an open request in (the chosen one stays, so it can be cleared);
+  // every request comes from the shared "all" list, cached, so picking a chip does not change which chips show
+  const everyRequest = useMyRequests(null, { enabled: categories.isSuccess });
+  const openTypeIds = new Set((everyRequest.data ?? []).filter(isOpen).map((row) => row.bookingTypeId));
+  const chips = list.filter((item) => item.id === current?.id || item.typeIds.some((id) => openTypeIds.has(id)));
   // the full page filters (open / all, search by number or category), as the earlier "הקריאות שלי" screen did
   const [view, setView] = useState('all');
   // the request open in the side panel
@@ -188,7 +193,7 @@ export function MyRequestsPanel({ full = false, extraCategories = null, category
           <span className="ic"><Icon name="list" /></span>
           הכל
         </button>
-        {list.map((item) => (
+        {chips.map((item) => (
           <button key={item.id} type="button" className="rq-cat" aria-pressed={current?.id === item.id} onClick={() => onCategory(item.id)}>
             <span className="ic pic">{item.img ? <img src={item.img} alt="" /> : <Icon name="layers" />}</span>
             {item.name}
