@@ -21,6 +21,7 @@ import { keys } from '@/lib/api/keys';
 
 import { fmtAgo, fmtDateTime, fmtLongHours } from '@/lib/format';
 import { DEFAULT_TARGET_HOURS } from '@/lib/targets';
+import { topicHandlerRole } from '@/lib/topicTypes';
 import { STAGE_COLOR, STAGE_ORDER, STAGE_SHORT } from '@/lib/labels';
 import { homeKind } from '@/lib/nav';
 import { useArrivals } from '@/lib/useArrivals';
@@ -127,7 +128,9 @@ export function DomainDashboard() {
   // the vice approver: their work only, the count in the list's title
   const handlerView = !isManager && Boolean(me.is_handler_only);
   const myCount = data.by_stage.vice_approver ?? 0;
-  const canSetTarget = single !== null && me.capabilities['targets.manage'] && (me.is_super_admin || me.permissions.includes(`admin_${single}`));
+  // ביטחון מידע / תקשוב requests have no handling target (one role handles them): no target line, no target button
+  const noTarget = data.booking_type_ids.length > 0 && data.booking_type_ids.every((id) => topicHandlerRole(id) !== null);
+  const canSetTarget = !noTarget && single !== null && me.capabilities['targets.manage'] && (me.is_super_admin || me.permissions.includes(`admin_${single}`));
   const targetText = data.target ? `יעד טיפול: ${fmtLongHours(data.target.target_hours)} מפתיחה ועד סגירה` : `יעד טיפול: ${fmtLongHours(DEFAULT_TARGET_HOURS)} מפתיחה ועד סגירה (ברירת מחדל)`;
 
   const goStage = (stage) => router.push(`/requests?view=open&stage=${stage}${typesParam}`);
@@ -158,7 +161,7 @@ export function DomainDashboard() {
           </h1>
           <p>
             {single ? '' : `${data.booking_type_ids.map((id) => typeName(id)).join(', ')}. `}
-            {targetText}.
+            {noTarget ? null : `${targetText}.`}
           </p>
           {data.last_activity ? <LastActivity activity={data.last_activity} statusLabel={(id) => catalog?.statuses?.find((status) => status.id === id)?.display_name ?? `סטטוס ${id}`} /> : null}
         </div>
