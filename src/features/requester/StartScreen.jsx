@@ -13,8 +13,7 @@ import { useRequesterUser } from './RequesterHome';
 export function StartScreen() {
   const { user, name } = useRequesterUser();
   const { me, catalog } = useSession();
-  // "הקריאות שלי" shows only the service domains the user manages (GET me: managed_booking_types and dashboard_booking_types;
-  // the super admin: every domain), not the forms anyone may open (ביטחון מידע / תקשוב)
+  // Add metadata for the service domains this role manages to the requester's categories.
   const managed = new Set(me.is_super_admin ? (catalog?.booking_types ?? []).map((type) => type.id) : [...(me.managed_booking_types ?? []), ...(me.dashboard_booking_types ?? [])]);
   const extraCategories = (catalog?.booking_types ?? [])
     .filter((type) => managed.has(type.id))

@@ -19,7 +19,7 @@ import { RequestDrawer } from './RequestDrawer';
 import { RequestRow } from './RequestRow';
 import { RowBridge } from './RowBridge';
 import { celebrationKey, isChanged, markCelebrated, markSeen, useSeen, wasCelebrated } from './seen';
-import { counterOf, stageOf } from './requesterData';
+import { counterOf, requestCategories, stageOf } from './requesterData';
 import { STAGE_SHORT } from '@/lib/labels';
 import { useCatalog, useMyRequests } from './useRequester';
 
@@ -78,18 +78,14 @@ export function MyRequestsPanel({ full = false, extraCategories = null, category
   const bucket = BUCKETS.some((option) => option.id === rawBucket) ? rawBucket : null;
   // the categories (topics and domains) come from GET /requester/catalog, already limited to what the user may open
   const categories = useCatalog();
-  // a management role passes its own list (the domains it manages - the super admin: all); a regular user gets the
-  // catalog's categories (what they may open). In domain order, so nothing moves or swaps once data arrives.
-  const list = [...(extraCategories ?? categories.data?.categories ?? [])].sort((a, b) => a.typeIds[0] - b.typeIds[0]);
+  const requests = useMyRequests({ openOnly: !full });
+  const ownedRows = requests.data ?? [];
+  const openTypeIds = new Set(ownedRows.filter(isOpen).map((row) => row.bookingTypeId));
+  const list = requestCategories(ownedRows, categories.data?.categories, extraCategories ?? []);
   // a ביטחון מידע / תקשוב type's own picture (by booking type id); other domains show their domain badge
   const typeImg = Object.fromEntries((categories.data?.topics ?? []).flatMap((topic) => topic.groups.flatMap((group) => group.types.map((type) => [type.id, type.img]))));
-  const current = list.find((candidate) => candidate.id === category) ?? null;
-  const requests = useMyRequests(current, { enabled: categories.isSuccess });
-  // the chips show only the categories the user has an open request in (the chosen one stays, so it can be cleared);
-  // every request comes from the shared "all" list, cached, so picking a chip does not change which chips show
-  const everyRequest = useMyRequests(null, { enabled: categories.isSuccess });
-  const openTypeIds = new Set((everyRequest.data ?? []).filter(isOpen).map((row) => row.bookingTypeId));
-  const chips = list.filter((item) => item.id === current?.id || item.typeIds.some((id) => openTypeIds.has(id)));
+  const chips = list.filter((item) => item.typeIds.some((id) => openTypeIds.has(id)));
+  const current = (full ? list : chips).find((candidate) => candidate.id === category) ?? null;
   // the full page filters (open / all, search by number or category), as the earlier "הקריאות שלי" screen did
   const [view, setView] = useState('all');
   // the request open in the side panel
@@ -116,7 +112,7 @@ export function MyRequestsPanel({ full = false, extraCategories = null, category
   const [stage, setStage] = useState('');
   const [status, setStatus] = useState('');
   const [range, setRange] = useState({ from: null, to: null });
-  const allRows = requests.data ?? [];
+  const allRows = ownedRows.filter((row) => (full || isOpen(row)) && (!current || current.typeIds.includes(row.bookingTypeId)));
   const changedRows = allRows.filter((row) => isChanged(seen, row));
   // Keep an update queued even when opening the drawer marks it as seen.
   const [celebrated, setCelebrated] = useState(() => new Set());
@@ -275,7 +271,7 @@ export function MyRequestsPanel({ full = false, extraCategories = null, category
         <ErrorNotice error={requests.error} title="לא ניתן להציג את הקריאות." onRetry={() => void requests.refetch()} />
       ) : rows.length ? (
         <>
-        <ul className="rq-list" data-loading={requests.isPlaceholderData ? '' : undefined} aria-busy={requests.isPlaceholderData || undefined}>
+        <ul className="rq-list">
           {rows.map((row) => (
             <li key={row.id}>
               <RequestRow
@@ -298,7 +294,7 @@ export function MyRequestsPanel({ full = false, extraCategories = null, category
         ) : null}
         </>
       ) : (
-        full && allRows.length ? (
+        !full ? <EmptyState title="אין לך קריאות פתוחות" /> : allRows.length ? (
         <EmptyState title={query ? 'לא נמצאו קריאות התואמות לחיפוש' : 'אין לך קריאות פתוחות'}>{query ? 'נסה מספר קריאה או קטגוריה אחרים, או נקה את החיפוש.' : 'לכל הקריאות, כולל סגורות, בחר הכל.'}</EmptyState>
       ) : (
         <EmptyState title={current ? `אין לך קריאות ב${current.name}` : 'עוד לא פתחת קריאות'}>בחר סוג קריאה כדי לפתוח קריאה ראשונה</EmptyState>

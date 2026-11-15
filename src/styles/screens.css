@@ -628,6 +628,28 @@ span.chart-fade { flex-direction: row; align-items: center; gap: 8px; white-spac
 .queue-scroll:has(.ticket.selected), .scroll-y:has(.ticket.selected) { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) { .ticket { transition: none; } }
 
+/* The covered row fades behind the scrim. The preview stays inside the drawer for keyboard navigation. */
+.ticket.selected.covered { z-index: auto; }
+.ticket > :is(.dom, .ticket-summary, .side) { transition: opacity 240ms var(--ease-drawer); }
+.ticket.covered > :is(.dom, .ticket-summary, .side) { opacity: 0; }
+.ticket-copy, .ticket-copy:hover {
+  position: absolute; inset-inline-start: 100%;
+  top: max(0px, calc(var(--row-top) - 8px)); width: var(--preview-width);
+  min-height: calc(var(--row-height) + 16px); padding: 8px 20px;
+  background: var(--bg); border: 0; border-start-end-radius: 14px; border-end-end-radius: 14px;
+  cursor: default;
+}
+.ticket-copy .ticket-summary { min-width: 0; }
+.ticket-copy :is(.t1, .t2) { flex-wrap: nowrap; white-space: nowrap; }
+.ticket-copy .t1 { overflow: hidden; }
+.ticket-copy .t1 > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.ticket-copy .t2 > span:not(.mr) { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.ticket-copy .mr { flex: none; }
+.ticket-copy.compact { grid-template-columns: auto minmax(0, 1fr); }
+@media (prefers-reduced-motion: reduce) {
+  .ticket > :is(.dom, .ticket-summary, .side) { transition: none; }
+}
+
 /* the history row whose eye opened the booking's side panel, brought forward (AuditRowPreview): a copy of the row above
    the panel's dimming, joined to the panel's edge as the selected row in "קריאות" - the panel's background, a little
    taller than the row, rounded on its far end - with all the row's columns fitted into the room the panel leaves. It

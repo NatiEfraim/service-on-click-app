@@ -1,10 +1,47 @@
-import { describe, expect, it } from 'vitest';
-import { requestRoute, stageOf } from './requesterData';
+import { describe, expect, it, vi } from 'vitest';
+import { OPEN_STATUS_IDS, requesterApi } from '@/lib/api/endpoints';
+import { fetchMyRequests, requestCategories, requestRoute, stageOf } from './requesterData';
 
 /** Booking type ids: a plain domain (בינוי), הובלות (starts at the control officer), the barber. */
 const CONSTRUCTION = 13;
 const TRANSPORT = 8;
 const BARBER = 5;
+
+describe('fetchMyRequests', () => {
+  it('filters open requests on the server and reads past the history page limit', async () => {
+    const firstPage = Array.from({ length: 20 }, (_, index) => ({ uuid: String(index), status: { id: 2 } }));
+    const lastPage = [{ uuid: 'older', status: { id: 8 } }];
+    const myBookings = vi.spyOn(requesterApi, 'myBookings').mockImplementation(async (page) => ({
+      data: page <= 10 ? firstPage : lastPage,
+    }));
+    try {
+      const signal = new AbortController().signal;
+      const requests = await fetchMyRequests(signal, { openOnly: true });
+      expect(myBookings).toHaveBeenCalledWith(11, OPEN_STATUS_IDS, signal);
+      expect(requests.at(-1)).toMatchObject({ id: 'older', statusId: 8 });
+    } finally {
+      myBookings.mockRestore();
+    }
+  });
+});
+
+describe('requestCategories', () => {
+  it('includes request types outside the managed and requester catalogs without duplicating known types', () => {
+    const managed = { id: 'd8', name: 'Managed', typeIds: [8] };
+    const catalog = { id: 'd13', name: 'Catalog', typeIds: [13] };
+    const rows = [
+      { bookingTypeId: 5, typeName: 'Own request' },
+      { bookingTypeId: 5, typeName: 'Own request' },
+      { bookingTypeId: 13, typeName: 'Use catalog metadata' },
+    ];
+
+    expect(requestCategories(rows, [catalog], [managed])).toEqual([
+      expect.objectContaining({ id: 'd5', name: 'Own request', typeIds: [5] }),
+      managed,
+      catalog,
+    ]);
+  });
+});
 
 describe('stageOf (the API Workflow::stageOf, for a requester)', () => {
   it('sends a received request of a plain domain to the handler, and of הובלות to the control officer', () => {

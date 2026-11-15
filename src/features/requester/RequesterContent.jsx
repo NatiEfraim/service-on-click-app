@@ -50,7 +50,7 @@ export function RequesterContent({ name, extraCategories = null }) {
   const catalog = useCatalog();
   const counters = useCounters();
   // the user's requests (shared with the "הקריאות שלי" panel's cache): which of them changed since the last visit
-  const mine = useMyRequests(null);
+  const mine = useMyRequests();
   const seen = useSeen();
   useEffect(() => {
     if (mine.data) rememberFirstVisit(mine.data);

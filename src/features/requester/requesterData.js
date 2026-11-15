@@ -48,6 +48,20 @@ export async function fetchCatalog(signal) {
   return { topics, categories };
 }
 
+/** Filter categories for the user’s own requests, including types missing from the permission-filtered catalogs. */
+export function requestCategories(rows, catalogCategories = [], managedCategories = []) {
+  const categories = new Map(managedCategories.map((category) => [category.id, category]));
+  for (const category of catalogCategories) categories.set(category.id, category);
+  for (const { bookingTypeId, typeName } of rows) {
+    if (bookingTypeId == null || !typeName) continue;
+    const id = 'd' + bookingTypeId;
+    if (!categories.has(id)) {
+      categories.set(id, { id, name: typeName, img: domainIconSrc(bookingTypeId), typeIds: [bookingTypeId] });
+    }
+  }
+  return [...categories.values()].sort((a, b) => a.typeIds[0] - b.typeIds[0]);
+}
+
 /** The type with its topic and group, for the form's breadcrumb; null when the catalog does not offer it. */
 export function findType(catalog, typeId) {
   for (const topic of catalog?.topics ?? []) {
@@ -126,34 +140,31 @@ export async function fetchCounters(signal) {
   return requesterApi.counters(signal);
 }
 
-/** GET /bookings/my-bookings page size (PaginationEnum::PER_PAGE on the API), and how many pages to read at most (200 requests). */
+/** GET /bookings/my-bookings page size and the page limit for request history. */
 const PAGE_SIZE = 20;
 const MAX_PAGES = 10;
 
 /**
- * The user's requests from GET /bookings/my-bookings (up to 200, newest first), limited to `typeIds` when given
- * (a category of "הקריאות שלי"). Row shape: id (uuid), typeName, bookingTypeId, serial, createdAt, updatedAt, statusId, statusName.
+ * The user's requests from GET /bookings/my-bookings, newest first. The home panel reads every open request.
  */
-export async function fetchMyRequests(typeIds, signal) {
+export async function fetchMyRequests(signal, { openOnly = false } = {}) {
   // the API sends 20 a page with no paging meta: a short page is the last one
   const bookings = [];
-  for (let page = 1; page <= MAX_PAGES; page += 1) {
-    const rows = (await requesterApi.myBookings(page, null, signal)).data ?? [];
+  for (let page = 1; openOnly || page <= MAX_PAGES; page += 1) {
+    const rows = (await requesterApi.myBookings(page, openOnly ? OPEN_STATUS_IDS : null, signal)).data ?? [];
     bookings.push(...rows);
     if (rows.length < PAGE_SIZE) break;
   }
-  return bookings
-    .filter((booking) => !typeIds || typeIds.includes(booking.booking_type?.id))
-    .map((booking) => ({
-      id: booking.uuid,
-      typeName: booking.booking_type?.display_name ?? '',
-      bookingTypeId: booking.booking_type?.id,
-      serial: booking.serial_number,
-      createdAt: booking.created_at,
-      updatedAt: booking.updated_at,
-      statusId: booking.status?.id,
-      statusName: booking.status?.display_name ?? '',
-    }));
+  return bookings.map((booking) => ({
+    id: booking.uuid,
+    typeName: booking.booking_type?.display_name ?? '',
+    bookingTypeId: booking.booking_type?.id,
+    serial: booking.serial_number,
+    createdAt: booking.created_at,
+    updatedAt: booking.updated_at,
+    statusId: booking.status?.id,
+    statusName: booking.status?.display_name ?? '',
+  }));
 }
 
 /**
