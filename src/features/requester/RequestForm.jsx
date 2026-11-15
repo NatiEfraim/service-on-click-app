@@ -2,10 +2,13 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
+import { hasTypeIcon, TypeIcon } from '@/components/booking/TypeIcon';
 import { Button } from '@/components/ui/Button';
+import { DatePicker } from '@/components/ui/DateRangePicker';
 import { EmptyState, ErrorNotice, FormError, Loading } from '@/components/ui/Feedback';
 import { Icon } from '@/components/ui/Icon';
 import { Select } from '@/components/ui/Select';
+import { TimePicker } from '@/components/ui/TimePicker';
 import { ATTACH_ACCEPT, fetchForm, MAX_FILE_BYTES, MAX_FILES, submitRequest } from './requesterData';
 import { markSeen } from './seen';
 import { REQUESTER_KEY } from './useRequester';
@@ -123,7 +126,7 @@ export function RequestForm({ found, onHome, onDone }) {
       <section className="card">
         <div className="rq-form-head">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <span className="ic">{type.img ? <img src={type.img} alt="" /> : <Icon name="layers" />}</span>
+          <span className="ic">{hasTypeIcon(type.id) ? <TypeIcon bookingTypeId={type.id} /> : type.img ? <img src={type.img} alt="" /> : <Icon name="layers" />}</span>
           <div>
             <h1>{type.name}</h1>
             {type.description ? <p className="muted">{type.description}</p> : null}
@@ -161,6 +164,11 @@ export function RequestForm({ found, onHome, onDone }) {
                         <option value="">בחירה…</option>
                         {field.options.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}
                       </Select>
+                    ) : field.inputType === 'date' ? (
+                      // the app's own calendar (not the browser's); its value is 'YYYY-MM-DD' as the API expects
+                      <DatePicker value={values[field.id] ?? ''} onChange={(day) => set(field.id, day ?? '')} label={field.label} />
+                    ) : field.inputType === 'time' ? (
+                      <TimePicker value={values[field.id] ?? ''} onChange={(time) => set(field.id, time ?? '')} label={field.label} invalid={Boolean(error)} />
                     ) : (
                       <input className="input" type={field.inputType} {...props} />
                     )}

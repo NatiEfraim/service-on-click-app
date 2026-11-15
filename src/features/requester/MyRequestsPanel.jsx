@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { AnimatedText } from '@/components/ui/AnimatedText';
 import { Button } from '@/components/ui/Button';
 import { ClearFilters } from '@/components/ui/ClearFilters';
@@ -8,9 +8,11 @@ import { DateRangePicker } from '@/components/ui/DateRangePicker';
 import { Field } from '@/components/ui/Field';
 import { Select } from '@/components/ui/Select';
 import { EmptyState, ErrorNotice, Loading, Notice } from '@/components/ui/Feedback';
+import { hasTypeIcon, TypeIcon } from '@/components/booking/TypeIcon';
 import { Icon } from '@/components/ui/Icon';
 import { Seg } from '@/components/ui/Controls';
 import { SearchField } from '@/components/ui/SearchField';
+import { SmoothSize } from '@/components/ui/SmoothSize';
 import { usePresence } from '@/components/ui/usePresence';
 import { OPEN_STATUS_IDS } from '@/lib/api/endpoints';
 import { useDebounced } from '@/lib/useDebounced';
@@ -79,6 +81,7 @@ export function MyRequestsPanel({ full = false, extraCategories = null, category
   // the categories (topics and domains) come from GET /requester/catalog, already limited to what the user may open
   const categories = useCatalog();
   const requests = useMyRequests({ openOnly: !full });
+  const ListBox = full ? Fragment : SmoothSize;
   const ownedRows = requests.data ?? [];
   const openTypeIds = new Set(ownedRows.filter(isOpen).map((row) => row.bookingTypeId));
   const list = requestCategories(ownedRows, categories.data?.categories, extraCategories ?? []);
@@ -191,7 +194,7 @@ export function MyRequestsPanel({ full = false, extraCategories = null, category
         </button>
         {chips.map((item) => (
           <button key={item.id} type="button" className="rq-cat" aria-pressed={current?.id === item.id} onClick={() => onCategory(item.id)}>
-            <span className="ic pic">{item.img ? <img src={item.img} alt="" /> : <Icon name="layers" />}</span>
+            <span className="ic pic">{hasTypeIcon(item.typeIds[0]) ? <TypeIcon bookingTypeId={item.typeIds[0]} size={32} /> : item.img ? <img src={item.img} alt="" /> : <Icon name="layers" />}</span>
             {item.name}
           </button>
         ))}
@@ -265,6 +268,9 @@ export function MyRequestsPanel({ full = false, extraCategories = null, category
         </div>
         </>
       ) : null}
+      {/* the home: switching category glides the card to its new height (SmoothSize) instead of snapping; the full page
+          keeps its window-fitted list */}
+      <ListBox>
       {categories.isPending || requests.isPending ? (
         <div className="card-body"><Loading rows={3} /></div>
       ) : requests.isError ? (
@@ -300,6 +306,7 @@ export function MyRequestsPanel({ full = false, extraCategories = null, category
         <EmptyState title={current ? `אין לך קריאות ב${current.name}` : 'עוד לא פתחת קריאות'}>בחר סוג קריאה כדי לפתוח קריאה ראשונה</EmptyState>
       )
       )}
+      </ListBox>
       {opened ? <RowBridge key={opened.id} /> : null}
       {opened ? <RequestDrawer row={opened} rows={rows} onGo={open} onClose={() => setOpened(null)} celebrate={celebrating(opened) ? celebrationKey(opened) : null} onCelebrated={() => finishCelebration(opened)} /> : null}
     </section>

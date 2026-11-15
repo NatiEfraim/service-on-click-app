@@ -357,3 +357,10 @@ button.rq-counter:focus-visible { outline: 2px solid var(--accent); outline-offs
 /* the station's celebration fades out smoothly whenever it ends (RequestDrawer keeps it mounted for 450ms) */
 .rq-celebrate.on-station { transition: opacity 450ms cubic-bezier(0.77, 0, 0.175, 1), transform 450ms cubic-bezier(0.77, 0, 0.175, 1); }
 .rq-celebrate.on-station.leaving { opacity: 0; transform: scale(.92); }
+
+/* a topic card ends at the bottom of the window; its list scrolls inside it (TopicCard), never the page */
+.rq-topic-scroll { overflow-y: auto; overscroll-behavior: contain; }
+
+/* "סימון הכל כנקרא" never makes the head taller than its 32px (it overlaps the space around it instead), so a category
+   with updates and one without line up exactly and the card does not shift when switching between them */
+.rq-mine-head .rq-mark-all { margin-block: -8px; }
