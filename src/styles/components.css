@@ -402,3 +402,9 @@ body:has(.ticket.selected, .ticket-copy, .rq-row.selected, .sync-decision-previe
 @media (prefers-reduced-motion: reduce) {
   :is(.ti-sw-arrow, .ti-sw-bar, .ti-pr-paper, .ti-em-mail, .ti-em-badge, .ti-rn-line, .ti-rn-pen, .ti-uo-plus, .ti-mv-arrow, .ti-mv-person) { transition: none; }
 }
+
+/* every dialog's close button, at the end of its title row (Modal) */
+.modal header { display: flex; align-items: center; gap: 12px; }
+.modal header .modal-x { margin-inline-start: auto; flex: none; }
+/* a dialog opened over another: its dimming blurs the dialog underneath, so only the top one reads as active */
+.scrim.stacked { background: rgba(43, 36, 51, .22); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }

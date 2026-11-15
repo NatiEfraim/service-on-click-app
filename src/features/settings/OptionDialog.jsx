@@ -174,7 +174,7 @@ export function OptionDialog({ unitId, bookingTypeId, settings, field, target, s
         {problem}
       </div>
       <p className="small muted" style={{ margin: 0 }}>
-        השינוי נשמר מיד, נרשם בהיסטוריית השינויים ונשלח גם לאפליקציה.
+        השינוי נשמר מיד ונרשם בהיסטוריית השינויים.
       </p>
       <FormError>{error}</FormError>
     </FormDialog>

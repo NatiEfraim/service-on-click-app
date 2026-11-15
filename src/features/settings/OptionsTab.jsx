@@ -1,20 +1,14 @@
 'use client';
 
-import { useMutation } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
-import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/Feedback';
 import { Icon } from '@/components/ui/Icon';
 import { SideNav } from '@/components/ui/SideNav';
 
-import { settingsApi } from '@/lib/api/endpoints';
 import { useSetSearchParams } from '@/lib/useSetSearchParams';
-import { useConfirm, useToast } from '@/providers/UiProvider';
-import { OptionDialog } from './OptionDialog';
 import { buildOptionTree, choiceFields, countOptions } from './options';
-import { OptionRows } from './OptionRows';
-import { handleWriteError, useReloadSettings } from './useSettings';
+import { FieldOptionsEditor } from './FieldOptionsEditor';
 
 /**
  * The choices of each field. `editable` (the system admin, on a website-only form - ביטחון מידע / תקשוב): add, rename
@@ -22,23 +16,7 @@ import { handleWriteError, useReloadSettings } from './useSettings';
  * Otherwise view only (the mobile app's forms, until mobile synchronization is available).
  */
 export function OptionsTab({ unitId, bookingTypeId, settings, editable = false }) {
-  const toast = useToast();
-  const confirm = useConfirm();
-  const reload = useReloadSettings(unitId, bookingTypeId);
   const canEdit = editable && Boolean(settings.can_edit_global);
-  // the option the dialog adds / edits: { option?, parent? }
-  const [target, setTarget] = useState(null);
-  const removal = useMutation({
-    mutationFn: (option) => settingsApi.removeOption(option.form_field_id, option.id),
-    onSuccess: async () => {
-      toast('האפשרות הוסרה מהטופס. אם נבחרה בקריאות קיימות, היא נשמרת בהן.', 'ok');
-      await reload();
-    },
-    onError: async (e) => {
-      const shown = await handleWriteError(e, toast, reload);
-      if (shown) toast(shown.message, 'bad');
-    },
-  });
   const search = useSearchParams();
   const setParams = useSetSearchParams();
 
@@ -69,26 +47,10 @@ export function OptionsTab({ unitId, bookingTypeId, settings, editable = false }
   }, [current?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const shown = fields.find((field) => field.id === shownId) ?? current;
 
-  const tree = useMemo(() => (shown ? buildOptionTree(settings.options, shown.id) : []), [settings.options, shown]);
-
   if (!current) return <EmptyState title="אין שדות בחירה בטופס זה" />;
 
   const select = (id) => setParams({ field: String(id) });
 
-  async function askRemove(node) {
-    const ok = await confirm({
-      title: 'הסרת אפשרות',
-      body: `להסיר את "${node.option.name}"? אם היא נבחרה בקריאות קיימות היא תוסר מהטופס בלבד והערכים שנשמרו יישארו; אחרת היא תימחק.`,
-      confirmLabel: 'הסרה',
-      tone: 'danger',
-    });
-    if (ok) removal.mutate(node.option);
-  }
-  // names already used at the level the dialog writes to
-  const siblingsFor = ({ option, parent }) => {
-    const parentId = parent?.id ?? option?.parent_id ?? null;
-    return settings.options.filter((other) => other.form_field_id === shown.id && other.parent_id === parentId && other.id !== option?.id).map((other) => other.name);
-  };
   const shownSubs = subFields(shown.id);
   const countLabel = (field) => {
     const subs = subFields(field.id).length;
@@ -119,11 +81,6 @@ export function OptionsTab({ unitId, bookingTypeId, settings, editable = false }
                 ),
               )}
             </h3>
-            {canEdit && !shownSubs.length ? (
-              <Button size="sm" variant="primary" icon="plus" onClick={() => setTarget({ parent: null })}>
-                הוספת אפשרות
-              </Button>
-            ) : null}
           </div>
           <span className="small muted">
             {shownSubs.length ? 'בחרו שדה כדי לצפות באפשרויות הבחירה שלו.' : canEdit ? 'אפשר להוסיף, לשנות שם ולהסיר אפשרויות. אפשרות שכבר נבחרה בקריאות מועברת לארכיון ולא נמחקת.' : 'אפשרויות הבחירה בשדה זה מוצגות לצפייה.'}
@@ -139,33 +96,10 @@ export function OptionsTab({ unitId, bookingTypeId, settings, editable = false }
               </button>
             ))}
           </div>
-        ) : tree.length ? (
-          <OptionRows
-            nodes={tree}
-            depth={0}
-            canEdit={canEdit}
-            fieldTypes={settings.field_types}
-            onEdit={(option) => setTarget({ option, parent: null })}
-            onAddChild={(parent) => setTarget({ parent })}
-            onRemove={(node) => void askRemove(node)}
-            lastRoot={tree.length === 1}
-          />
         ) : (
-          <EmptyState title="אין אפשרויות בשדה זה" />
+          <FieldOptionsEditor key={shown.id} unitId={unitId} bookingTypeId={bookingTypeId} settings={settings} field={shown} canEdit={canEdit} />
         )}
       </div>
-      {target ? (
-        <OptionDialog
-          key={`${target.option?.id ?? 'new'}-${target.parent?.id ?? 'root'}`}
-          unitId={unitId}
-          bookingTypeId={bookingTypeId}
-          settings={settings}
-          field={shown}
-          target={target}
-          siblings={siblingsFor(target)}
-          onClose={() => setTarget(null)}
-        />
-      ) : null}
     </div>
   );
 }

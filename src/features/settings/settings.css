@@ -241,3 +241,29 @@
 
 /* a shimmer standing in for a line of names while a domain card loads: a text line's height, inline (DomainCard) */
 .st-skel-inline { display: inline-block; height: 12px; vertical-align: middle; max-width: 100%; }
+
+/* a choice field's options, edited in the options tab and in the field's own dialog (FieldOptionsEditor) */
+.st-field-options { display: grid; gap: 8px; }
+.st-field-options-bar { display: flex; justify-content: flex-start; }
+.st-dialog-options { display: grid; gap: 6px; }
+/* in the field dialog only the choices scroll; the add button above them stays in place */
+.st-dialog-options .st-field-options-list { max-height: 280px; overflow-y: auto; overscroll-behavior: contain; }
+.st-dialog-options > .label { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+
+
+/* ---------- the field / choice dialogs: everything fades in and out smoothly (transitions, so nothing jumps when
+   repeated quickly). The dialog's own height already glides (Modal's SmoothSize). ---------- */
+/* a choice row fades and rises in (staggered when the list opens), and fades out while its removal is saved */
+.st-opt { transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out); transition-delay: calc(var(--i, 0) * 30ms); }
+@starting-style { .st-opt { opacity: 0; transform: translateY(4px); } }
+.st-opt.leaving { opacity: .3; transform: translateX(-6px); transition-delay: 0s; pointer-events: none; }
+/* the choices section of the field dialog fades in */
+.st-dialog-options { transition: opacity var(--dur-base) var(--ease-out); }
+@starting-style { .st-dialog-options { opacity: 0; } }
+/* a save error (FormError) fades in */
+.modal .err[role="alert"] { transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out); }
+@starting-style { .modal .err[role="alert"] { opacity: 0; transform: translateY(-3px); } }
+@media (prefers-reduced-motion: reduce) {
+  .st-opt, .modal .err[role="alert"] { transition-property: opacity; transform: none; }
+  .st-opt.leaving { transform: none; }
+}

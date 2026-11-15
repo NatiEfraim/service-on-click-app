@@ -91,6 +91,33 @@ const FIELD_KIND = {
   radio: ['select'],
 };
 
+/**
+ * A choice as the form uses it: a "type in a value" choice (isInput) asks for a value of its own type (inputType, as
+ * FIELD_KIND maps the server's type name); a list carries its sub-choices (children).
+ */
+function toChoice(raw) {
+  const [, inputType] = FIELD_KIND[raw.field_type?.name] ?? ['text', 'text'];
+  return {
+    id: raw.id,
+    name: raw.name ?? '',
+    isInput: Boolean(raw.is_input),
+    inputType,
+    ltr: ['tel', 'email', 'url', 'number'].includes(inputType),
+    children: (raw.children ?? []).map(toChoice),
+  };
+}
+
+/** The chain of choices from the field's top level down to the one with this id ([] when none is chosen). */
+export function choicePath(options, id) {
+  if (id === undefined || id === null || id === '') return [];
+  for (const option of options) {
+    if (String(option.id) === String(id)) return [option];
+    const below = choicePath(option.children, id);
+    if (below.length) return [option, ...below];
+  }
+  return [];
+}
+
 /** A field as the form draws it; `regex` comes from the field's `validations`. */
 function toField(raw) {
   const [kind, inputType] = FIELD_KIND[raw.field_type?.name] ?? ['text', 'text'];
@@ -108,7 +135,7 @@ function toField(raw) {
     ltr: ['tel', 'email', 'url', 'number'].includes(inputType),
     required: Boolean(raw.is_required),
     regex,
-    options: raw.options ?? [],
+    options: (raw.options ?? []).map(toChoice),
     children: [...(raw.children ?? [])].sort((a, b) => a.position - b.position).map(toField),
   };
 }
@@ -124,12 +151,16 @@ export async function fetchForm(typeId, signal) {
 
 /**
  * Opens a request (POST /bookings/{id}, multipart): `values` maps field id → value (a select's value is its option id),
- * `files` are the attachments. Returns the new booking; a 422 carries per-field messages (`values.<id>`, `files.<n>`).
+ * `typed` maps a choice field id → the value typed with its chosen "type in a value" choice (option_values), `files` are
+ * the attachments. Returns the new booking; a 422 carries per-field messages (`values.<id>`, `option_values.<id>`, `files.<n>`).
  */
-export async function submitRequest(typeId, values, files) {
+export async function submitRequest(typeId, values, files, typed = {}) {
   const body = new FormData();
   for (const [fieldId, value] of Object.entries(values)) {
     if (value !== undefined && value !== null && value !== '') body.append(`values[${fieldId}]`, value);
+  }
+  for (const [fieldId, value] of Object.entries(typed)) {
+    if (value !== undefined && value !== null && String(value).trim() !== '') body.append(`option_values[${fieldId}]`, value);
   }
   for (const file of files) body.append('files[]', file);
   return requesterApi.create(typeId, body);

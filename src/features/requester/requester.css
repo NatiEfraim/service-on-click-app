@@ -364,3 +364,9 @@ button.rq-counter:focus-visible { outline: 2px solid var(--accent); outline-offs
 /* "סימון הכל כנקרא" never makes the head taller than its 32px (it overlaps the space around it instead), so a category
    with updates and one without line up exactly and the card does not shift when switching between them */
 .rq-mine-head .rq-mark-all { margin-block: -8px; }
+
+/* a choice field: its sub-choice dropdown and its "type in a value" box fade and rise in as they appear (ChoiceField) */
+.rq-choice { display: grid; gap: 8px; }
+.rq-choice-step { transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out); }
+@starting-style { .rq-choice-step { opacity: 0; transform: translateY(-4px); } }
+@media (prefers-reduced-motion: reduce) { .rq-choice-step { transition-property: opacity; transform: none; } }

@@ -2,7 +2,6 @@
 
 import { useMutation } from '@tanstack/react-query';
 import { Select } from '@/components/ui/Select';
-import Link from 'next/link';
 import { useId, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { FormError } from '@/components/ui/Feedback';
@@ -12,6 +11,8 @@ import { settingsApi } from '@/lib/api/endpoints';
 
 import { useToast } from '@/providers/UiProvider';
 import { fieldNameError, fieldTypeName, newOptionsError, parseOptionLines, retypeChoices } from './fieldRules';
+import { AnimatedText } from '@/components/ui/AnimatedText';
+import { FieldOptionsEditor } from './FieldOptionsEditor';
 import { Switch } from './Switch';
 import { handleWriteError, useReloadSettings } from './useSettings';
 
@@ -74,7 +75,8 @@ export function FieldDialog({ unitId, bookingTypeId, settings, field, onClose })
     if (problem || optionProblem) return;
 
     if (!isNew && name.trim() === field.field_display_name && typeId === field.field_type_id && required === field.is_required && editable === field.editable) {
-      setError('לא בוצע שינוי.');
+      // nothing of the field itself changed: just close (its choices are saved the moment each is confirmed)
+      onClose();
       return;
     }
     setError('');
@@ -84,7 +86,7 @@ export function FieldDialog({ unitId, bookingTypeId, settings, field, onClose })
   const lockedReason = isNew
     ? ''
     : !field.is_custom
-      ? 'סוג של שדה שקיים באפליקציה אינו ניתן לשינוי.'
+      ? 'סוג של שדה שהוגדר עם הטופס אינו ניתן לשינוי.'
       : field.used_by > 0
         ? `לא ניתן לשנות סוג: השדה מופיע ב-${field.used_by} קריאות. אפשר להוסיף שדה חדש ולהסיר את הישן.`
         : '';
@@ -119,7 +121,7 @@ export function FieldDialog({ unitId, bookingTypeId, settings, field, onClose })
         />
       </Field>
       <div id={`${ids}-name-err`} className="err" aria-live="polite">
-        {nameError}
+        <AnimatedText>{nameError}</AnimatedText>
       </div>
 
       <div className="field st-types">
@@ -167,18 +169,16 @@ export function FieldDialog({ unitId, bookingTypeId, settings, field, onClose })
             />
           </Field>
           <div id={`${ids}-opt-err`} className="err" aria-live="polite">
-            {optionsError}
+            <AnimatedText>{optionsError}</AnimatedText>
           </div>
         </>
       ) : null}
       {!isNew && currentType?.has_options ? (
-        <p className="small muted" style={{ margin: 0 }}>
-          את האפשרויות עצמן עורכים ב
-          <Link className="st-link" href={`?tab=options&field=${field.id}`}>
-            לשונית &quot;אפשרויות בחירה&quot;
-          </Link>
-          .
-        </p>
+        // the field's choices, seen and edited right here (the same editor as the options tab)
+        <div className="st-dialog-options">
+          <span className="label">אפשרויות הבחירה</span>
+          <FieldOptionsEditor unitId={unitId} bookingTypeId={bookingTypeId} settings={settings} field={field} canEdit={Boolean(settings.can_edit_global)} />
+        </div>
       ) : null}
 
       <div className="st-check-row">
@@ -198,7 +198,7 @@ export function FieldDialog({ unitId, bookingTypeId, settings, field, onClose })
         </p>
       ) : null}
       <p className="small muted" style={{ margin: 0 }}>
-        {isNew ? 'השדה יתווסף בסוף הטופס ויופיע גם בטופס באפליקציה. קריאות קיימות לא יושפעו.' : 'השינוי יחול גם בטופס באפליקציה, על קריאות חדשות בלבד.'}
+        {isNew ? 'השדה יתווסף בסוף הטופס. קריאות קיימות לא יושפעו.' : 'השינוי יחול על קריאות חדשות בלבד.'}
       </p>
       <FormError>{error}</FormError>
     </Modal>
