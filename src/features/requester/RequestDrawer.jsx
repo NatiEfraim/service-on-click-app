@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { Fragment, useEffect } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { DomainBadge } from '@/components/booking/DomainBadge';
 import { ApprovalTrack } from '@/components/booking/RouteViz';
 import { Button } from '@/components/ui/Button';
@@ -9,6 +9,7 @@ import { Chip, StatusChip } from '@/components/ui/Chips';
 import { Drawer } from '@/components/ui/Drawer';
 import { ErrorNotice, Loading, Notice } from '@/components/ui/Feedback';
 import { Icon } from '@/components/ui/Icon';
+import { usePresence } from '@/components/ui/usePresence';
 import { holdDescription, isHoldStatus } from '@/lib/booking-workflow';
 import { fmtDate, fmtDateTime } from '@/lib/format';
 import { daysSince, fetchRequestDetails, isRejectedRequest, parseDay, requestRoute, waitedLabel } from './requesterData';
@@ -82,15 +83,23 @@ function RequestStepper({ row, rows, onGo }) {
  * The request's route, the same stations the management screens show for its domain (requestRoute): passed ones filled,
  * the current one marked (on hold, stopped or finished in its colour), with the status and how long it has been there.
  */
+/** How long the station's celebration takes to fade out once it ends (requester.css: .rq-celebrate.leaving). */
+const CELEBRATION_EXIT_MS = 450;
+
 function ProgressRail({ statusId, bookingTypeId, label, since, celebrate = false, onCelebrated }) {
   const { stations, here, mode } = requestRoute(statusId, bookingTypeId);
   // how long it has been at this step (from its last update), while it is still moving: not once completed or stopped
   const waited = mode === 'here' || mode === 'hold' ? waitedLabel(daysSince(since)) : '';
+  // the celebration fades out however it ends (its own timer, or the same request's celebration in the list finishing
+  // first): it stays mounted for its exit instead of vanishing
+  const presence = usePresence(Boolean(celebrate), CELEBRATION_EXIT_MS);
+  const [lastCelebration, setLastCelebration] = useState(celebrate);
+  if (celebrate && celebrate !== lastCelebration) setLastCelebration(celebrate);
   return (
     <ApprovalTrack stations={stations} here={here} mode={mode} label={`${stations[here]?.label ?? ''}, ${label}`}>
       <span className="sub">{mode === 'finished' ? 'הושלמה' : label}</span>
       {waited ? <span className="rq-waited">{waited}</span> : null}
-      {celebrate ? <Celebration key={celebrate} className="on-station" rejected={isRejectedRequest(statusId)} onDone={onCelebrated} /> : null}
+      {presence.mounted && lastCelebration ? <Celebration key={lastCelebration} className={`on-station${presence.closing ? ' leaving' : ''}`} rejected={isRejectedRequest(statusId)} onDone={() => onCelebrated?.()} /> : null}
     </ApprovalTrack>
   );
 }

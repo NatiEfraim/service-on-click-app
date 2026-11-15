@@ -258,8 +258,10 @@ button.rq-counter:focus-visible { outline: 2px solid var(--accent); outline-offs
 @keyframes rq-check {
   0% { transform: scale(0); opacity: 0; }
   18% { transform: scale(1.15); opacity: 1; }
-  28%, 75% { transform: scale(1); opacity: 1; }
-  100% { transform: scale(.9); opacity: 0; }
+  28% { transform: scale(1); opacity: 1; }
+  /* the pop-in springs; the fade-out must not (an overshooting curve drops opacity to nothing at once): a smooth ease */
+  62% { transform: scale(1); opacity: 1; animation-timing-function: cubic-bezier(0.77, 0, 0.175, 1); }
+  100% { transform: scale(.92); opacity: 0; }
 }
 @keyframes rq-confetti {
   0% { transform: translate(0, 0) rotate(0) scale(.4); opacity: 0; }
@@ -351,3 +353,7 @@ button.rq-counter:focus-visible { outline: 2px solid var(--accent); outline-offs
 @keyframes rq-bridge-in { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
 @media (prefers-reduced-motion: reduce) { .rq-row-bridge { animation: rq-bridge-fade 200ms ease both; } }
 @keyframes rq-bridge-fade { from { opacity: 0; } }
+
+/* the station's celebration fades out smoothly whenever it ends (RequestDrawer keeps it mounted for 450ms) */
+.rq-celebrate.on-station { transition: opacity 450ms cubic-bezier(0.77, 0, 0.175, 1), transform 450ms cubic-bezier(0.77, 0, 0.175, 1); }
+.rq-celebrate.on-station.leaving { opacity: 0; transform: scale(.92); }
