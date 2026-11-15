@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   adminAssignments,
   approverAssignments,
+  roleApplies,
   buildMatrix,
   callerFrom,
   cellKey,
@@ -289,5 +290,67 @@ describe('barber roles', () => {
     expect(barber.cells.vice_approver).toBeUndefined();
     expect(matrix.rows.find((row) => row.bookingTypeId === 1).cells.vice_approver).toBeDefined();
     expect(approverAssignments(matrix, { [cellKey('approver', 5)]: true })).toEqual([{ booking_type_id: 5, is_approver: true }]);
+  });
+});
+
+describe('ביטחון מידע / תקשוב roles (roles & permissions guide)', () => {
+  const guideAnswer = {
+    role_options: { approver: 3, vice_approver: 4, transportation_control_officer: 6, infosec_officer: 7, ict_handler: 8 },
+    user: { full_name: 'x', personal_number: '1' },
+    permissions: [
+      { booking_type_id: 1, is_approver: false, is_vice_approver: false },
+      { booking_type_id: 5, is_approver: false },
+      { booking_type_id: 8, is_approver: false, is_vice_approver: false, is_transportation_control_officer: false },
+      { booking_type_id: 14, is_infosec_officer: false },
+      { booking_type_id: 17, is_ict_handler: false },
+    ],
+  };
+  const matrix = buildMatrix({ approver: guideAnswer, permissionNames: [], caller: ADMIN_CALLER, targetUuid: 'p', controlOfficerTypes: [8] });
+
+  it('shows every offered role as a column, in the guide order', () => {
+    expect(matrix.roles).toEqual(['approver', 'vice_approver', 'transportation_control_officer', 'ict_handler', 'infosec_officer']);
+  });
+
+  it('gives a checkbox only where the row has the flag (else —)', () => {
+    const cells = (id) => Object.keys(matrix.rows.find((row) => row.bookingTypeId === id).cells).sort();
+    expect(cells(14)).toEqual(['infosec_officer']);
+    expect(cells(17)).toEqual(['ict_handler']);
+    expect(cells(5)).toEqual(['approver']);
+    expect(cells(8)).toEqual(['approver', 'transportation_control_officer', 'vice_approver']);
+  });
+
+  it('sends only the flags a changed row has - no approver flag on 14-19', () => {
+    // the super admin (a camp commander may assign only in the domains they manage, so 14 / 17 would be locked for one)
+    const open = buildMatrix({ approver: guideAnswer, permissionNames: [], caller: SUPER_CALLER, targetUuid: 'p', controlOfficerTypes: [8] });
+    expect(approverAssignments(open, { [cellKey('infosec_officer', 14)]: true, [cellKey('ict_handler', 17)]: true })).toEqual([
+      { booking_type_id: 14, is_infosec_officer: true },
+      { booking_type_id: 17, is_ict_handler: true },
+    ]);
+  });
+
+  it('applies each role only to its own types (the super admin fallback)', () => {
+    expect(roleApplies('infosec_officer', 14)).toBe(true);
+    expect(roleApplies('approver', 14)).toBe(false);
+    expect(roleApplies('ict_handler', 18)).toBe(true);
+    expect(roleApplies('infosec_officer', 18)).toBe(false);
+    expect(roleApplies('infosec_officer', 1)).toBe(false);
+    expect(roleApplies('vice_approver', 5)).toBe(false);
+    expect(roleApplies('approver', 5)).toBe(true);
+  });
+
+  it('builds the super admin fallback without boxes where a role does not apply', () => {
+    const fallback = buildMatrix({
+      approver: { ...guideAnswer, permissions: [] },
+      admin: adminAnswer([{ id: 1, admin: false }, { id: 14, admin: null }, { id: 17, admin: null }]),
+      permissionNames: ['infosec_officer_14'],
+      caller: SUPER_CALLER,
+      targetUuid: 'p',
+      controlOfficerTypes: [8],
+    });
+    const cells = (id) => fallback.rows.find((row) => row.bookingTypeId === id).cells;
+    expect(Object.keys(cells(14))).toEqual(['infosec_officer']);
+    expect(cells(14).infosec_officer.value).toBe(true);
+    expect(Object.keys(cells(17))).toEqual(['ict_handler']);
+    expect(Object.keys(cells(1)).sort()).toEqual(['admin', 'approver', 'vice_approver']);
   });
 });

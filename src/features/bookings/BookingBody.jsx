@@ -137,7 +137,7 @@ export function Body({ booking }) {
               <dt>מבקש</dt>
               <dd>
                 {owner ? `${owner} ` : ''}
-                <span className="serial">{booking.owner_personal_id ?? '—'}</span>
+                <span className="ltr">{booking.owner_personal_id ?? '—'}</span>
               </dd>
               {booking.booking_owner?.phone ? (
                 <>
@@ -156,7 +156,7 @@ export function Body({ booking }) {
                   <dt>גורם מטפל</dt>
                   <dd>
                     {booking.vice_approver.full_name ?? booking.vice_approver.personal_id}
-                    {booking.vice_approver.phone ? <span className="serial"> · {booking.vice_approver.phone}</span> : null}
+                    {booking.vice_approver.phone ? <> · <span className="ltr">{booking.vice_approver.phone}</span></> : null}
                   </dd>
                 </>
               ) : null}

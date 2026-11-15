@@ -35,14 +35,14 @@ const labels = (me) => buildNav(me).map((entry) => entry.id);
 describe('buildNav', () => {
   it('gives the super admin every screen (the queue only if they also act on a type)', () => {
     const me = makeMe({ is_super_admin: true, caps: ['audit.view', 'sync.view', 'sync.operate', 'config.global', 'users.manage', 'dashboard.view', 'reports.view', 'targets.manage'] });
-    expect(labels(me)).toEqual(['home', 'requests', 'reports', 'manage', 'audit', 'sync']);
+    expect(labels(me)).toEqual(['start', 'home', 'requests', 'reports', 'manage', 'audit', 'sync']);
     const manage = buildNav(me).find((entry) => entry.id === 'manage');
     expect(manage?.kind === 'group' && manage.items.map((item) => item.id)).toEqual(['domains', 'users', 'org', 'hatch']);
   });
 
   it('gives an admin the list and users management, but not the service domains, history or sync', () => {
     const me = makeMe({ is_admin: true, caps: ['users.manage', 'dashboard.view', 'reports.view', 'targets.manage'] });
-    expect(labels(me)).toEqual(['home', 'requests', 'reports', 'manage']);
+    expect(labels(me)).toEqual(['start', 'home', 'requests', 'reports', 'manage']);
     const manage = buildNav(me).find((entry) => entry.id === 'manage');
     expect(manage?.kind === 'group' && manage.items.map((item) => item.id)).toEqual(['users']);
   });
@@ -55,12 +55,12 @@ describe('buildNav', () => {
 
   it('gives an approver the queue because they act on bookings, and no empty management menu', () => {
     const me = makeMe({ permissions: ['approver_1', 'approver_2'], caps: ['dashboard.view'] });
-    expect(labels(me)).toEqual(['home', 'requests']);
+    expect(labels(me)).toEqual(['start', 'home', 'requests']);
   });
 
   it('reduces a handler to the queue alone', () => {
     const me = makeMe({ is_handler_only: true, permissions: ['vice_approver_1'] });
-    expect(buildNav(me)).toEqual([expect.objectContaining({ id: 'requests', label: 'קריאות', href: '/requests?view=mine&sort=stage_age_hours&dir=desc', counter: 'queue' })]);
+    expect(buildNav(me)).toEqual([expect.objectContaining({ id: 'start', href: '/' }), expect.objectContaining({ id: 'requests', label: 'קריאות', href: '/requests?view=mine&sort=stage_age_hours&dir=desc', counter: 'queue' })]);
   });
 });
 

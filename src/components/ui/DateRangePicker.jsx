@@ -111,7 +111,7 @@ export function DateRangePicker({ value, onChange, label = 'תאריך', placeho
   const rangeTo = draftStart ? (hover && hover > draftStart ? hover : draftStart) : to;
   const todayIso = toIso(new Date());
 
-  const clearPresence = usePresence(Boolean(clearable && (from || to)), 220);
+  const hasValue = multiple ? selectedDays.length > 0 : Boolean(from || to);
   const text = multiple ? (selectedDays.length ? `נבחרו ${selectedDays.length} תאריכים` : placeholder) : from && to ? (from === to ? show(from) : `${show(from)} – ${show(to)}`) : from ? `מ-${show(from)}` : to ? `עד ${show(to)}` : placeholder;
   const outside = (iso) => (min && iso < min) || (max && iso > max);
 
@@ -122,11 +122,6 @@ export function DateRangePicker({ value, onChange, label = 'תאריך', placeho
         {label ? <span className="drp-label">{label}:</span> : null}
         <AnimatedText>{text}</AnimatedText>
       </button>
-      {clearPresence.mounted ? (
-        <button type="button" className="drp-clear" data-closing={clearPresence.closing || undefined} disabled={clearPresence.closing} aria-label="ניקוי התאריכים" data-tip="ניקוי" onClick={() => onChange(multiple ? [] : { from: '', to: '' })}>
-          <Icon name="x" />
-        </button>
-      ) : null}
 
       {presence.mounted && place ? createPortal(
         <div
@@ -190,6 +185,23 @@ export function DateRangePicker({ value, onChange, label = 'תאריך', placeho
             })}
           </div>
           {multiple ? <p className="drp-hint">לחצו על ימים כדי לסמן או לבטל סימון</p> : single ? null : <p className="drp-hint">{draftStart ? `מ-${show(draftStart)}: בחרו את תאריך הסיום` : 'בחרו תאריך התחלה ואז תאריך סיום'}</p>}
+          {/* clearing lives inside the calendar (no ✕ beside the button): it empties the dates and closes the calendar */}
+          {clearable ? (
+            <div className="drp-foot">
+              <button
+                type="button"
+                className="drp-reset"
+                disabled={!hasValue && !draftStart}
+                onClick={() => {
+                  onChange(multiple ? [] : { from: '', to: '' });
+                  setDraftStart(null);
+                  setOpen(false);
+                }}
+              >
+                ניקוי
+              </button>
+            </div>
+          ) : null}
         </div>,
         document.body,
       ) : null}

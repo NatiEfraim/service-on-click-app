@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Fragment, useEffect } from 'react';
 import { DomainBadge } from '@/components/booking/DomainBadge';
+import { ApprovalTrack } from '@/components/booking/RouteViz';
 import { Button } from '@/components/ui/Button';
 import { Chip, StatusChip } from '@/components/ui/Chips';
 import { Drawer } from '@/components/ui/Drawer';
@@ -10,7 +11,7 @@ import { ErrorNotice, Loading, Notice } from '@/components/ui/Feedback';
 import { Icon } from '@/components/ui/Icon';
 import { holdDescription, isHoldStatus } from '@/lib/booking-workflow';
 import { fmtDate, fmtDateTime } from '@/lib/format';
-import { daysSince, fetchRequestDetails, parseDay, requestRoute, waitedLabel } from './requesterData';
+import { daysSince, fetchRequestDetails, isRejectedRequest, parseDay, requestRoute, waitedLabel } from './requesterData';
 import { Celebration } from './Celebration';
 import { REQUESTER_KEY, useCatalog } from './useRequester';
 
@@ -86,18 +87,11 @@ function ProgressRail({ statusId, bookingTypeId, label, since, celebrate = false
   // how long it has been at this step (from its last update), while it is still moving: not once completed or stopped
   const waited = mode === 'here' || mode === 'hold' ? waitedLabel(daysSince(since)) : '';
   return (
-    <div className="rail" role="img" aria-label={`מסלול הקריאה: ${stations[here]?.label ?? ''}, ${label}`}>
-      {stations.map((station, index) => (
-        <div key={station.id} className={`station ${index < here ? 'done' : index === here ? mode : ''}`.trim()}>
-          <span className="dot" />
-          <span className="name">{station.label}</span>
-          {index === here ? <span className="sub">{mode === 'finished' ? 'הושלמה' : label}</span> : null}
-          {index === here && waited ? <span className="rq-waited">{waited}</span> : null}
-          {/* a request that has just become completed: the celebration plays on its last station */}
-          {index === here && mode === 'finished' && celebrate ? <Celebration className="on-station" onDone={onCelebrated} /> : null}
-        </div>
-      ))}
-    </div>
+    <ApprovalTrack stations={stations} here={here} mode={mode} label={`${stations[here]?.label ?? ''}, ${label}`}>
+      <span className="sub">{mode === 'finished' ? 'הושלמה' : label}</span>
+      {waited ? <span className="rq-waited">{waited}</span> : null}
+      {celebrate ? <Celebration key={celebrate} className="on-station" rejected={isRejectedRequest(statusId)} onDone={onCelebrated} /> : null}
+    </ApprovalTrack>
   );
 }
 
@@ -124,7 +118,7 @@ export function RequestDrawer({ row, rows = [], onGo, onClose, celebrate = false
       tools={onGo ? <RequestStepper row={row} rows={rows} onGo={onGo} /> : undefined}
       title={
         <>
-          קריאה <span className="serial" style={{ fontSize: 16 }}>{row.serial}</span>
+          קריאה <span className="ltr" style={{ fontSize: 16, fontWeight: 400 }}>{row.serial}</span>
         </>
       }
     >
@@ -167,7 +161,7 @@ export function RequestDrawer({ row, rows = [], onGo, onClose, celebrate = false
                       <dt>מבקש</dt>
                       <dd>
                         {details.requester.name}{' '}
-                        <span className="serial">{details.requester.personalId}</span>
+                        <span className="ltr">{details.requester.personalId}</span>
                       </dd>
                       {details.requester.phone ? (
                         <>

@@ -2,8 +2,8 @@
 
 import { ROLE_NAME } from '@/lib/labels';
 
-/** The camp commander first, then the stages of the approval route. */
-const ROLE_ORDER = ['admin', 'approver', 'vice_approver', 'transportation_control_officer'];
+/** The columns' order (roles & permissions guide): the camp commander, the stages of the approval route, then the ICT and infosec officers. */
+const ROLE_ORDER = ['admin', 'approver', 'vice_approver', 'transportation_control_officer', 'ict_handler', 'infosec_officer'];
 
 /** Roles every person has or that are not a "grant on a domain" - never drawn as a role chip. */
 const NOT_A_GRANT = new Set(['user', 'super_admin']);
@@ -108,6 +108,23 @@ export function controlOfficerTypesOf(catalog) {
 }
 
 /**
+ * The roles a booking type has (roles & permissions guide, per-type table) - used only where the server sends no row of
+ * flags to read it from (the super admin's fallback): ביטחון מידע (14-16) has only the infosec officer, תקשוב (17-19) only
+ * the ICT handler; every other type the approver, the vice approver (not the barber, 5) and the control officer (only
+ * where that step exists). When the server sends a row, its flag keys are the answer and this is not used.
+ */
+const INFOSEC_TYPES = [14, 15, 16];
+const ICT_TYPES = [17, 18, 19];
+export function roleApplies(role, bookingTypeId) {
+  const id = Number(bookingTypeId);
+  if (INFOSEC_TYPES.includes(id)) return role === 'infosec_officer';
+  if (ICT_TYPES.includes(id)) return role === 'ict_handler';
+  if (role === 'infosec_officer' || role === 'ict_handler') return false;
+  if (role === 'vice_approver') return id !== 5;
+  return true;
+}
+
+/**
  * Rows are booking types, columns the `is_<role>` flags. Approver rows derive from the caller's `admin_*`
  * permissions, so they are empty for the super admin; the grid then uses the admin answer and permission names.
  */
@@ -136,7 +153,7 @@ export function buildMatrix({ approver, admin, permissionNames, caller, targetUu
     const held = new Set(permissionNames);
     const roles = Object.keys(approver.role_options ?? {}).filter(isApproverSide);
     for (const row of adminRows) {
-      for (const role of roles) put(row.booking_type_id, role, held.has(`${role}_${row.booking_type_id}`));
+      for (const role of roles) if (roleApplies(role, row.booking_type_id)) put(row.booking_type_id, role, held.has(`${role}_${row.booking_type_id}`));
     }
   }
 
@@ -145,7 +162,10 @@ export function buildMatrix({ approver, admin, permissionNames, caller, targetUu
   }
 
   const sorted = [...rows.values()].sort((a, b) => a.bookingTypeId - b.bookingTypeId);
-  const roles = [...new Set(sorted.flatMap((row) => Object.keys(row.cells)))].sort(byRole);
+  // a column for every role the server offers (role_options; the camp commander for the super admin), even with no row yet
+  // (no rows, no columns: the dialog then says there is no domain to assign)
+  const offered = sorted.length ? [...Object.keys(approver.role_options ?? {}).filter(isApproverSide), ...(caller.isSuperAdmin && adminRows.length ? ['admin'] : [])] : [];
+  const roles = [...new Set([...offered, ...sorted.flatMap((row) => Object.keys(row.cells))])].sort(byRole);
   return { roles, rows: sorted };
 }
 
@@ -175,18 +195,15 @@ export function pendingChanges(matrix, edits) {
   return changes;
 }
 
-/** `role_assignments` for `assign-approver-role`: changed booking types only, each with its flags (no vice approver flag where the type has none, e.g. the barber). */
+/** `role_assignments` for `assign-approver-role`: changed booking types only, each with exactly the flags that row has (guide: none it lacks - e.g. no approver flag on ביטחון מידע / תקשוב, no vice approver on the barber). */
 export function approverAssignments(matrix, edits) {
   const changed = new Set(pendingChanges(matrix, edits).filter((change) => change.role !== 'admin').map((change) => change.bookingTypeId));
   return matrix.rows
     .filter((row) => changed.has(row.bookingTypeId))
     .map((row) => {
-      const assignment = {
-        booking_type_id: row.bookingTypeId,
-        is_approver: shownValue(row, 'approver', edits) ?? false,
-      };
-      for (const role of Object.keys(row.cells)) {
-        if (role !== 'admin' && role !== 'approver') assignment[`is_${role}`] = shownValue(row, role, edits) ?? false;
+      const assignment = { booking_type_id: row.bookingTypeId };
+      for (const role of Object.keys(row.cells).sort(byRole)) {
+        if (role !== 'admin') assignment[`is_${role}`] = shownValue(row, role, edits) ?? false;
       }
       return assignment;
     });

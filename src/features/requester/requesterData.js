@@ -17,7 +17,7 @@ export const MAX_FILE_BYTES = 10 * 1024 * 1024;
  * GET /requester/catalog, shaped for the screens. The server already keeps only what the user may open
  * ("user_<id>" permission and the user's unit). Request types are identified by their booking type id.
  * - topics: [{ id (server name), name, img, groups: [{ id, name, types: [{ id, key, name, description, img }] }] }]
- * - categories: the topics and the plain domains, for "הקריאות שלי": [{ id, name, img, typeIds }]
+ * - categories: each request type of the topics, then the plain domains, for "הקריאות שלי": [{ id, name, img, typeIds }]
  */
 export async function fetchCatalog(signal) {
   const data = await requesterApi.catalog(signal);
@@ -40,7 +40,9 @@ export async function fetchCatalog(signal) {
   }));
   const domains = [...(data?.domains ?? [])].sort(byPosition);
   const categories = [
-    ...topics.map((topic) => ({ id: topic.id, name: topic.name, img: topic.img, typeIds: topic.groups.flatMap((group) => group.types.map((type) => type.id)) })),
+    // every request type of a topic is a category of its own (not the topic as one), with the same id a domain gets
+    // ("d<id>"), so the super admin's full domain list adds nothing twice and nothing appears, then vanishes
+    ...topics.flatMap((topic) => topic.groups.flatMap((group) => group.types.map((type) => ({ id: `d${type.id}`, name: type.name, img: type.img, typeIds: [type.id] })))),
     ...domains.map((domain) => ({ id: `d${domain.id}`, name: domain.display_name, img: domainIconSrc(domain.id), typeIds: [domain.id] })),
   ];
   return { topics, categories };
@@ -263,6 +265,8 @@ export function waitedLabel(days) {
 const BARBER_TYPE_ID = 5;
 const CONTROL_OFFICER_TYPE_IDS = [8];
 /** The statuses that end a request (StatusBookingEnum::isTerminal). */
+export const isRejectedRequest = (statusId) => [4, 12, 16, 18].includes(Number(statusId));
+
 const TERMINAL_STATUS_IDS = [4, 5, 6, 7, 12, 13];
 
 /**

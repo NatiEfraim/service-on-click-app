@@ -6,7 +6,7 @@ import { ENTITY_LABEL } from './labels';
 import { useTargetPerson } from './useTargetPerson';
 
 /** What a row acted on, by name: a booking by number, a person by full name, else the entity. */
-export function AuditTarget({ row }) {
+export function AuditTarget({ row, onPeek }) {
   const person = useTargetPerson(row);
   const drawer = useBookingDrawer();
   if (row.booking_serial) {
@@ -21,6 +21,7 @@ export function AuditTarget({ row }) {
           data-tip="פרטי הקריאה"
           onClick={(event) => {
             event.stopPropagation();
+            onPeek?.(row.id);
             drawer.open(row.booking_serial);
           }}
         >

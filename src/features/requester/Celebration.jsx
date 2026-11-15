@@ -41,7 +41,7 @@ const ROW_PIECES = Array.from({ length: 18 }, (_, index) => ({
  * burst of soft confetti flies out of it, then everything fades. It starts only once it is in view; `onDone` runs when
  * it has played (or at once with reduced motion), so the caller remembers it and never plays it again for that request.
  */
-export function Celebration({ onDone, className = '', variant = 'burst' }) {
+export function Celebration({ onDone, className = '', variant = 'burst', rejected = false }) {
   // the latest onDone, so a redraw of the list (a new function each time) does not restart the timer
   const done = useRef(onDone);
   useEffect(() => {
@@ -68,8 +68,8 @@ export function Celebration({ onDone, className = '', variant = 'burst' }) {
   // a whole row: it glows softly in green, and light confetti drifts across it
   if (variant === 'row') {
     return (
-      <span ref={ref} className={`rq-celebrate-row${playing ? ' play' : ''}`} aria-hidden="true">
-        {ROW_PIECES.map((piece, index) => (
+      <span ref={ref} className={`rq-celebrate-row${playing ? ' play' : ''}${rejected ? ' rejected' : ''}`} aria-hidden="true">
+        {rejected ? <span className="rq-sad-face">☹</span> : ROW_PIECES.map((piece, index) => (
           <i
             key={index}
             className={piece.round ? 'round' : ''}
@@ -81,9 +81,9 @@ export function Celebration({ onDone, className = '', variant = 'burst' }) {
   }
 
   return (
-    <span ref={ref} className={`rq-celebrate${playing ? ' play' : ''}${className ? ` ${className}` : ''}`} aria-hidden="true">
-      <span className="check"><Icon name="check" /></span>
-      {PIECES.map((piece, index) => (
+    <span ref={ref} className={`rq-celebrate${playing ? ' play' : ''}${rejected ? ' rejected' : ''}${className ? ` ${className}` : ''}`} aria-hidden="true">
+      {rejected ? <span className="rq-sad-face">☹</span> : <span className="check"><Icon name="check" /></span>}
+      {!rejected && PIECES.map((piece, index) => (
         <i
           key={index}
           className={piece.round ? 'round' : ''}

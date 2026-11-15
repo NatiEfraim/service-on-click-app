@@ -7,6 +7,7 @@ import { Ticket } from '@/components/booking/Ticket';
 import { AnimatedText } from '@/components/ui/AnimatedText';
 import { usePresence } from '@/components/ui/usePresence';
 import { Button } from '@/components/ui/Button';
+import { ClearFilters } from '@/components/ui/ClearFilters';
 import { Seg } from '@/components/ui/Controls';
 import { insightsApi } from '@/lib/api/endpoints';
 import { LOAD_AHEAD_PX, MIN_LIST_HEIGHT, PAGE_SIZE } from '@/features/queue/constants';
@@ -162,8 +163,7 @@ export function RequestsScreen() {
             <AnimatedText>{advanced ? `סינון (${advanced})` : 'סינון'}</AnimatedText>
           </Button>
           {clearPresence.mounted ? (
-            <Button size="sm" variant="ghost" icon="x" className="requests-clear" data-closing={clearPresence.closing || undefined} disabled={!hasFilters} aria-label="ניקוי הסינון" data-tip={hasFilters ? 'ניקוי הסינון' : undefined} onClick={() => router.replace(filters.view === DEFAULT_FILTERS.view ? pathname : `${pathname}?view=${filters.view}`, { scroll: false })}>
-            </Button>
+            <ClearFilters closing={clearPresence.closing} disabled={!hasFilters} onClick={() => router.replace(filters.view === DEFAULT_FILTERS.view ? pathname : `${pathname}?view=${filters.view}`, { scroll: false })} />
           ) : null}
           </div>
           <span className="grow" />

@@ -80,7 +80,8 @@
 .rq-no-hits { padding: 12px; }
 
 /* ---------- form */
-.rq-form { max-width: 860px; }
+/* the request form takes the page's whole width, as the other screens */
+.rq-form { max-width: none; }
 .rq-crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 14px; color: var(--mute); }
 .rq-crumbs b { color: var(--ink); }
 .rq-form-head { display: flex; gap: 14px; align-items: center; padding: 18px 20px; border-bottom: 1px solid var(--line-2); }
@@ -108,8 +109,11 @@
 .btn.rq-send:hover:not(:disabled) { filter: brightness(0.92); }
 /* a category with a colour picture: white tile, the picture keeps its own colours (also when picked) */
 .rq-cat .ic.pic, .rq-cat[aria-pressed="true"] .ic.pic { background: var(--surface); border: 1px solid var(--line); }
-.rq-cat .ic.pic img { width: 26px; height: 26px; }
-.rq-cat[aria-pressed="true"] .ic.pic { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.rq-cat .ic.pic img { width: 32px; height: 32px; }
+/* a new category's list on its way: the previous one stays, dimmed, so nothing jumps */
+.rq-list { transition: opacity var(--dur-base) ease; }
+.rq-list[data-loading] { opacity: .55; }
+/* the selected button itself is outlined; its picture keeps its plain frame */
 .rq-more { display: flex; margin: 12px auto 0; }
 /* a request row opens its side panel */
 .rq-list li { padding: 0; }
@@ -216,27 +220,19 @@ button.rq-counter:focus-visible { outline: 2px solid var(--accent); outline-offs
   position: relative;
   transition: margin 260ms var(--ease-out), box-shadow 260ms var(--ease-out), background-color 260ms var(--ease-out), border-radius 260ms var(--ease-out);
 }
-.rq-row::before {
-  content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 2px; pointer-events: none;
-  background: conic-gradient(from var(--sel-angle, 0deg), #2FA85A, #8EE3A8, var(--accent-mid), var(--accent), #2FA85A);
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor; mask-composite: exclude;
-  opacity: 0; transition: opacity 260ms var(--ease-out);
-}
 .rq-row.selected {
-  z-index: 61; margin: 12px 10px; border-radius: 14px; background: var(--surface);
-  box-shadow: 0 6px 16px color-mix(in srgb, var(--ink) 14%, transparent), 0 2px 6px color-mix(in srgb, #2FA85A 14%, transparent);
+  z-index: 61; margin-block: 12px; margin-inline: 0 10px; background: var(--bg);
+  border-start-end-radius: 14px; border-end-end-radius: 14px;
+  border-start-start-radius: 0; border-end-start-radius: 0;
+  border-bottom-color: transparent; border-inline-start-color: transparent;
 }
-.rq-row.selected::before { opacity: 1; animation: rq-sel-flow 4s linear infinite; }
-.rq-row.selected:hover { background: var(--surface); }
+.rq-row.selected:hover { background: var(--bg); }
 /* while a request is open its list stays put (the row sits above the dimming, so the wheel would reach the list) */
 .rq-list:has(.rq-row.selected) { overflow: hidden; }
 /* detached: the divider above it and the one below it fade away, so it does not touch its neighbours */
 .rq-list li { transition: border-color 260ms var(--ease-out); }
 .rq-list li:has(> .rq-row.selected), .rq-list li:has(> .rq-row.selected) + li { border-top-color: transparent; }
-@property --sel-angle { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
-@keyframes rq-sel-flow { to { --sel-angle: 360deg; } }
-@media (prefers-reduced-motion: reduce) { .rq-row, .rq-row::before, .rq-list li { transition: none; } .rq-row.selected::before { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .rq-row, .rq-list li { transition: none; } }
 
 /* "כבר 3 ימים" under the current step of a request's progress */
 .rq-waited { display: inline-block; margin-top: 4px; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; color: var(--accent); background: var(--accent-wash); }
@@ -308,7 +304,7 @@ button.rq-counter:focus-visible { outline: 2px solid var(--accent); outline-offs
 .rq-celebrate-row.play i { animation: rq-row-confetti 1.6s cubic-bezier(.2, .7, .3, 1) both; }
 @keyframes rq-row-glow {
   0% { opacity: 0; background: transparent; box-shadow: inset 0 0 0 0 transparent; }
-  20%, 70% { opacity: 1; background: color-mix(in srgb, #2FA85A 9%, transparent); box-shadow: inset 0 0 0 2px color-mix(in srgb, #2FA85A 45%, transparent), inset 0 0 22px color-mix(in srgb, #2FA85A 20%, transparent); }
+  20%, 70% { opacity: 1; background: color-mix(in srgb, var(--rq-glow, #2FA85A) 9%, transparent); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--rq-glow, #2FA85A) 45%, transparent), inset 0 0 22px color-mix(in srgb, var(--rq-glow, #2FA85A) 20%, transparent); }
   100% { opacity: 0; background: transparent; box-shadow: inset 0 0 0 0 transparent; }
 }
 @keyframes rq-row-confetti {
@@ -318,3 +314,37 @@ button.rq-counter:focus-visible { outline: 2px solid var(--accent); outline-offs
   100% { transform: translate(var(--x), var(--y)) rotate(var(--r)) scale(.9); opacity: 0; }
 }
 @media (prefers-reduced-motion: reduce) { .rq-celebrate-row { display: none; } }
+
+.rq-celebrate-row.rejected { --rq-glow: var(--bad); display: grid; place-items: center; }
+.rq-sad-face {
+  display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 25%, #fff5f2, #ffc4bd);
+  color: #8d2424; font-size: 21px; line-height: 1; font-weight: 700;
+  box-shadow: 0 0 0 4px rgb(224 72 62 / 16%); opacity: 0;
+}
+.rq-celebrate .rq-sad-face { width: 22px; height: 22px; font-size: 17px; }
+.play > .rq-sad-face { animation: rq-sad-pop 1.6s var(--ease-out) both; }
+@keyframes rq-sad-pop {
+  0% { opacity: 0; transform: scale(.45) rotate(-12deg); }
+  20% { opacity: 1; transform: scale(1.16) rotate(6deg); }
+  34%, 72% { opacity: 1; transform: scale(1) rotate(0); }
+  100% { opacity: 0; transform: scale(.85); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rq-celebrate-row.rejected, .play > .rq-sad-face { animation: none; }
+}
+/* "הקריאות שלי" keeps its scroll bar's room when it locks for an open request, so nothing shifts when one is picked */
+.rq-mine.full .rq-list { scrollbar-gutter: stable; }
+
+/* "עדכון חדש" for a negative update (the request was rejected or cancelled): the same pill in soft red, its bubbles too */
+.rq-new.bad { background: var(--bad-w); color: var(--bad); border-color: color-mix(in srgb, var(--bad) 30%, transparent); }
+.rq-new.bad .fx .bub { background: radial-gradient(circle at 35% 30%, #F6B8AE, #D2553F 75%); }
+.rq-new.bad .fx .spark { color: var(--bad); }
+
+/* the strip that joins the open row to the side panel when the list stops short of it (RowBridge); the row's colour,
+   above the dimming */
+.rq-row-bridge { position: fixed; z-index: 61; pointer-events: none; background: var(--bg); animation: rq-bridge-in 320ms var(--ease-out) both; }
+/* it grows out of the row (its left edge) toward the panel */
+@keyframes rq-bridge-in { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@media (prefers-reduced-motion: reduce) { .rq-row-bridge { animation: rq-bridge-fade 200ms ease both; } }
+@keyframes rq-bridge-fade { from { opacity: 0; } }

@@ -38,3 +38,202 @@
 @media (max-width: 760px) {
   .ppl-head .field { flex: 1 1 100%; }
 }
+
+/* the permissions window: only the domains table scrolls (inside its own box, its header row staying in view); the
+   title, the person's line, the reason and the buttons never move, and the window itself never scrolls. The box's
+   height is set by PermissionsDialog: the window's cap (88vh) minus everything else in it, which does not depend on
+   the box, so it cannot feed back. (Tying the body's height to the window instead looped with SmoothSize, which
+   animates the body to its content's height: each glide changed the content's height, which started another.) */
+.modal .ppl-matrix-wrap { overflow: auto; overscroll-behavior: contain; }
+.modal:has(.ppl-matrix) .ppl-matrix thead th { position: sticky; top: 0; z-index: 2; }
+
+/* ---------- the permissions grid (PermissionsCards): three main categories that open into domain cards ----------
+   Motion (by the animate skill): an occasional screen, so standard motion. Transform and opacity only (the category's
+   height is the accordion exception), the project's --ease-out and duration tokens, transitions rather than keyframes
+   (everything here can be clicked again mid-way and must pick up from where it is), hover motion only for a real
+   pointer, and a gentler version under reduced motion. */
+.pp-wrap { border: 0; border-radius: 0; }
+.pp-cards { display: grid; gap: 10px; }
+
+/* a main category - spatial: its header opens and closes it; it says how many domains hold a role, and if a change waits */
+.pp-group {
+  border: 1px solid var(--line-2); border-radius: 14px; background: var(--surface);
+  transition: border-color var(--dur-base) ease, box-shadow var(--dur-base) var(--ease-out);
+}
+.pp-group.open { border-color: var(--line); box-shadow: 0 6px 18px -12px rgba(43, 36, 51, .35); }
+.pp-group-head {
+  all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px;
+  cursor: pointer; border-radius: 14px; transition: background-color var(--dur-fast) ease;
+}
+.pp-group-head:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+/* the category's colour picture, on a tile tinted with its own colour */
+.pp-group-ic {
+  width: 40px; height: 40px; flex: none; display: grid; place-items: center; border-radius: 12px;
+  background: color-mix(in srgb, var(--tint) 20%, var(--surface)); border: 1px solid color-mix(in srgb, var(--tint) 55%, transparent);
+  transition: transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
+}
+.pp-group-ic img { width: 26px; height: 26px; }
+.pp-group.open .pp-group-ic { box-shadow: 0 4px 12px -6px color-mix(in srgb, var(--tint) 90%, #000); }
+.pp-group-txt { display: grid; gap: 1px; min-width: 0; }
+.pp-group-txt b { font-size: 15px; }
+.pp-group-txt span { font-size: 12px; color: var(--mute); }
+.pp-group-pending {
+  margin-inline-start: auto; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--accent-wash); color: var(--accent);
+  transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+@starting-style { .pp-group-pending { opacity: 0; transform: scale(.92); } }
+.pp-group-chev { margin-inline-start: auto; color: var(--mute); transition: transform 260ms var(--ease-out), color var(--dur-fast) ease; }
+.pp-group-pending + .pp-group-chev { margin-inline-start: 0; }
+.pp-group.open .pp-group-chev { transform: rotate(180deg); color: var(--ink-2); }
+@media (hover: hover) and (pointer: fine) {
+  .pp-group-head:hover { background: var(--hover); }
+  .pp-group-head:hover .pp-group-ic { transform: translateY(-1px) scale(1.04); }
+}
+.pp-group-head:active .pp-group-ic { transform: scale(.96); transition-duration: 100ms; }
+
+/* opening and closing: the body's row glides between 0 and its content's height (260ms = --dur-resize) */
+.pp-group-body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows var(--dur-resize) var(--ease-out); }
+.pp-group.open .pp-group-body { grid-template-rows: 1fr; }
+.pp-group-inner { overflow: hidden; min-height: 0; }
+.pp-group-inner > .pp-cards-grid { padding: 4px 14px 14px; }
+
+/* the domain cards: three to a row; an assigned card takes its domain's colour on its edge. When a category opens they
+   come in one after another (40ms apart, so the eye reads them in order); when it closes they leave together, fast */
+.pp-cards-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.pp-card {
+  display: grid; gap: 10px; padding: 12px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line-2);
+  border-inline-start: 3px solid var(--line-2);
+  opacity: 0; transform: translateY(6px);
+  transition: opacity 120ms ease, transform 120ms ease, border-color var(--dur-base) ease, box-shadow var(--dur-base) var(--ease-out);
+}
+.pp-group.open .pp-card {
+  opacity: 1; transform: none;
+  transition: opacity 220ms var(--ease-out) calc(var(--i, 0) * 40ms), transform 260ms var(--ease-out) calc(var(--i, 0) * 40ms),
+    border-color var(--dur-base) ease, box-shadow var(--dur-base) var(--ease-out);
+}
+.pp-card.set { border-inline-start-color: var(--dc); box-shadow: 0 4px 14px -8px rgba(43, 36, 51, .3); }
+.pp-card.changed { box-shadow: 0 0 0 2px var(--accent-soft); }
+.pp-card.locked { opacity: .55; }
+.pp-group.open .pp-card.locked { opacity: .55; }
+.pp-card header { display: grid; grid-template-columns: auto 1fr; column-gap: 8px; row-gap: 2px; align-items: center; }
+.pp-card header > :first-child { grid-row: span 2; }
+.pp-card header b { font-size: 14px; line-height: 1.25; }
+@media (hover: hover) and (pointer: fine) {
+  .pp-group.open .pp-card:not(.locked):hover { box-shadow: 0 8px 20px -12px rgba(43, 36, 51, .45); }
+  .pp-group.open .pp-card.set:not(.locked):hover { box-shadow: 0 8px 20px -10px color-mix(in srgb, var(--dc) 60%, transparent); }
+}
+
+/* the role badge - state indication: keyed by the role, so a new role fades and settles in instead of the text swapping */
+.pp-badge {
+  justify-self: start; font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: var(--accent-wash); color: var(--accent);
+  transition: opacity 180ms var(--ease-out), transform 180ms var(--ease-out);
+}
+@starting-style { .pp-badge { opacity: 0; transform: translateY(2px) scale(.94); } }
+.pp-badge.none { background: transparent; color: var(--mute); padding-inline: 0; }
+
+/* the role buttons - feedback: a press gives a short push in; the chosen one fills */
+.pp-card-roles { display: flex; flex-wrap: wrap; gap: 6px; }
+.pp-card-roles button {
+  all: unset; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; cursor: pointer;
+  border: 1px solid var(--line); color: var(--ink-2);
+  transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease, border-color var(--dur-fast) ease, transform 120ms var(--ease-out);
+}
+.pp-card-roles button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.pp-card-roles button:active:not(:disabled) { transform: scale(.96); }
+.pp-card-roles button:disabled { cursor: default; }
+.pp-card-roles button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) {
+  .pp-card-roles button:hover:not(:disabled):not([aria-pressed="true"]) { border-color: var(--accent-soft); background: var(--accent-wash); }
+}
+
+/* reduced motion: fewer and gentler - opacity and colour stay, movement, scaling and the stagger go */
+@media (prefers-reduced-motion: reduce) {
+  .pp-group-body { transition: none; }
+  .pp-card, .pp-group.open .pp-card { transform: none; transition: opacity 120ms ease, border-color var(--dur-base) ease; }
+  .pp-group-chev, .pp-group-ic, .pp-card-roles button { transition-property: color, background-color, border-color; }
+  .pp-group-head:hover .pp-group-ic, .pp-group-head:active .pp-group-ic, .pp-card-roles button:active { transform: none; }
+  @starting-style { .pp-badge, .pp-group-pending { transform: none; } }
+}
+/* "שינויים ממתינים" leaves the way it came: fading and shrinking a little (150ms = PENDING_EXIT_MS) */
+.pp-group-pending[data-closing] { opacity: 0; transform: scale(.92); }
+@media (prefers-reduced-motion: reduce) { .pp-group-pending[data-closing] { transform: none; } }
+
+/* ---------- the three category pictures (ServiceIcon: CATEGORY_ICONS) ----------
+   One style for all three: a container that opens and something that springs out of it. Press (feedback): the picture
+   pushes in while the header is pressed. Hover (a real pointer): a taste of the motion. Opening (a deliberate, occasional
+   action): the whole sequence. Closing: transitions back, so nothing snaps and a quick open / close picks up from where
+   it is. Transform, opacity and a line's stroke only; a slight overshoot (a light spring) only where something springs
+   out. Reduced motion: no movement, only fades. Each part moves around its own box (transform-box: fill-box). */
+.svc * { transform-box: fill-box; transform-origin: center; }
+.pp-group-ic .svc { transition: transform 120ms var(--ease-out); }
+.pp-group-head:active .pp-group-ic .svc { transform: scale(.88); }
+
+/* תחומי שירות - the toolbox: the lid hinges on its left corner; the gear waits inside (low, small) and rises turning */
+.svc-g5-lid { transform-origin: 0% 100%; transition: transform 320ms var(--ease-out); }
+.svc-g5-gear { transform: translateY(6px) scale(.7); transition: transform 560ms cubic-bezier(.34, 1.56, .64, 1); }
+@media (hover: hover) and (pointer: fine) {
+  .pp-group-head:hover .svc-g5-lid { transform: rotate(-14deg); }
+  .pp-group-head:hover .svc-g5-gear { transform: translateY(3px) scale(.8) rotate(40deg); }
+}
+.pp-group.open .svc-g5-lid { transform: rotate(-38deg); }
+.pp-group.open .svc-g5-gear { transform: translateY(-6px) scale(1) rotate(300deg); transition-delay: 90ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pp-group-head:active .pp-group-ic .svc { transform: none; }
+  .svc-g5-lid, .svc-g5-gear { transition-property: opacity; }
+  .pp-group-head:hover .svc *, .pp-group.open .svc * { transform: none !important; }
+}
+/* ---------- ביטחון מידע (the safe) and תקשוב (the monitor and its window) ----------
+   The toolbox's recipe: hover clearly opens the container part of the way and shows a glimpse of what is inside;
+   opening plays the whole sequence; closing reverses it with transitions. Big enough to see (3-5px moves, colour). */
+:root { --svc-spring: cubic-bezier(.34, 1.56, .64, 1); }
+
+/* ביטחון מידע - the safe: the door is hinged on its left edge (scaleX reads as a swing) */
+.svc-sf-door { transform-origin: 0% 50%; transition: transform 380ms var(--ease-out); }
+.svc-sf-dial { transition: transform 380ms var(--ease-out); }
+.svc-sf-glow { transition: opacity 260ms var(--ease-out); }
+.svc-sf-item { opacity: 0; transform: scale(.6); transition: transform 520ms var(--svc-spring), opacity 200ms var(--ease-out); }
+@media (hover: hover) and (pointer: fine) {
+  .pp-group-head:hover .svc-sf-door { transform: scaleX(.72); }
+  .pp-group-head:hover .svc-sf-dial { transform: rotate(-60deg); }
+  .pp-group-head:hover .svc-sf-glow { opacity: .55; }
+  .pp-group-head:hover .svc-sf-item { opacity: .9; transform: scale(.7); }
+}
+.pp-group.open .svc-sf-door { transform: scaleX(.16); }
+.pp-group.open .svc-sf-dial { transform: rotate(-180deg); }
+.pp-group.open .svc-sf-glow { opacity: .8; }
+.pp-group.open .svc-sf-item { opacity: 1; transform: translateY(-1px) scale(1.12); transition-delay: 120ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .svc-sf-door, .svc-sf-dial, .svc-sf-item { transition-property: opacity; }
+}
+
+/* ---------- תקשוב - the satellite dish ---------- */
+/* it rests turned aside, turns upward on hover, aims fully on open; the waves leave it one by one */
+.svc-ds-dish { transform-origin: 70% 90%; transform: rotate(-22deg); transition: transform 380ms var(--ease-out); }
+.svc-ds-w { opacity: 0; transform: translate(-3px, 3px) scale(.6); transform-origin: 0% 100%; transition: transform 460ms var(--svc-spring), opacity 200ms var(--ease-out); }
+@media (hover: hover) and (pointer: fine) {
+  .pp-group-head:hover .svc-ds-dish { transform: rotate(-8deg); }
+  .pp-group-head:hover .svc-ds-w.w1 { opacity: 1; transform: none; }
+}
+.pp-group.open .svc-ds-dish { transform: none; transition: transform 480ms var(--svc-spring); }
+.pp-group.open .svc-ds-w { opacity: 1; transform: none; }
+.pp-group.open .svc-ds-w.w1 { transition-delay: 120ms; }
+.pp-group.open .svc-ds-w.w2 { transition-delay: 220ms; }
+.pp-group.open .svc-ds-w.w3 { transition-delay: 320ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .svc-ds-dish, .svc-ds-w { transition-property: opacity; }
+}
+
+/* the domain picture of a permissions card: in its tile at 40px (the picture ~30px), so its outline stays a crisp line
+   instead of a blurred sub-pixel one at 18px; tinted with the domain colour when the card holds a role */
+.pp-card header .dom { width: 40px; height: 40px; border-radius: 11px; transition: background-color var(--dur-base) ease, border-color var(--dur-base) ease; }
+.pp-card header .dom img { width: 76%; height: 76%; }
+.pp-card.set header .dom { background: color-mix(in srgb, var(--dc) 12%, var(--surface)); border-color: color-mix(in srgb, var(--dc) 45%, var(--line)); }
+
+/* the change-reason field: folds open and fades in once a permission changed; reverses when the changes are undone */
+.ppl-reason-reveal { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows var(--dur-resize) var(--ease-out), opacity var(--dur-base) var(--ease-out); }
+.ppl-reason-reveal > .ppl-reason { min-height: 0; overflow: hidden; padding: 3px; margin: -3px; }
+.ppl-reason-reveal[data-open] { grid-template-rows: 1fr; opacity: 1; transition-delay: 0s, 60ms; }
+@media (prefers-reduced-motion: reduce) { .ppl-reason-reveal { transition: opacity var(--dur-base) ease; } }

@@ -11,7 +11,8 @@
 .tag.int { background: var(--accent-wash); color: var(--accent-ink); }
 .tag.sys { background: var(--hold-w); color: var(--hold); }
 .code { display: inline-grid; place-items: center; min-width: 30px; height: 26px; padding: 0 8px; border-radius: 6px; background: var(--accent-soft); color: var(--accent-ink); font-weight: 700; font-family: ui-monospace, Consolas, monospace; }
-.serial { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 13px; color: var(--mute); font-weight: 400; letter-spacing: .02em; }
+/* request, personal and ID numbers: the regular font (no monospace), with even-width digits so columns of numbers line up */
+.serial { font-size: 13px; color: var(--mute); font-weight: 400; font-variant-numeric: tabular-nums; }
 .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
 .dot.bad { background: var(--bad); } .dot.warn { background: var(--warn); } .dot.info { background: var(--info); } .dot.ok { background: var(--ok); }
 
@@ -195,10 +196,12 @@ table.t { width: 100%; border-collapse: collapse; font-size: 14px; }
 .scrim { position: fixed; inset: 0; background: rgba(43, 36, 51, .32); z-index: 60; animation: fade .15s ease-out; }
 .scrim.top { z-index: 70; }
 @keyframes fade { from { opacity: 0; } }
+:root { --drawer-width: min(800px, 100vw); }
 .drawer {
-  position: fixed; top: 0; bottom: 0; inset-inline-start: 0; width: min(800px, 100vw); background: var(--bg); z-index: 61;
+  position: fixed; top: 0; bottom: 0; inset-inline-start: 0; width: var(--drawer-width); background: var(--bg); z-index: 61;
   display: flex; flex-direction: column; box-shadow: 0 0 60px rgba(43, 36, 51, .22); animation: slide 300ms var(--ease-drawer);
 }
+body:has(.ticket.selected, .rq-row.selected, .sync-decision-preview, .audit-row-preview) .drawer { box-shadow: none; }
 /* the panel sits on the right edge (inline-start of the rtl page) and slides in from it; it leaves the same way (Drawer.jsx) */
 @keyframes slide { from { transform: translateX(100%); } }
 .drawer > header { display: flex; align-items: center; gap: 12px; padding: 16px 22px; background: var(--surface); border-bottom: 1px solid var(--line); }
@@ -351,3 +354,17 @@ table.t { width: 100%; border-collapse: collapse; font-size: 14px; }
 
 /* a hint may list names one per line */
 .tip { white-space: pre-line; }
+/* the date picker's "ניקוי התאריכים", at the bottom of its calendar (instead of a ✕ beside the button) */
+.drp-foot { display: flex; justify-content: center; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line-2); }
+.drp-reset { all: unset; display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--ink-2); transition: background-color 150ms var(--ease-out), color 150ms var(--ease-out); }
+.drp-reset .ico { width: 14px; height: 14px; }
+.drp-reset:hover:not(:disabled) { background: var(--hover); color: var(--bad); }
+.drp-reset:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.drp-reset:disabled { opacity: .45; cursor: default; }
+/* the one filter-clearing button (ClearFilters): the word "ניקוי", fading in and out as the old ✕ did */
+.clear-filters { color: var(--ink-2); }
+.clear-filters:hover:not(:disabled) { color: var(--bad); }
+.clear-filters .spin-slot { display: none; }
+.clear-filters { animation: clear-appear 220ms var(--ease-out) both; }
+.clear-filters[data-closing] { animation: clear-disappear 220ms var(--ease-out) both; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .clear-filters { animation: none; } }

@@ -1,0 +1,45 @@
+'use client';
+
+import { useLayoutEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+
+/** How far the strip reaches over the row's own edge: covers the row's corners while they square off (no notch). */
+const OVERLAP = 10;
+
+/**
+ * Joins the open request's row to the side panel: when the list does not reach the panel (the home, where "הקריאות שלי"
+ * is one column of several), a strip in the row's colour fills the room between the row's edge and the panel's, above the
+ * dimming, so the row and the panel read as one piece. Follows the row through the panel's opening and on scroll / resize.
+ */
+export function RowBridge() {
+  const [box, setBox] = useState(null);
+  useLayoutEffect(() => {
+    const measure = () => {
+      const row = document.querySelector('.rq-row.selected');
+      const drawer = document.querySelector('.drawer');
+      if (!row || !drawer) return setBox(null);
+      const bounds = row.getBoundingClientRect();
+      // the panel's inner edge (it sits on the right of the rtl page)
+      const edge = drawer.getBoundingClientRect().left;
+      const next = edge - bounds.right > 0.5 ? { top: bounds.top, height: bounds.height, left: bounds.right - OVERLAP, width: edge - bounds.right + OVERLAP } : null;
+      setBox((previous) => (previous && next && Object.keys(next).every((key) => previous[key] === next[key]) ? previous : next));
+    };
+    measure();
+    let frame = 0;
+    const started = performance.now();
+    const follow = () => {
+      measure();
+      if (performance.now() - started < 450) frame = requestAnimationFrame(follow);
+    };
+    frame = requestAnimationFrame(follow);
+    window.addEventListener('resize', measure);
+    window.addEventListener('scroll', measure, true);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('resize', measure);
+      window.removeEventListener('scroll', measure, true);
+    };
+  }, []);
+  if (!box) return null;
+  return createPortal(<div className="rq-row-bridge" style={box} aria-hidden="true" />, document.body);
+}

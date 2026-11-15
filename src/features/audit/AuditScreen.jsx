@@ -1,7 +1,6 @@
 'use client';
 
 import { Fragment, useEffect, useRef, useState } from 'react';
-import { Button } from '@/components/ui/Button';
 import { DateRangePicker } from '@/components/ui/DateRangePicker';
 import { ExpandRow } from '@/components/ui/ExpandRow';
 import { EmptyState, ErrorNotice, Loading } from '@/components/ui/Feedback';
@@ -15,6 +14,10 @@ import { useSession } from '@/providers/SessionProvider';
 import { ACTION_GROUPS, actionLabel, changedFields, fieldLabel, listChange, mergeOneSave, RESULT } from './labels';
 import { VerifyButton } from './VerifyButton';
 import { AuditTarget } from './AuditTarget';
+import { useRowPreview } from '@/components/booking/useRowPreview';
+import { ClearFilters } from '@/components/ui/ClearFilters';
+import { usePublishDrawerList } from '@/features/bookings/drawerList';
+import { useBookingDrawer } from '@/features/bookings/useBookingDrawer';
 import { useShowValue, useAuditPages } from './useAuditData';
 import { AuditPeople } from './AuditPeople';
 
@@ -61,6 +64,31 @@ export function AuditScreen() {
       .filter((row) => (seen.has(row.id) ? false : seen.add(row.id)))
       .sort((a, b) => b.id - a.id),
   );
+  // the row whose eye opened the booking's side panel: it stands out above the panel's dimming, as in "קריאות". The same
+  // booking can be on several rows, so it is the row that was clicked (else the first row of that booking, e.g. a link)
+  const drawer = useBookingDrawer();
+  const [peekId, setPeekId] = useState(null);
+  const peekRowId = drawer.serial
+    ? (rows.find((row) => row.id === peekId && Number(row.booking_serial) === drawer.serial) ?? rows.find((row) => Number(row.booking_serial) === drawer.serial))?.id ?? null
+    : null;
+  // that row pops out and joins the panel; it fades back as the panel leaves, and cross-fades on ‹ › (useRowPreview)
+  const preview = useRowPreview(peekRowId);
+  // the side panel steps through the bookings of this list ("‹ 3 מתוך 12 ›", ↑ / ↓): each booking once, in the table's order
+  // at the last loaded one, "next" first loads the table's next page (as in "קריאות")
+  usePublishDrawerList([...new Set(rows.map((row) => Number(row.booking_serial)).filter(Boolean))], { hasMore: query.hasNextPage, loadMore: query.fetchNextPage });
+  /** One history row's cells: when, who, action, what (a booking with its eye), source, result. */
+  const rowCells = (row) => {
+    const result = RESULT[row.result] ?? { label: row.result, tone: '' };
+    const source = sourceTag(row.source);
+    return [
+      fmtDateTime(row.occurred_at),
+      row.actor_type === 'system' ? 'המערכת' : row.actor_name ?? '—',
+      actionLabel(row.action),
+      <AuditTarget key="target" row={row} onPeek={setPeekId} />,
+      source ? <span className={`tag ${source.tone}`}>{source.label}</span> : '—',
+      <span key="result" className={`chip ${result.tone}`}>{result.label}</span>,
+    ];
+  };
   const total = lists.reduce((sum, list) => sum + (list.data?.pages[0]?.meta.total ?? 0), 0);
 
   // the card ends at the window's bottom and only the table scrolls inside it
@@ -115,9 +143,7 @@ export function AuditScreen() {
           </Select>
           <DateRangePicker value={{ from: filters.from, to: filters.to }} onChange={(range) => update(range)} />
           {filtered ? (
-            <Button size="sm" variant="ghost" icon="x" onClick={() => { setFilters(EMPTY); setSearchText(''); }}>
-              ניקוי
-            </Button>
+            <ClearFilters onClick={() => { setFilters(EMPTY); setSearchText(''); }} />
           ) : null}
           {/* the count and the integrity check close the bar */}
           <span className="report-export">
@@ -134,6 +160,7 @@ export function AuditScreen() {
           <div className="card-body"><EmptyState title={filtered ? 'אין רשומות שמתאימות לסינון.' : 'עדיין אין רשומות בהיסטוריה.'} /></div>
         ) : (
           <div className={`fit-fill${query.isPlaceholderData ? ' is-stale' : ''}`}>
+          {preview.node}
           <div ref={scroller} className="queue-scroll audit-scroll">
             <table className="t">
               <thead>
@@ -149,20 +176,11 @@ export function AuditScreen() {
               <tbody>
                 {rows.map((row) => {
                   const isOpen = open === row.id;
-                  const result = RESULT[row.result] ?? { label: row.result, tone: '' };
-                  const source = sourceTag(row.source);
                   const changes = changedFields(row.before, row.after);
                   return (
                     <Fragment key={row.id}>
-                      <tr className={`clk${isOpen ? ' audit-open' : ''}`} aria-expanded={isOpen} tabIndex={0} onClick={() => setOpen(isOpen ? null : row.id)} onKeyDown={(event) => (event.key === 'Enter' || event.key === ' ') && (event.preventDefault(), setOpen(isOpen ? null : row.id))}>
-                        <td style={{ whiteSpace: 'nowrap' }}>{fmtDateTime(row.occurred_at)}</td>
-                        <td>
-                          {row.actor_type === 'system' ? 'המערכת' : row.actor_name ?? '—'}
-                        </td>
-                        <td>{actionLabel(row.action)}</td>
-                        <td><AuditTarget row={row} /></td>
-                        <td>{source ? <span className={`tag ${source.tone}`}>{source.label}</span> : '—'}</td>
-                        <td><span className={`chip ${result.tone}`}>{result.label}</span></td>
+                      <tr {...preview.rowAttrs(row.id)} className={`clk${isOpen ? ' audit-open' : ''}${preview.rowClass(row.id)}`} aria-expanded={isOpen} tabIndex={0} onClick={() => setOpen(isOpen ? null : row.id)} onKeyDown={(event) => (event.key === 'Enter' || event.key === ' ') && (event.preventDefault(), setOpen(isOpen ? null : row.id))}>
+                        {rowCells(row).map((cell, index) => <td key={index} style={index === 0 ? { whiteSpace: 'nowrap' } : undefined}>{cell}</td>)}
                       </tr>
                       <ExpandRow open={isOpen} colSpan={6}>
                         <div className="audit-detail-body">

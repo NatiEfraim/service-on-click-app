@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatedText } from '@/components/ui/AnimatedText';
 import { Button } from '@/components/ui/Button';
+import { ClearFilters } from '@/components/ui/ClearFilters';
 import { DateRangePicker } from '@/components/ui/DateRangePicker';
 import { Field } from '@/components/ui/Field';
 import { Select } from '@/components/ui/Select';
@@ -16,7 +17,8 @@ import { useDebounced } from '@/lib/useDebounced';
 import { useFitToWindow } from '@/lib/useFitToWindow';
 import { RequestDrawer } from './RequestDrawer';
 import { RequestRow } from './RequestRow';
-import { isChanged, markCelebrated, markSeen, useSeen, wasCelebrated } from './seen';
+import { RowBridge } from './RowBridge';
+import { celebrationKey, isChanged, markCelebrated, markSeen, useSeen, wasCelebrated } from './seen';
 import { counterOf, stageOf } from './requesterData';
 import { STAGE_SHORT } from '@/lib/labels';
 import { useCatalog, useMyRequests } from './useRequester';
@@ -72,11 +74,13 @@ const statusNameOf = (row) => row.statusName;
  * "הקריאות שלי": an icon and name for every category the user may open requests in (the new topics and the service
  * domains); picking one lists their requests in it. `full` is the whole-page version, otherwise the home's side panel.
  */
-export function MyRequestsPanel({ full = false, category, onCategory, bucket: rawBucket = null, onBucket = () => {}, sent = null, onSentSeen = () => {}, onAll }) {
+export function MyRequestsPanel({ full = false, extraCategories = null, category, onCategory, bucket: rawBucket = null, onBucket = () => {}, sent = null, onSentSeen = () => {}, onAll }) {
   const bucket = BUCKETS.some((option) => option.id === rawBucket) ? rawBucket : null;
   // the categories (topics and domains) come from GET /requester/catalog, already limited to what the user may open
   const categories = useCatalog();
-  const list = categories.data?.categories ?? [];
+  // a management role passes its own list (the domains it manages - the super admin: all); a regular user gets the
+  // catalog's categories (what they may open). In domain order, so nothing moves or swaps once data arrives.
+  const list = [...(extraCategories ?? categories.data?.categories ?? [])].sort((a, b) => a.typeIds[0] - b.typeIds[0]);
   // a ביטחון מידע / תקשוב type's own picture (by booking type id); other domains show their domain badge
   const typeImg = Object.fromEntries((categories.data?.topics ?? []).flatMap((topic) => topic.groups.flatMap((group) => group.types.map((type) => [type.id, type.img]))));
   const current = list.find((candidate) => candidate.id === category) ?? null;
@@ -109,16 +113,22 @@ export function MyRequestsPanel({ full = false, category, onCategory, bucket: ra
   const [range, setRange] = useState({ from: null, to: null });
   const allRows = requests.data ?? [];
   const changedRows = allRows.filter((row) => isChanged(seen, row));
-  // a completion that is new since the last visit gets a one-time celebration; a played one is remembered
-  // once due it stays due until it has played, so opening the request (which marks it seen) does not cancel it
+  // Keep an update queued even when opening the drawer marks it as seen.
   const [celebrated, setCelebrated] = useState(() => new Set());
   const [due, setDue] = useState(() => new Set());
-  const newlyDue = typeof window === 'undefined' ? [] : allRows.filter((row) => counterOf(row) === 'done' && isChanged(seen, row) && !due.has(row.id) && !wasCelebrated(row.id));
-  if (newlyDue.length) setDue(new Set([...due, ...newlyDue.map((row) => row.id)]));
-  const celebrating = (row) => due.has(row.id) && !celebrated.has(row.id) && !wasCelebrated(row.id);
-  const finishCelebration = (id) => {
-    markCelebrated(id);
-    setCelebrated((previous) => new Set(previous).add(id));
+  const newlyDue = changedRows
+    .map(celebrationKey)
+    .filter((key) => !due.has(key) && !celebrated.has(key) && !wasCelebrated(key));
+  if (newlyDue.length) setDue(new Set([...due, ...newlyDue]));
+  const celebrating = (row) => {
+    const key = celebrationKey(row);
+    return due.has(key) && !celebrated.has(key) && !wasCelebrated(key);
+  };
+  const finishCelebration = (row) => {
+    const key = celebrationKey(row);
+    markCelebrated(key);
+    setCelebrated((previous) => new Set(previous).add(key));
+    setDue((previous) => new Set([...previous].filter((candidate) => candidate !== key)));
   };
   // "סימון הכל כנקרא" fades out instead of vanishing (as the management "ניקוי הסינון"), keeping its last count meanwhile
   const markAll = usePresence(changedRows.length > 0, MARK_ALL_EXIT_MS);
@@ -202,7 +212,7 @@ export function MyRequestsPanel({ full = false, category, onCategory, bucket: ra
             <Button size="sm" icon="sliders" aria-expanded={filtersOpen} onClick={() => setFiltersOpen((open) => !open)}>
               <AnimatedText>{advanced ? `סינון (${advanced})` : 'סינון'}</AnimatedText>
             </Button>
-            {advanced ? <Button size="sm" variant="ghost" icon="x" className="requests-clear" aria-label="ניקוי הסינון" data-tip="ניקוי הסינון" onClick={clearFilters} /> : null}
+            {advanced ? <ClearFilters onClick={clearFilters} /> : null}
             {markAll.mounted ? (
               <Button size="sm" variant="ghost" icon="check" className="rq-mark-all" data-closing={markAll.closing || undefined} disabled={markAll.closing} onClick={() => markSeen(changedRows)}>
                 סימון הכל כנקרא ({markAllCount})
@@ -260,7 +270,7 @@ export function MyRequestsPanel({ full = false, category, onCategory, bucket: ra
         <ErrorNotice error={requests.error} title="לא ניתן להציג את הקריאות." onRetry={() => void requests.refetch()} />
       ) : rows.length ? (
         <>
-        <ul className="rq-list">
+        <ul className="rq-list" data-loading={requests.isPlaceholderData ? '' : undefined} aria-busy={requests.isPlaceholderData || undefined}>
           {rows.map((row) => (
             <li key={row.id}>
               <RequestRow
@@ -268,9 +278,9 @@ export function MyRequestsPanel({ full = false, category, onCategory, bucket: ra
                 img={typeImg[row.bookingTypeId]}
                 changed={isChanged(seen, row)}
                 selected={opened?.id === row.id}
-                celebrating={celebrating(row)}
+                celebrating={celebrating(row) ? celebrationKey(row) : null}
                 onOpen={() => open(row)}
-                onCelebrated={() => finishCelebration(row.id)}
+                onCelebrated={() => finishCelebration(row)}
               />
             </li>
           ))}
@@ -289,7 +299,8 @@ export function MyRequestsPanel({ full = false, category, onCategory, bucket: ra
         <EmptyState title={current ? `אין לך קריאות ב${current.name}` : 'עוד לא פתחת קריאות'}>בחר סוג קריאה כדי לפתוח קריאה ראשונה</EmptyState>
       )
       )}
-      {opened ? <RequestDrawer row={opened} rows={rows} onGo={open} onClose={() => setOpened(null)} celebrate={celebrating(opened)} onCelebrated={() => finishCelebration(opened.id)} /> : null}
+      {opened ? <RowBridge key={opened.id} /> : null}
+      {opened ? <RequestDrawer row={opened} rows={rows} onGo={open} onClose={() => setOpened(null)} celebrate={celebrating(opened) ? celebrationKey(opened) : null} onCelebrated={() => finishCelebration(opened)} /> : null}
     </section>
   );
 }
