@@ -2,11 +2,14 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
+import { hasTypeIcon, TypeIcon } from '@/components/booking/TypeIcon';
 import { Button } from '@/components/ui/Button';
+import { DatePicker } from '@/components/ui/DateRangePicker';
 import { EmptyState, ErrorNotice, FormError, Loading } from '@/components/ui/Feedback';
 import { Icon } from '@/components/ui/Icon';
-import { Select } from '@/components/ui/Select';
-import { ATTACH_ACCEPT, fetchForm, MAX_FILE_BYTES, MAX_FILES, submitRequest } from './requesterData';
+import { TimePicker } from '@/components/ui/TimePicker';
+import { ChoiceField } from './ChoiceField';
+import { ATTACH_ACCEPT, choicePath, fetchForm, MAX_FILE_BYTES, MAX_FILES, submitRequest } from './requesterData';
 import { markSeen } from './seen';
 import { REQUESTER_KEY } from './useRequester';
 
@@ -14,9 +17,19 @@ import { REQUESTER_KEY } from './useRequester';
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
 
 /** The error of one field, or '' when its value is fine (the server checks the same again). */
-function fieldError(field, raw) {
+function fieldError(field, raw, typed) {
   const value = String(raw ?? '').trim();
   if (!value) return field.required ? 'שדה חובה' : '';
+  if (field.kind === 'select') {
+    const chosen = choicePath(field.options, value).at(-1);
+    if (chosen?.children.length) return 'יש לבחור תת-אפשרות';
+    if (chosen?.isInput) {
+      const text = String(typed ?? '').trim();
+      if (!text) return `יש להזין ערך עבור "${chosen.name}"`;
+      if (chosen.inputType === 'number' && Number.isNaN(Number(text))) return 'יש להזין מספר';
+    }
+    return '';
+  }
   if (field.regex && !field.regex.test(value)) return 'הערך אינו בפורמט הנדרש';
   if (field.inputType === 'number' && Number.isNaN(Number(value))) return 'יש להזין מספר';
   return '';
@@ -34,6 +47,8 @@ export function RequestForm({ found, onHome, onDone }) {
   const form = useQuery({ queryKey: [...REQUESTER_KEY, 'form', type.id], queryFn: ({ signal }) => fetchForm(type.id, signal), staleTime: 5 * 60_000 });
   const fields = flatten(form.data ?? []);
   const [values, setValues] = useState({});
+  // the value typed with a chosen "type in a value" choice, by its field id
+  const [typed, setTyped] = useState({});
   const [touched, setTouched] = useState(false);
   const [files, setFiles] = useState([]);
   const [fileNote, setFileNote] = useState('');
@@ -43,7 +58,7 @@ export function RequestForm({ found, onHome, onDone }) {
   const client = useQueryClient();
 
   const send = useMutation({
-    mutationFn: () => submitRequest(type.id, values, files),
+    mutationFn: () => submitRequest(type.id, values, files, typed),
     onSuccess: (booking) => {
       // the user's own new request is already "seen": it must not stand out as changed
       if (booking?.uuid) markSeen([{ id: booking.uuid, statusId: booking.status_id ?? booking.status?.id }]);
@@ -53,7 +68,7 @@ export function RequestForm({ found, onHome, onDone }) {
     onError: (error) => {
       const byField = {};
       for (const [key, messages] of Object.entries(error?.fieldErrors ?? {})) {
-        const match = /^values\.(\d+)/.exec(key);
+        const match = /^(?:option_)?values\.(\d+)/.exec(key);
         if (match) byField[match[1]] = messages[0];
         else if (key.startsWith('files')) byField.files = messages[0];
       }
@@ -61,7 +76,7 @@ export function RequestForm({ found, onHome, onDone }) {
     },
   });
 
-  const errors = Object.fromEntries(fields.map((field) => [field.id, fieldError(field, values[field.id])]));
+  const errors = Object.fromEntries(fields.map((field) => [field.id, fieldError(field, values[field.id], typed[field.id])]));
   const valid = fields.every((field) => !errors[field.id]);
   const set = (id, value) => {
     setValues((previous) => ({ ...previous, [id]: value }));
@@ -123,7 +138,7 @@ export function RequestForm({ found, onHome, onDone }) {
       <section className="card">
         <div className="rq-form-head">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <span className="ic">{type.img ? <img src={type.img} alt="" /> : <Icon name="layers" />}</span>
+          <span className="ic">{hasTypeIcon(type.id) ? <TypeIcon bookingTypeId={type.id} /> : type.img ? <img src={type.img} alt="" /> : <Icon name="layers" />}</span>
           <div>
             <h1>{type.name}</h1>
             {type.description ? <p className="muted">{type.description}</p> : null}
@@ -157,10 +172,20 @@ export function RequestForm({ found, onHome, onDone }) {
                     {field.kind === 'textarea' ? (
                       <textarea className="input" rows={4} {...props} />
                     ) : field.kind === 'select' ? (
-                      <Select {...props}>
-                        <option value="">בחירה…</option>
-                        {field.options.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}
-                      </Select>
+                      <ChoiceField
+                        id={props.id}
+                        field={field}
+                        value={values[field.id] ?? ''}
+                        typed={typed[field.id] ?? ''}
+                        invalid={Boolean(error)}
+                        onChange={(value) => set(field.id, value)}
+                        onTyped={(value) => setTyped((previous) => ({ ...previous, [field.id]: value }))}
+                      />
+                    ) : field.inputType === 'date' ? (
+                      // the app's own calendar (not the browser's); its value is 'YYYY-MM-DD' as the API expects
+                      <DatePicker value={values[field.id] ?? ''} onChange={(day) => set(field.id, day ?? '')} label={field.label} />
+                    ) : field.inputType === 'time' ? (
+                      <TimePicker value={values[field.id] ?? ''} onChange={(time) => set(field.id, time ?? '')} label={field.label} invalid={Boolean(error)} />
                     ) : (
                       <input className="input" type={field.inputType} {...props} />
                     )}

@@ -109,8 +109,11 @@
 .btn.rq-send:hover:not(:disabled) { filter: brightness(0.92); }
 /* a category with a colour picture: white tile, the picture keeps its own colours (also when picked) */
 .rq-cat .ic.pic, .rq-cat[aria-pressed="true"] .ic.pic { background: var(--surface); border: 1px solid var(--line); }
-.rq-cat .ic.pic img { width: 26px; height: 26px; }
-.rq-cat[aria-pressed="true"] .ic.pic { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.rq-cat .ic.pic img { width: 32px; height: 32px; }
+/* a new category's list on its way: the previous one stays, dimmed, so nothing jumps */
+.rq-list { transition: opacity var(--dur-base) ease; }
+.rq-list[data-loading] { opacity: .55; }
+/* the selected button itself is outlined; its picture keeps its plain frame */
 .rq-more { display: flex; margin: 12px auto 0; }
 /* a request row opens its side panel */
 .rq-list li { padding: 0; }
@@ -255,8 +258,10 @@ button.rq-counter:focus-visible { outline: 2px solid var(--accent); outline-offs
 @keyframes rq-check {
   0% { transform: scale(0); opacity: 0; }
   18% { transform: scale(1.15); opacity: 1; }
-  28%, 75% { transform: scale(1); opacity: 1; }
-  100% { transform: scale(.9); opacity: 0; }
+  28% { transform: scale(1); opacity: 1; }
+  /* the pop-in springs; the fade-out must not (an overshooting curve drops opacity to nothing at once): a smooth ease */
+  62% { transform: scale(1); opacity: 1; animation-timing-function: cubic-bezier(0.77, 0, 0.175, 1); }
+  100% { transform: scale(.92); opacity: 0; }
 }
 @keyframes rq-confetti {
   0% { transform: translate(0, 0) rotate(0) scale(.4); opacity: 0; }
@@ -286,7 +291,10 @@ button.rq-counter:focus-visible { outline: 2px solid var(--accent); outline-offs
 @media (prefers-reduced-motion: reduce) { .rq-ticket { transition: none; } }
 /* in the side panel the celebration sits on the route's "סגירה" station, so it is where the user looks */
 .station { position: relative; }
-.rq-celebrate.on-station { position: absolute; top: -8px; left: 50%; margin-left: -11px; z-index: 2; }
+/* above its station's dot (not on it); the rail scrolls sideways, which clips anything above its box, so while it plays
+   the rail gets headroom, taken back by a negative margin so nothing on the page moves */
+.rq-celebrate.on-station { position: absolute; top: -30px; left: 50%; margin-left: -11px; z-index: 2; }
+.rail:has(.rq-celebrate.on-station) { padding-top: 40px; margin-top: -34px; }
 /* the flowing border covers the 4px domain-colour edge too (it sits outside the padding box, where ::before starts),
    so the white of the selected row never shows outside its frame */
 .rq-ticket::before { inset-inline-start: -4px; }
@@ -337,3 +345,28 @@ button.rq-counter:focus-visible { outline: 2px solid var(--accent); outline-offs
 .rq-new.bad { background: var(--bad-w); color: var(--bad); border-color: color-mix(in srgb, var(--bad) 30%, transparent); }
 .rq-new.bad .fx .bub { background: radial-gradient(circle at 35% 30%, #F6B8AE, #D2553F 75%); }
 .rq-new.bad .fx .spark { color: var(--bad); }
+
+/* the strip that joins the open row to the side panel when the list stops short of it (RowBridge); the row's colour,
+   above the dimming */
+.rq-row-bridge { position: fixed; z-index: 61; pointer-events: none; background: var(--bg); animation: rq-bridge-in 320ms var(--ease-out) both; }
+/* it grows out of the row (its left edge) toward the panel */
+@keyframes rq-bridge-in { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@media (prefers-reduced-motion: reduce) { .rq-row-bridge { animation: rq-bridge-fade 200ms ease both; } }
+@keyframes rq-bridge-fade { from { opacity: 0; } }
+
+/* the station's celebration fades out smoothly whenever it ends (RequestDrawer keeps it mounted for 450ms) */
+.rq-celebrate.on-station { transition: opacity 450ms cubic-bezier(0.77, 0, 0.175, 1), transform 450ms cubic-bezier(0.77, 0, 0.175, 1); }
+.rq-celebrate.on-station.leaving { opacity: 0; transform: scale(.92); }
+
+/* a topic card ends at the bottom of the window; its list scrolls inside it (TopicCard), never the page */
+.rq-topic-scroll { overflow-y: auto; overscroll-behavior: contain; }
+
+/* "סימון הכל כנקרא" never makes the head taller than its 32px (it overlaps the space around it instead), so a category
+   with updates and one without line up exactly and the card does not shift when switching between them */
+.rq-mine-head .rq-mark-all { margin-block: -8px; }
+
+/* a choice field: its sub-choice dropdown and its "type in a value" box fade and rise in as they appear (ChoiceField) */
+.rq-choice { display: grid; gap: 8px; }
+.rq-choice-step { transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out); }
+@starting-style { .rq-choice-step { opacity: 0; transform: translateY(-4px); } }
+@media (prefers-reduced-motion: reduce) { .rq-choice-step { transition-property: opacity; transform: none; } }

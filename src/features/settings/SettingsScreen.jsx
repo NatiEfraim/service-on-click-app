@@ -12,8 +12,10 @@ import { useFitToWindow } from '@/lib/useFitToWindow';
 import { useSetSearchParams } from '@/lib/useSetSearchParams';
 import { useSession } from '@/providers/SessionProvider';
 import { TABS } from './constants';
+import { topicHandlerRole } from '@/lib/topicTypes';
 import { BarberDaysTab } from './BarberDaysTab';
 import { DatesTab } from './DatesTab';
+import { FormTab } from './FormTab';
 import { OperationsTab } from './OperationsTab';
 import { OptionsTab } from './OptionsTab';
 import { choiceFields } from './options';
@@ -48,8 +50,14 @@ export function SettingsScreen() {
   // Keep the statement tab hidden until it is needed again.
   const showStatement = false;
   const hidden = new Set(showStatement && (me.is_super_admin || me.is_admin) ? [] : ['statement']);
-  // Choice options stay hidden until mobile synchronization is available.
-  hidden.add('options');
+  // ביטחון מידע / תקשוב forms live on the website only (not in the mobile app), so the system admin edits them here:
+  // the whole form (fields, their order, types and choice lists) and its choice options. Every other domain's form is
+  // the mobile app's, and stays read-only until mobile synchronization is available.
+  const webForm = topicHandlerRole(bookingTypeId) !== null;
+  if (!webForm || !me.is_super_admin) hidden.add('form');
+  if (!webForm) hidden.add('options');
+  // these requests have no handling target (one role handles them; there is no approval route to time)
+  if (webForm) hidden.add('target');
   // as in the mobile app, a domain shows only the settings it has: no blocked dates (equipment, construction),
   // no choice fields (barber) or no operations settings means no tab for them
   if (query.data) {
@@ -119,11 +127,12 @@ export function SettingsScreen() {
         <Tabs tabs={tabs} value={tab} onChange={setTab} label="הגדרות התחום" />
         <div className="st-panel st-panel-scroll" role="tabpanel" aria-label={tabs.find((candidate) => candidate.id === tab)?.label}>
           <div dir="rtl">
+          {tab === 'form' && webForm && me.is_super_admin ? <FormTab unitId={unitId} bookingTypeId={bookingTypeId} settings={settings} /> : null}
           {tab === 'target' ? <TargetTab bookingTypeId={bookingTypeId} /> : null}
           {tab === 'refs' ? <OperationsTab unitId={unitId} bookingTypeId={bookingTypeId} settings={settings} ownUnit={ownUnit} /> : null}
           {tab === 'dates' ? <DatesTab unitId={unitId} bookingTypeId={bookingTypeId} settings={settings} ownUnit={ownUnit} ownUnitId={me.user.unit_id} typeName={name} /> : null}
           {tab === 'barber' ? <BarberDaysTab /> : null}
-          {tab === 'options' ? <OptionsTab unitId={unitId} bookingTypeId={bookingTypeId} settings={settings} /> : null}
+          {tab === 'options' ? <OptionsTab unitId={unitId} bookingTypeId={bookingTypeId} settings={settings} editable={webForm && me.is_super_admin} /> : null}
           {tab === 'statement' ? <StatementTab unitId={unitId} bookingTypeId={bookingTypeId} settings={settings} /> : null}
         </div></div>
       </section>

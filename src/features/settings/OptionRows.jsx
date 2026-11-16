@@ -1,5 +1,6 @@
 'use client';
 
+import { AnimatedText } from '@/components/ui/AnimatedText';
 import { Button } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chips';
 import { OPTION_FIELD_TYPES } from '@/lib/labels';
@@ -13,10 +14,10 @@ function canHoldChildren(option) {
   return option.has_category;
 }
 
-export function OptionRows({ nodes, depth, canEdit, fieldTypes, onEdit, onAddChild, onRemove, lastRoot }) {
+export function OptionRows({ nodes, depth, canEdit, fieldTypes, onEdit, onAddChild, onRemove, lastRoot, removingId = null }) {
   return (
     <>
-      {nodes.map((node) => {
+      {nodes.map((node, index) => {
         const { option } = node;
         const isCategory = node.children.length > 0;
         // a choice keeps at least one option; a category must be emptied first
@@ -24,8 +25,8 @@ export function OptionRows({ nodes, depth, canEdit, fieldTypes, onEdit, onAddChi
         const typed = option.field_type_id != null && option.field_type_id !== FIELD_TYPE_TEXT;
         return (
           <div key={option.id}>
-            <div className={`st-opt${isCategory ? ' cat' : ''}`} style={{ '--depth': depth }}>
-              <span className="name">{option.name}</span>
+            <div className={`st-opt${isCategory ? ' cat' : ''}${removingId === option.id ? ' leaving' : ''}`} style={{ '--depth': depth, '--i': Math.min(index, 12) }}>
+              <span className="name"><AnimatedText>{option.name}</AnimatedText></span>
               {option.is_input ? <Chip tone="acc">הזנת ערך</Chip> : null}
               {typed ? <Chip>{fieldTypeName(option.field_type_id, fieldTypes)}</Chip> : null}
               {isCategory ? <Chip>{node.children.length} תתי-אפשרויות</Chip> : null}
@@ -40,7 +41,7 @@ export function OptionRows({ nodes, depth, canEdit, fieldTypes, onEdit, onAddChi
               ) : null}
             </div>
             {isCategory ? (
-              <OptionRows nodes={node.children} depth={depth + 1} canEdit={canEdit} fieldTypes={fieldTypes} onEdit={onEdit} onAddChild={onAddChild} onRemove={onRemove} lastRoot={false} />
+              <OptionRows nodes={node.children} depth={depth + 1} canEdit={canEdit} fieldTypes={fieldTypes} onEdit={onEdit} onAddChild={onAddChild} onRemove={onRemove} lastRoot={false} removingId={removingId} />
             ) : null}
           </div>
         );

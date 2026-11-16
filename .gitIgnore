@@ -34,3 +34,7 @@ coverage/
 
 # Claude Code: personal local instructions, never committed
 CLAUDE.local.md
+
+# Claude Code skills and agent files: for this machine only, never committed
+.claude/
+.agents/

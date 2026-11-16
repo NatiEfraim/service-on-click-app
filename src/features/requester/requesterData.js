@@ -17,7 +17,7 @@ export const MAX_FILE_BYTES = 10 * 1024 * 1024;
  * GET /requester/catalog, shaped for the screens. The server already keeps only what the user may open
  * ("user_<id>" permission and the user's unit). Request types are identified by their booking type id.
  * - topics: [{ id (server name), name, img, groups: [{ id, name, types: [{ id, key, name, description, img }] }] }]
- * - categories: the topics and the plain domains, for "הקריאות שלי": [{ id, name, img, typeIds }]
+ * - categories: each request type of the topics, then the plain domains, for "הקריאות שלי": [{ id, name, img, typeIds }]
  */
 export async function fetchCatalog(signal) {
   const data = await requesterApi.catalog(signal);
@@ -40,10 +40,26 @@ export async function fetchCatalog(signal) {
   }));
   const domains = [...(data?.domains ?? [])].sort(byPosition);
   const categories = [
-    ...topics.map((topic) => ({ id: topic.id, name: topic.name, img: topic.img, typeIds: topic.groups.flatMap((group) => group.types.map((type) => type.id)) })),
+    // every request type of a topic is a category of its own (not the topic as one), with the same id a domain gets
+    // ("d<id>"), so the super admin's full domain list adds nothing twice and nothing appears, then vanishes
+    ...topics.flatMap((topic) => topic.groups.flatMap((group) => group.types.map((type) => ({ id: `d${type.id}`, name: type.name, img: type.img, typeIds: [type.id] })))),
     ...domains.map((domain) => ({ id: `d${domain.id}`, name: domain.display_name, img: domainIconSrc(domain.id), typeIds: [domain.id] })),
   ];
   return { topics, categories };
+}
+
+/** Filter categories for the user’s own requests, including types missing from the permission-filtered catalogs. */
+export function requestCategories(rows, catalogCategories = [], managedCategories = []) {
+  const categories = new Map(managedCategories.map((category) => [category.id, category]));
+  for (const category of catalogCategories) categories.set(category.id, category);
+  for (const { bookingTypeId, typeName } of rows) {
+    if (bookingTypeId == null || !typeName) continue;
+    const id = 'd' + bookingTypeId;
+    if (!categories.has(id)) {
+      categories.set(id, { id, name: typeName, img: domainIconSrc(bookingTypeId), typeIds: [bookingTypeId] });
+    }
+  }
+  return [...categories.values()].sort((a, b) => a.typeIds[0] - b.typeIds[0]);
 }
 
 /** The type with its topic and group, for the form's breadcrumb; null when the catalog does not offer it. */
@@ -75,6 +91,33 @@ const FIELD_KIND = {
   radio: ['select'],
 };
 
+/**
+ * A choice as the form uses it: a "type in a value" choice (isInput) asks for a value of its own type (inputType, as
+ * FIELD_KIND maps the server's type name); a list carries its sub-choices (children).
+ */
+function toChoice(raw) {
+  const [, inputType] = FIELD_KIND[raw.field_type?.name] ?? ['text', 'text'];
+  return {
+    id: raw.id,
+    name: raw.name ?? '',
+    isInput: Boolean(raw.is_input),
+    inputType,
+    ltr: ['tel', 'email', 'url', 'number'].includes(inputType),
+    children: (raw.children ?? []).map(toChoice),
+  };
+}
+
+/** The chain of choices from the field's top level down to the one with this id ([] when none is chosen). */
+export function choicePath(options, id) {
+  if (id === undefined || id === null || id === '') return [];
+  for (const option of options) {
+    if (String(option.id) === String(id)) return [option];
+    const below = choicePath(option.children, id);
+    if (below.length) return [option, ...below];
+  }
+  return [];
+}
+
 /** A field as the form draws it; `regex` comes from the field's `validations`. */
 function toField(raw) {
   const [kind, inputType] = FIELD_KIND[raw.field_type?.name] ?? ['text', 'text'];
@@ -92,7 +135,7 @@ function toField(raw) {
     ltr: ['tel', 'email', 'url', 'number'].includes(inputType),
     required: Boolean(raw.is_required),
     regex,
-    options: raw.options ?? [],
+    options: (raw.options ?? []).map(toChoice),
     children: [...(raw.children ?? [])].sort((a, b) => a.position - b.position).map(toField),
   };
 }
@@ -108,12 +151,16 @@ export async function fetchForm(typeId, signal) {
 
 /**
  * Opens a request (POST /bookings/{id}, multipart): `values` maps field id → value (a select's value is its option id),
- * `files` are the attachments. Returns the new booking; a 422 carries per-field messages (`values.<id>`, `files.<n>`).
+ * `typed` maps a choice field id → the value typed with its chosen "type in a value" choice (option_values), `files` are
+ * the attachments. Returns the new booking; a 422 carries per-field messages (`values.<id>`, `option_values.<id>`, `files.<n>`).
  */
-export async function submitRequest(typeId, values, files) {
+export async function submitRequest(typeId, values, files, typed = {}) {
   const body = new FormData();
   for (const [fieldId, value] of Object.entries(values)) {
     if (value !== undefined && value !== null && value !== '') body.append(`values[${fieldId}]`, value);
+  }
+  for (const [fieldId, value] of Object.entries(typed)) {
+    if (value !== undefined && value !== null && String(value).trim() !== '') body.append(`option_values[${fieldId}]`, value);
   }
   for (const file of files) body.append('files[]', file);
   return requesterApi.create(typeId, body);
@@ -124,34 +171,31 @@ export async function fetchCounters(signal) {
   return requesterApi.counters(signal);
 }
 
-/** GET /bookings/my-bookings page size (PaginationEnum::PER_PAGE on the API), and how many pages to read at most (200 requests). */
+/** GET /bookings/my-bookings page size and the page limit for request history. */
 const PAGE_SIZE = 20;
 const MAX_PAGES = 10;
 
 /**
- * The user's requests from GET /bookings/my-bookings (up to 200, newest first), limited to `typeIds` when given
- * (a category of "הקריאות שלי"). Row shape: id (uuid), typeName, bookingTypeId, serial, createdAt, updatedAt, statusId, statusName.
+ * The user's requests from GET /bookings/my-bookings, newest first. The home panel reads every open request.
  */
-export async function fetchMyRequests(typeIds, signal) {
+export async function fetchMyRequests(signal, { openOnly = false } = {}) {
   // the API sends 20 a page with no paging meta: a short page is the last one
   const bookings = [];
-  for (let page = 1; page <= MAX_PAGES; page += 1) {
-    const rows = (await requesterApi.myBookings(page, null, signal)).data ?? [];
+  for (let page = 1; openOnly || page <= MAX_PAGES; page += 1) {
+    const rows = (await requesterApi.myBookings(page, openOnly ? OPEN_STATUS_IDS : null, signal)).data ?? [];
     bookings.push(...rows);
     if (rows.length < PAGE_SIZE) break;
   }
-  return bookings
-    .filter((booking) => !typeIds || typeIds.includes(booking.booking_type?.id))
-    .map((booking) => ({
-      id: booking.uuid,
-      typeName: booking.booking_type?.display_name ?? '',
-      bookingTypeId: booking.booking_type?.id,
-      serial: booking.serial_number,
-      createdAt: booking.created_at,
-      updatedAt: booking.updated_at,
-      statusId: booking.status?.id,
-      statusName: booking.status?.display_name ?? '',
-    }));
+  return bookings.map((booking) => ({
+    id: booking.uuid,
+    typeName: booking.booking_type?.display_name ?? '',
+    bookingTypeId: booking.booking_type?.id,
+    serial: booking.serial_number,
+    createdAt: booking.created_at,
+    updatedAt: booking.updated_at,
+    statusId: booking.status?.id,
+    statusName: booking.status?.display_name ?? '',
+  }));
 }
 
 /**

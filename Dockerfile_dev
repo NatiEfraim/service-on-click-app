@@ -1,7 +1,6 @@
 # ---------- Build stage: install deps and build the Next.js app ----------
 FROM node:24-alpine AS builder
 
-
 # Server-side proxy: next.config.mjs rewrites /api/* → API_ORIGIN/api/*
 ENV API_ORIGIN=http://denverdev.idf
 # Client-side axios baseURL used in ADFS mode (baked into bundle at build time)
@@ -11,12 +10,10 @@ ENV NEXT_PUBLIC_DEV_LOGIN=false
 # ADFS iframe src: loads ${NEXT_PUBLIC_ADFS_URL}/api/token and posts the token back
 ENV NEXT_PUBLIC_ADFS_URL=https://vm0099adfs.army.secret
 ENV NEXT_TELEMETRY_DISABLED=1
-
 WORKDIR /app
 
 COPY package.json package-lock.json .npmrc ./
 RUN npm ci
-
 COPY . .
 
 # Swap in the ADFS axios client and auth hook; page.js is portal-hatal-specific and not swapped.
@@ -32,15 +29,10 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
-
 WORKDIR /var/www/html
-
 COPY --from=builder --chown=node:node /app/.next/standalone ./
 COPY --from=builder --chown=node:node /app/.next/static ./.next/static
 COPY --from=builder --chown=node:node /app/public ./public
-
 USER node
-
 EXPOSE 3000
-
 CMD ["node", "server.js"]

@@ -16,11 +16,10 @@ export function useCounters() {
   return useQuery({ queryKey: [...REQUESTER_KEY, 'counters'], queryFn: ({ signal }) => fetchCounters(signal) });
 }
 
-/** The user's requests, all of them or one category's (`category` from the catalog's categories). */
-export function useMyRequests(category, options = {}) {
+/** The user's own requests, including the home panel's open-only list. */
+export function useMyRequests({ openOnly = false } = {}) {
   return useQuery({
-    queryKey: [...REQUESTER_KEY, 'requests', category?.id ?? 'all'],
-    queryFn: ({ signal }) => fetchMyRequests(category?.typeIds ?? null, signal),
-    ...options,
+    queryKey: [...REQUESTER_KEY, 'requests', openOnly ? 'open' : 'all'],
+    queryFn: ({ signal }) => fetchMyRequests(signal, { openOnly }),
   });
 }

@@ -9,5 +9,20 @@ export function validateVaticanPerson(data, personalNumber) {
     || !('personal_id' in data) || (data.personal_id !== null && typeof data.personal_id !== 'string')) {
     throw new ApiError(502, 'שירות החיפוש לא החזיר פרטי משתמש תקינים. נסו שוב או פנו למנהל המערכת.');
   }
-  return { ...data, full_name: data.full_name?.trim() || null };
+
+  const result = { ...data, full_name: data.full_name?.trim() || null };
+
+  // API returns full_name; split into first_name / surname when not returned separately
+  if (result.full_name && !result.first_name && !result.surname) {
+    const space = result.full_name.indexOf(' ');
+    if (space > 0) {
+      result.first_name = result.full_name.slice(0, space).trim();
+      result.surname = result.full_name.slice(space + 1).trim();
+    } else {
+      result.first_name = result.full_name;
+      result.surname = '';
+    }
+  }
+
+  return result;
 }

@@ -1,10 +1,19 @@
 
 import { Icon } from '@/components/ui/Icon';
 import { domainColor, domainIconSrc } from '@/lib/labels';
+import { hasTypeIcon, TypeIcon } from './TypeIcon';
 
 /** The domain's own illustration in a rounded square; a generic icon when it has none. */
 export function DomainBadge({ bookingTypeId, size }) {
   const src = domainIconSrc(bookingTypeId);
+  // the ICT types 20-25 have an interactive picture of their own
+  if (hasTypeIcon(bookingTypeId)) {
+    return (
+      <span className={`dom${size === 'sm' ? ' sm' : ''}`} style={{ '--dc': domainColor(bookingTypeId) }}>
+        <TypeIcon bookingTypeId={bookingTypeId} />
+      </span>
+    );
+  }
   return (
     <span className={`dom${size === 'sm' ? ' sm' : ''}`} style={{ '--dc': domainColor(bookingTypeId) }}>
       {src ? (

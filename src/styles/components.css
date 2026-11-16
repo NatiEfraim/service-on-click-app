@@ -201,7 +201,7 @@ table.t { width: 100%; border-collapse: collapse; font-size: 14px; }
   position: fixed; top: 0; bottom: 0; inset-inline-start: 0; width: var(--drawer-width); background: var(--bg); z-index: 61;
   display: flex; flex-direction: column; box-shadow: 0 0 60px rgba(43, 36, 51, .22); animation: slide 300ms var(--ease-drawer);
 }
-body:has(.ticket.selected, .rq-row.selected, .sync-decision-preview, .audit-row-preview) .drawer { box-shadow: none; }
+body:has(.ticket.selected, .ticket-copy, .rq-row.selected, .sync-decision-preview, .audit-row-preview) .drawer { box-shadow: none; }
 /* the panel sits on the right edge (inline-start of the rtl page) and slides in from it; it leaves the same way (Drawer.jsx) */
 @keyframes slide { from { transform: translateX(100%); } }
 .drawer > header { display: flex; align-items: center; gap: 12px; padding: 16px 22px; background: var(--surface); border-bottom: 1px solid var(--line); }
@@ -368,3 +368,43 @@ body:has(.ticket.selected, .rq-row.selected, .sync-decision-preview, .audit-row-
 .clear-filters { animation: clear-appear 220ms var(--ease-out) both; }
 .clear-filters[data-closing] { animation: clear-disappear 220ms var(--ease-out) both; pointer-events: none; }
 @media (prefers-reduced-motion: reduce) { .clear-filters { animation: none; } }
+
+/* ---------- the ICT request types' pictures (components/booking/TypeIcon): still at rest; hovering the button that
+   holds them plays a short sequence, leaving reverses it (transitions, so a quick in-and-out never jumps) ---------- */
+:root { --ti-spring: cubic-bezier(.34, 1.56, .64, 1); }
+.ti { display: block; flex: none; overflow: visible; }
+.dom .ti { width: 74%; height: 74%; }
+.ti-sw-arrow { transition: transform 360ms var(--ti-spring); }
+.ti-sw-bar { transform-box: fill-box; transform-origin: 0 50%; transform: scaleX(.25); transition: transform 520ms var(--ease-out); }
+.ti-pr-paper { transform: translateY(-5px); transition: transform 420ms var(--ease-out); }
+.ti-pr-led { transition: fill 200ms ease 120ms; }
+.ti-em-mail { transform-box: fill-box; transform-origin: 50% 100%; transition: transform 320ms var(--ti-spring); }
+.ti-em-badge { transform-box: fill-box; transform-origin: 50% 50%; transition: transform 380ms var(--ti-spring); }
+.ti-rn-line { stroke-dasharray: 100; stroke-dashoffset: 100; transition: stroke-dashoffset 420ms var(--ease-out) 60ms; }
+.ti-rn-pen { transition: transform 420ms var(--ease-out); }
+.ti-uo-plus { transform-box: fill-box; transform-origin: 50% 50%; transition: transform 460ms var(--ti-spring); }
+.ti-mv-arrow { transition: transform 320ms var(--ease-out); }
+.ti-mv-person { transition: transform 420ms var(--ti-spring) 80ms; }
+@media (hover: hover) and (pointer: fine) {
+  :is(.rq-type, .rq-cat, .ticket, .rq-row):hover .ti-sw-arrow { transform: translateY(2px); }
+  :is(.rq-type, .rq-cat, .ticket, .rq-row):hover .ti-sw-bar { transform: scaleX(1); }
+  :is(.rq-type, .rq-cat, .ticket, .rq-row):hover .ti-pr-paper { transform: none; }
+  :is(.rq-type, .rq-cat, .ticket, .rq-row):hover .ti-pr-led { fill: #2FA85A; }
+  :is(.rq-type, .rq-cat, .ticket, .rq-row):hover .ti-em-mail { transform: rotate(-8deg); }
+  :is(.rq-type, .rq-cat, .ticket, .rq-row):hover .ti-em-badge { transform: scale(1.18); }
+  :is(.rq-type, .rq-cat, .ticket, .rq-row):hover .ti-rn-line { stroke-dashoffset: 0; }
+  :is(.rq-type, .rq-cat, .ticket, .rq-row):hover .ti-rn-pen { transform: translate(-3px, -3px); }
+  :is(.rq-type, .rq-cat, .ticket, .rq-row):hover .ti-uo-plus { transform: rotate(90deg) scale(1.15); }
+  :is(.rq-type, .rq-cat, .ticket, .rq-row):hover .ti-mv-arrow { transform: translateX(2px); }
+  :is(.rq-type, .rq-cat, .ticket, .rq-row):hover .ti-mv-person { transform: translateX(-2px); }
+}
+/* reduced motion: only the colour changes stay; nothing moves */
+@media (prefers-reduced-motion: reduce) {
+  :is(.ti-sw-arrow, .ti-sw-bar, .ti-pr-paper, .ti-em-mail, .ti-em-badge, .ti-rn-line, .ti-rn-pen, .ti-uo-plus, .ti-mv-arrow, .ti-mv-person) { transition: none; }
+}
+
+/* every dialog's close button, at the end of its title row (Modal) */
+.modal header { display: flex; align-items: center; gap: 12px; }
+.modal header .modal-x { margin-inline-start: auto; flex: none; }
+/* a dialog opened over another: its dimming blurs the dialog underneath, so only the top one reads as active */
+.scrim.stacked { background: rgba(43, 36, 51, .22); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
