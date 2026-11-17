@@ -444,3 +444,6 @@ body:has(.ticket.selected, .ticket-copy, .rq-row.selected, .sync-decision-previe
 .comments-list li { padding-bottom: 10px; border-bottom: 1px solid var(--line-2); }
 .comments-list li:last-child { border-bottom: 0; padding-bottom: 0; }
 .comment-by { color: var(--ink); }
+
+/* the viewer's note while a file loads, or when it cannot be shown */
+.lb-msg { color: #fff; font-size: 15px; margin: 0; }

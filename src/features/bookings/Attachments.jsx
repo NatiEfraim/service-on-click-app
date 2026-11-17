@@ -6,6 +6,36 @@ import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
 import { useOverlay } from '@/components/ui/overlay';
 import { useIsClient } from '@/components/ui/useIsClient';
+import { downloadBlob } from '@/lib/export/download';
+import { fetchCookieless, useCookielessFile } from './cookielessFile';
+
+/** One file in the viewer, from its cookie-less copy (cookielessFile): a PDF in a frame, an image as itself. */
+function ViewerMedia({ item }) {
+  const { src, failed } = useCookielessFile(item.url);
+  if (failed) return <p className="lb-msg">לא ניתן להציג את הקובץ. נסו לסגור ולפתוח שוב.</p>;
+  if (!src) return <p className="lb-msg">טוען…</p>;
+  return isPdf(item) ? (
+    <iframe key={item.url} src={src} title={item.label ?? item.name} />
+  ) : (
+    // eslint-disable-next-line @next/next/no-img-element -- an object URL, not a static image
+    <img key={item.url} src={src} alt={item.label ?? item.name} />
+  );
+}
+
+/** A thumbnail's picture from its cookie-less copy; the type's glyph until it is in memory, or when it cannot be fetched. */
+function ThumbImage({ attachment }) {
+  const { src } = useCookielessFile(attachment.url);
+  if (!src) return <FileGlyph attachment={attachment} />;
+  // eslint-disable-next-line @next/next/no-img-element -- an object URL, not a static image
+  return <img src={src} alt="" />;
+}
+
+/** Saves a non-viewable attachment from its cookie-less copy (a plain link would carry the app's cookies to the store). */
+async function downloadAttachment(attachment) {
+  const src = await fetchCookieless(attachment.url);
+  const blob = await (await fetch(src)).blob();
+  downloadBlob(blob, attachment.label ?? attachment.name ?? 'קובץ');
+}
 
 
 /** A stored identifier rather than a real name: a uuid (or long hex), with or without an extension. */
@@ -22,6 +52,103 @@ export function attachmentLabel(attachment, number) {
 }
 
 const isPdf = (attachment) => (attachment.mime ?? '').toLowerCase() === 'application/pdf' || (attachment.name ?? '').toLowerCase().endsWith('.pdf');
+
+/**
+ * An attachment's type for its tile: the badge text and its family. The families are what the apps accept (PDF, DOCX,
+ * XLSX, PPTX and PNG/JPG/JPEG, plus GIF/WEBP from the website); anything else is "other".
+ */
+function fileType(attachment) {
+  const name = (attachment.name ?? attachment.url ?? '').split('?')[0].toLowerCase();
+  const mime = (attachment.mime ?? '').toLowerCase();
+  const ext = isPdf(attachment) ? 'pdf' : (name.match(/\.([a-z0-9]{2,4})$/)?.[1] ?? '');
+  let tone = 'other';
+  if (ext === 'pdf') tone = 'pdf';
+  else if (/^(docx?|rtf|odt)$/.test(ext) || mime.includes('word')) tone = 'doc';
+  else if (/^(xlsx?|csv|ods)$/.test(ext) || mime.includes('sheet') || mime.includes('excel')) tone = 'xls';
+  else if (/^(pptx?|odp)$/.test(ext) || mime.includes('presentation') || mime.includes('powerpoint')) tone = 'ppt';
+  else if (/^(png|jpe?g|gif|webp|heic|bmp)$/.test(ext) || mime.startsWith('image/') || attachment.kind === 'image') tone = 'img';
+  return { ext: ext ? ext.toUpperCase() : tone === 'img' ? 'IMG' : 'קובץ', tone };
+}
+
+/** Each family's mark on the page (a 30×26 drawing in the page's middle). */
+const FILE_MARKS = {
+  // a page of text with a heading
+  pdf: (
+    <>
+      <rect x="3" y="3" width="15" height="3" rx="1.5" className="fg-ink" />
+      <rect x="3" y="10" width="24" height="2" rx="1" />
+      <rect x="3" y="15" width="24" height="2" rx="1" />
+      <rect x="3" y="20" width="16" height="2" rx="1" />
+    </>
+  ),
+  // paragraphs: a title and justified lines
+  doc: (
+    <>
+      <rect x="3" y="3" width="24" height="3" rx="1.5" className="fg-ink" />
+      <rect x="3" y="9" width="24" height="2" rx="1" />
+      <rect x="3" y="13" width="24" height="2" rx="1" />
+      <rect x="3" y="17" width="24" height="2" rx="1" />
+      <rect x="3" y="21" width="13" height="2" rx="1" />
+    </>
+  ),
+  // a sheet: a header row and a grid
+  xls: (
+    <>
+      <rect x="2" y="2" width="26" height="22" rx="2" className="fg-frame" />
+      <rect x="2" y="2" width="26" height="6" rx="2" className="fg-ink" />
+      <path d="M11 2v22M20 2v22M2 13h26M2 18.5h26" className="fg-grid" />
+    </>
+  ),
+  // a slide with a small bar chart
+  ppt: (
+    <>
+      <rect x="2" y="3" width="26" height="18" rx="2" className="fg-frame" />
+      <rect x="7" y="12" width="4" height="6" rx="1" className="fg-ink" />
+      <rect x="13" y="8" width="4" height="10" rx="1" className="fg-ink" />
+      <rect x="19" y="10" width="4" height="8" rx="1" />
+      <rect x="13" y="22" width="4" height="3" rx="1" />
+    </>
+  ),
+  // a photo: a sun over hills
+  img: (
+    <>
+      <rect x="2" y="2" width="26" height="22" rx="3" className="fg-frame" />
+      <circle cx="21" cy="8.5" r="3" className="fg-ink" />
+      <path d="M2 21l8-8 6 6 4-4 8 8v1a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2z" className="fg-ink" />
+    </>
+  ),
+  // anything else: a few plain lines
+  other: (
+    <>
+      <rect x="3" y="6" width="24" height="2" rx="1" />
+      <rect x="3" y="11" width="24" height="2" rx="1" />
+      <rect x="3" y="16" width="16" height="2" rx="1" />
+    </>
+  ),
+};
+
+/**
+ * An attachment drawn by its type: a page with a folded corner, the type's mark and a coloured badge (PDF, DOCX,
+ * XLSX, PPTX, JPG…). `download` adds a download dot; an image whose picture is not in memory yet shows it too.
+ */
+function FileGlyph({ attachment, download = false }) {
+  const { ext, tone } = fileType(attachment);
+  return (
+    <span className={`ph file-glyph tone-${tone}`} aria-hidden="true">
+      <span className="fg-page">
+        <svg className="fg-mark" viewBox="0 0 30 26">
+          {FILE_MARKS[tone]}
+        </svg>
+        <span className="fg-badge">{ext}</span>
+      </span>
+      {download ? (
+        <span className="fg-dl">
+          <Icon name="download" />
+        </span>
+      ) : null}
+    </span>
+  );
+}
 
 /** Full-screen viewer for images and PDFs; arrow keys are mirrored in RTL (right = previous). */
 function LightboxInner({ items, start, onClose }) {
@@ -70,12 +197,7 @@ function LightboxInner({ items, start, onClose }) {
             <Icon name="right" />
           </button>
         ) : null}
-        {isPdf(item) ? (
-          <iframe key={item.url} src={item.url} title={item.label ?? item.name} />
-        ) : (
-          // eslint-disable-next-line @next/next/no-img-element -- needs the login cookie, so not next/image
-          <img key={item.url} src={item.url} alt={item.label ?? item.name} />
-        )}
+        <ViewerMedia key={item.url} item={item} />
         {many ? (
           <button type="button" className="lb-nav lb-next" aria-label="הבא" onClick={() => go(1)}>
             <Icon name="left" />
@@ -115,9 +237,7 @@ export function AttachmentsPanel({ attachments: given }) {
             if (!hasDownload(attachment)) {
               return (
                 <span key={key} className="thumb missing" data-tip="הקובץ טרם התקבל מהאפליקציה">
-                  <span className="ph">
-                    <Icon name={attachment.kind === 'image' ? 'image' : 'file'} />
-                  </span>
+                  <FileGlyph attachment={attachment} />
                   <span className="nm">{attachment.label} · טרם התקבל</span>
                 </span>
               );
@@ -125,15 +245,13 @@ export function AttachmentsPanel({ attachments: given }) {
 
             if (!attachment.inline) {
               return (
-                <a key={key} className="thumb" href={attachment.url} download={attachment.label} aria-label={`הורדת ${attachment.label}`}>
-                  <span className="ph">
-                    <Icon name="download" />
-                  </span>
+                <button key={key} type="button" className="thumb" aria-label={`הורדת ${attachment.label}`} onClick={() => void downloadAttachment(attachment).catch(() => {})}>
+                  <FileGlyph attachment={attachment} download />
                   <span className="nm">
                     <Icon name="file" />
                     {attachment.label}
                   </span>
-                </a>
+                </button>
               );
             }
 
@@ -141,12 +259,9 @@ export function AttachmentsPanel({ attachments: given }) {
             return (
               <button key={key} type="button" className="thumb" aria-label={`פתיחת ${attachment.label}`} onClick={() => setOpen(position)}>
                 {isPdf(attachment) ? (
-                  <span className="ph">
-                    <Icon name="file" />
-                  </span>
+                  <FileGlyph attachment={attachment} />
                 ) : (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={attachment.url} alt="" loading="lazy" />
+                  <ThumbImage attachment={attachment} />
                 )}
                 <span className="nm">
                   <Icon name={attachment.kind === 'image' ? 'image' : 'file'} />
