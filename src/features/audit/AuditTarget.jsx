@@ -22,7 +22,7 @@ export function AuditTarget({ row, onPeek }) {
           onClick={(event) => {
             event.stopPropagation();
             onPeek?.(row.id);
-            drawer.open(row.booking_serial);
+            drawer.open(row.booking_uuid ?? row.booking_serial);
           }}
         >
           <Icon name="eye" />

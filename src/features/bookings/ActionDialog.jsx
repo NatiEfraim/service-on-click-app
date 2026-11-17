@@ -37,7 +37,7 @@ export function ActionDialog({ booking, action, onClose, onDone, onDecided }) {
       // Reuse the key on retry (the first try may have arrived); a changed decision needs a new one.
       const fingerprint = JSON.stringify(body);
       if (attempt.current.fingerprint !== fingerprint) attempt.current = { key: newKey(), fingerprint };
-      return bookingsApi.changeStatus(booking.serial_number, body, attempt.current.key);
+      return bookingsApi.changeStatus(booking.uuid ?? booking.serial_number, body, attempt.current.key);
     },
     onSuccess: async (result) => {
       toast(result.message || 'הקריאה עודכנה.', 'ok');

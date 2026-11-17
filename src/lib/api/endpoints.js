@@ -64,13 +64,14 @@ export const startupApi = {
 export const bookingsApi = {
   // ביטחון מידע / תקשוב bookings are named by their one handler as they arrive (lib/topicTypes)
   list: (params, signal) => getPage(`${APPROVER}/bookings`, params, signal).then((page) => ({ ...page, data: Array.isArray(page?.data) ? page.data.map(topicBooking) : page?.data })),
-  get: (serial, signal) => getData(`${APPROVER}/bookings/${serial}`, undefined, signal).then(topicBooking),
+  // one booking, by its uuid (the management API's key; the serial number is for display and search only)
+  get: (uuid, signal) => getData(`${APPROVER}/bookings/${uuid}`, undefined, signal).then(topicBooking),
   /** One `idempotencyKey` per user action; a repeat returns the first result. */
-  changeStatus: (serial, body, idempotencyKey) =>
-    send('post', `${APPROVER}/bookings/${serial}/status`, body, { headers: { 'Idempotency-Key': idempotencyKey } }),
+  changeStatus: (uuid, body, idempotencyKey) =>
+    send('post', `${APPROVER}/bookings/${uuid}/status`, body, { headers: { 'Idempotency-Key': idempotencyKey } }),
   /** `values`: form_field_id -> new value (`Y-m-d` for a date, `HH:MM` for a time). */
-  updateValues: (serial, body) =>
-    send('put', `${APPROVER}/bookings/${serial}/values`, body),
+  updateValues: (uuid, body) =>
+    send('put', `${APPROVER}/bookings/${uuid}/values`, body),
 };
 
 

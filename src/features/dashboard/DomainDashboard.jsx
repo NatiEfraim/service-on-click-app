@@ -33,6 +33,7 @@ import { BarberStatusSummary } from './BarberStatusSummary';
 import { StageBars } from './StageBars';
 import { FullAnalysis } from './FullAnalysis';
 import { StatusBars } from './StatusBars';
+import { bookingKey } from '@/features/bookings/useBookingDrawer';
 
 /** The holds on a third party (the API's supplier stages) and the statuses behind them, for the overdue card's second half. */
 const THIRD_PARTY_STAGES = [
@@ -100,7 +101,7 @@ export function DomainDashboard() {
   // a booking that moves up into "the oldest" after a decision opens its room and fades in
   const arrivals = useArrivals((query.data?.oldest ?? []).map((row) => row.serial_number));
   // the side panel's ‹ › step through the requests listed here (the oldest ones)
-  usePublishDrawerList((query.data?.oldest ?? []).map((row) => row.serial_number));
+  usePublishDrawerList((query.data?.oldest ?? []).map(bookingKey));
   // the card keeps its size: when a row leaves, the ones below move up and the next fills the bottom
   const holdOldest = useHeldHeight();
 

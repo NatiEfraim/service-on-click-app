@@ -9,9 +9,9 @@ import { placeInList, useDrawerList } from './drawerList';
  * (↑ / ↓ too). At the last loaded row of a paged list, "next" first loads the next page. Hidden when the drawer
  * was not opened from a list.
  */
-export function DrawerStepper({ serial, onGo }) {
+export function DrawerStepper({ bookingKey, onGo }) {
   const list = useDrawerList();
-  const place = placeInList(list, serial);
+  const place = placeInList(list, bookingKey);
   const [waitingForNext, setWaitingForNext] = useState(false);
 
   // the next page arrived: carry on to the booking that was asked for

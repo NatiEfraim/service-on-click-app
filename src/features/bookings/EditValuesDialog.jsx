@@ -30,7 +30,7 @@ export function EditValuesDialog({ booking, onClose }) {
   const [error, setError] = useState('');
 
   const mutation = useMutation({
-    mutationFn: (changed) => bookingsApi.updateValues(booking.serial_number, { values: changed, version: booking.version, reason: reason.trim() || null }),
+    mutationFn: (changed) => bookingsApi.updateValues(booking.uuid ?? booking.serial_number, { values: changed, version: booking.version, reason: reason.trim() || null }),
     onSuccess: async (result) => {
       const changed = result.data?.changed ?? [];
       toast(changed.length ? `עודכן: ${changed.join(', ')}` : 'הפרטים עודכנו.', 'ok');

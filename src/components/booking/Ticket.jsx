@@ -57,14 +57,14 @@ export function Ticket({ booking: given, showActions = true, onAction, outcome, 
   useArrive(ref, entering);
   const actions = bookingActions(booking.actions);
   const owner = booking.owner_name || booking.owner_personal_id || '—';
-  const open = () => drawer.open(booking.serial_number);
+  const open = () => drawer.open(booking.uuid ?? booking.serial_number);
   // the booking open in the side panel: its row stands out above the panel's dimming (the same look as the requester's list)
-  const selected = drawer.serial === booking.serial_number && !outcome;
+  const selected = drawer.matches(booking) && !outcome;
   // when the side panel closes, the row keeps its lifted look until the panel and its dimming are gone (DRAWER_EXIT_MS),
   // and only then settles into the list: dropped at once, the dimming would cover it (dark) and it would shrink under it.
   // Not when stepping to another booking (the panel stays) nor when the booking leaves after a decision (its own motion)
   const lingering = usePresence(selected, DRAWER_EXIT_MS);
-  const lifted = selected || (lingering.closing && !outcome && drawer.serial == null);
+  const lifted = selected || (lingering.closing && !outcome && drawer.key == null);
   useEffect(() => {
     if (selected) ref.current?.scrollIntoView({ block: 'nearest', behavior: prefersReducedMotion() ? 'instant' : 'smooth' });
   }, [selected]);

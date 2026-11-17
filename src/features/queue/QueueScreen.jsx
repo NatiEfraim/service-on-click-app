@@ -21,6 +21,7 @@ import { CARD_EDGE, LOAD_AHEAD_PX, MIN_LIST_HEIGHT, PAGE_SIZE, SEARCH_DELAY_MS }
 import { DomainFilter } from './DomainFilter';
 import { usePublishDrawerList } from '@/features/bookings/drawerList';
 import { useInfiniteScroll } from '@/lib/useInfiniteScroll';
+import { bookingKey } from '@/features/bookings/useBookingDrawer';
 
 /** Bookings waiting for this user (`mine=1`), longest-waiting first; searched and filtered by stage on the server, 25 at a time. */
 export function QueueScreen() {
@@ -49,7 +50,7 @@ export function QueueScreen() {
   const rows = query.data?.pages.flatMap((page) => page.data) ?? [];
   const total = query.data?.pages[0]?.meta.total ?? 0;
   // the drawer steps through these rows (‹ › and ↑ ↓), in this order
-  usePublishDrawerList(rows.map((row) => row.serial_number), { total: total || null, hasMore: Boolean(query.hasNextPage), loadMore: () => void query.fetchNextPage() });
+  usePublishDrawerList(rows.map(bookingKey), { total: total || null, hasMore: Boolean(query.hasNextPage), loadMore: () => void query.fetchNextPage() });
   const filtered = Boolean(q || stage || types || from || to);
   const baseTitle = me.is_handler_only ? 'הקריאות שלי לטיפול' : 'ממתין לטיפולי';
   const title = types ? `${baseTitle}: ${typeName(Number(types))}` : baseTitle;

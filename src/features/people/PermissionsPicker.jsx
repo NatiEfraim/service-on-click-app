@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { CategoryGroup, groupBySection } from '@/components/booking/CategoryGroup';
 import { DomainBadge } from '@/components/booking/DomainBadge';
 import { AnimatedText } from '@/components/ui/AnimatedText';
