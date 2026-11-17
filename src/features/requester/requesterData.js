@@ -8,7 +8,7 @@ import { OPEN_STATUS_IDS, requesterApi } from '@/lib/api/endpoints';
 import { routeFor, routePosition } from '@/features/bookings/route';
 import { domainIconSrc, requesterIconSrc } from '@/lib/labels';
 import { topicStatusLabel } from '@/lib/topicTypes';
-import { uploadAttachment, uploadAttachments } from '@/lib/booking-values';
+import { optionText, uploadAttachment, uploadAttachments } from '@/lib/booking-values';
 
 /** Files a form accepts as attachments (POST /bookings/{id}: jpg, jpeg, png, gif, webp, pdf; up to 10, 10 MB each). */
 export const ATTACH_ACCEPT = 'image/jpeg,image/png,image/gif,image/webp,application/pdf';
@@ -222,14 +222,6 @@ export async function fetchRequestDetails(row, signal) {
   const values = [];
   const attachments = Array.isArray(booking.attachments) ? booking.attachments : [];
   const legacyFiles = uploadAttachments(booking.booking_values);
-  const optionText = (node) => {
-    const chain = [];
-    for (let cursor = node; cursor; cursor = cursor.option_fields?.[0]) {
-      if (cursor.display_name) chain.push(cursor.display_name);
-      if (cursor.value != null && cursor.value !== '') chain.push(String(cursor.value));
-    }
-    return chain.join(' › ');
-  };
   const walk = (item, depth) => {
     if (!item) return;
     const label = item.field_display_name ?? item.field_name ?? '';
@@ -241,8 +233,11 @@ export async function fetchRequestDetails(row, signal) {
       for (const child of item.form_fields) walk(child, depth + 1);
       return;
     }
-    if (item.option_fields?.length) {
-      values.push({ label, value: item.option_fields.map(optionText).filter(Boolean).join(', '), depth });
+    // the chosen option(s) by their display_name: one choice comes as an object, a multi-select as a list
+    // (lib/booking-values optionText reads both, as the management side does)
+    const chosen = optionText(item.option_fields);
+    if (chosen) {
+      values.push({ label, value: chosen, depth });
       return;
     }
     values.push({ label, value: item.value, depth });

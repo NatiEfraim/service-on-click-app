@@ -238,6 +238,13 @@ export function MyRequestsPanel({ full = false, extraCategories = null, category
     if (row) open(row);
     onOpened();
   }, [openId, requests.isSuccess]); // eslint-disable-line react-hooks/exhaustive-deps
+  // the request just sent (?sent=<serial>) slides in and glows once; after that it is an ordinary row (no replay when
+  // the list re-renders or a filter brings it back)
+  const [arrived, setArrived] = useState(null);
+  // its slot is a grid only while it opens (requester.css rq-arrive-slot); after that the row is laid out as any other,
+  // so opening it (the row grows past its box) is not squeezed
+  const [slotOpened, setSlotOpened] = useState(null);
+  const arriving = (row) => full && sent != null && String(row.serial) === String(sent) && arrived !== String(sent);
   const allRows = ownedRows.filter((row) => (full || isOpen(row)) && (!current || current.typeIds.includes(row.bookingTypeId)));
   const changedRows = allRows.filter((row) => isChanged(seen, row));
   // Keep an update queued even when opening the drawer marks it as seen.
@@ -290,7 +297,11 @@ export function MyRequestsPanel({ full = false, extraCategories = null, category
   };
   const [sort, setSort] = useState('new');
   const sortBy = SORTS.find((option) => option.value === sort) ?? SORTS[0];
-  const rows = full ? [...filtered].sort(sortBy.compare) : allRows.slice(0, PANEL_ROWS);
+  const sorted = full ? [...filtered].sort(sortBy.compare) : allRows.slice(0, PANEL_ROWS);
+  // the request just sent leads the list: request numbers are not in opening order, so within today's requests the sort
+  // alone could place it anywhere
+  const sentIndex = full && sent != null ? sorted.findIndex((row) => String(row.serial) === String(sent)) : -1;
+  const rows = sentIndex > 0 ? [sorted[sentIndex], ...sorted.slice(0, sentIndex), ...sorted.slice(sentIndex + 1)] : sorted;
 
   return (
     <section ref={card} className={`card rq-mine fit-card${full ? ' full' : ''}`} aria-label="הקריאות שלי">
@@ -431,13 +442,19 @@ export function MyRequestsPanel({ full = false, extraCategories = null, category
         <>
         <ul className="rq-list">
           {rows.map((row) => (
-            <li key={row.id}>
+            <li
+              key={row.id}
+              className={arriving(row) && slotOpened !== String(sent) ? 'arriving' : undefined}
+              onAnimationEnd={(event) => event.target === event.currentTarget && event.animationName === 'rq-arrive-slot' && setSlotOpened(String(sent))}
+            >
               <RequestRow
                 row={row}
                 img={typeImg[row.bookingTypeId]}
                 changed={isChanged(seen, row)}
                 selected={opened?.id === row.id}
                 celebrating={celebrating(row) ? celebrationKey(row) : null}
+                arriving={arriving(row)}
+                onArrived={() => setArrived(String(sent))}
                 onOpen={(event) => open(row, event)}
                 onCelebrated={() => finishCelebration(row)}
               />
