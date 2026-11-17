@@ -103,6 +103,13 @@ export function useRequesterView() {
   return { search, setParams, typeId, view, go, openType };
 }
 
+function clearSentParam(serial) {
+  const url = new URL(window.location.href);
+  if (url.searchParams.get('sent') !== String(serial)) return;
+  url.searchParams.delete('sent');
+  window.history.replaceState(null, '', url);
+}
+
 /**
  * The requester screen itself, without a frame: open a request by topic, the counters, and "הקריאות שלי". The regular
  * user sees it inside its own top bar (RequesterHome); every management role sees it as its home, inside the app's frame.
@@ -146,7 +153,7 @@ export function RequesterContent({ name, extraCategories = null }) {
       </FadeIn>
     ) : view === 'mine' ? (
       <FadeIn key="mine">
-        <MyRequestsPanel full extraCategories={extraCategories} category={search.get('cat')} onCategory={(cat) => setParams({ cat })} bucket={search.get('bucket')} onBucket={(bucket) => setParams({ bucket })} sent={search.get('sent')} onSentSeen={() => setParams({ sent: null })} openId={search.get('open')} onOpened={() => setParams({ open: null })} />
+        <MyRequestsPanel full extraCategories={extraCategories} category={search.get('cat')} onCategory={(cat) => setParams({ cat })} bucket={search.get('bucket')} onBucket={(bucket) => setParams({ bucket })} sent={search.get('sent')} onSentSeen={clearSentParam} openId={search.get('open')} onOpened={() => setParams({ open: null })} />
       </FadeIn>
     ) : (
       <div key="home">
