@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { describeValues, editableInitialValue, optionText } from './booking-values';
+import { describeValues, editableInitialValue, optionText, uploadAttachments } from './booking-values';
 
 const plain = (name, label, value, type = 'text', extra = {}) => ({
   field_name: name,
@@ -145,5 +145,29 @@ describe('editableInitialValue', () => {
 
   it('returns an empty string when the field has no value', () => {
     expect(editableInitialValue(nodes, 1234, 'date')).toBe('');
+  });
+});
+
+describe('uploadAttachments', () => {
+  it('collects and normalizes legacy uploads from nested booking values', () => {
+    const files = uploadAttachments([
+      {
+        field_name: 'group',
+        form_fields: [
+          {
+            field_type: { name: 'image' },
+            value: [
+              { id: 7, type: 'image', display_name: 'photo.png', url: 'https://old-source/photo.png?signature=ok' },
+              { id: 8, type: 'file', display_name: 'form.pdf', url: 'https://old-source/form.pdf?signature=ok' },
+            ],
+          },
+        ],
+      },
+    ]);
+
+    expect(files).toMatchObject([
+      { id: 7, kind: 'image', name: 'photo.png', inline: true, available: true },
+      { id: 8, kind: 'file', name: 'form.pdf', mime: 'application/pdf', inline: true, available: true },
+    ]);
   });
 });

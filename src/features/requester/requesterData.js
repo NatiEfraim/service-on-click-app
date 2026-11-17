@@ -8,6 +8,7 @@ import { OPEN_STATUS_IDS, requesterApi } from '@/lib/api/endpoints';
 import { routeFor, routePosition } from '@/features/bookings/route';
 import { domainIconSrc, requesterIconSrc } from '@/lib/labels';
 import { topicStatusLabel } from '@/lib/topicTypes';
+import { uploadAttachment, uploadAttachments } from '@/lib/booking-values';
 
 /** Files a form accepts as attachments (POST /bookings/{id}: jpg, jpeg, png, gif, webp, pdf; up to 10, 10 MB each). */
 export const ATTACH_ACCEPT = 'image/jpeg,image/png,image/gif,image/webp,application/pdf';
@@ -69,12 +70,7 @@ export function requestCategories(rows, catalogCategories = [], managedCategorie
  * file downloads.
  */
 export function toAttachment(entry, index) {
-  const name = entry.display_name ?? entry.name ?? 'קובץ';
-  const url = entry.url ?? null;
-  const path = `${name} ${url ?? ''}`.toLowerCase().split('?')[0];
-  const image = entry.type === 'image' || /\.(jpe?g|png|gif|webp)\b/.test(path);
-  const pdf = /\.pdf\b/.test(path) || (entry.mime_type ?? entry.mime ?? '') === 'application/pdf';
-  return { id: entry.id ?? index, kind: image ? 'image' : 'file', name, url, mime: entry.mime_type ?? entry.mime ?? (pdf ? 'application/pdf' : null), available: Boolean(url), inline: image || pdf };
+  return uploadAttachment(entry, index);
 }
 
 /** The type with its topic and group, for the form's breadcrumb; null when the catalog does not offer it. */
@@ -224,8 +220,8 @@ export async function fetchRequestDetails(row, signal) {
   // (form_fields), chosen options (option_fields, each an ancestor chain down to the chosen one, which may carry a typed
   // value) or a plain value; upload fields hold their files. Flatten it into label/value rows, sub-fields indented.
   const values = [];
-  const attachments = Array.isArray(booking.attachments) ? booking.attachments : null;
-  const legacyFiles = [];
+  const attachments = Array.isArray(booking.attachments) ? booking.attachments : [];
+  const legacyFiles = uploadAttachments(booking.booking_values);
   const optionText = (node) => {
     const chain = [];
     for (let cursor = node; cursor; cursor = cursor.option_fields?.[0]) {
@@ -238,11 +234,6 @@ export async function fetchRequestDetails(row, signal) {
     if (!item) return;
     const label = item.field_display_name ?? item.field_name ?? '';
     if (Array.isArray(item.value) && item.value.some((entry) => entry?.type === 'file' || entry?.type === 'image')) {
-      if (attachments === null) {
-        for (const entry of item.value) {
-          if (entry?.type === 'file' || entry?.type === 'image') legacyFiles.push(toAttachment(entry, legacyFiles.length));
-        }
-      }
       return;
     }
     if (item.form_fields?.length) {
@@ -267,7 +258,8 @@ export async function fetchRequestDetails(row, signal) {
     viceApprover: booking.vice_approver?.user?.full_name ?? null,
     requester: booking.user ? { name: booking.user.full_name ?? '', personalId: booking.user.personal_id ?? '', phone: booking.user.phone ?? '' } : null,
     values,
-    files: attachments ?? legacyFiles,
+    // booking_values is the established source and still carries working URLs. The newer attachments URLs are a fallback.
+    files: legacyFiles.length ? legacyFiles : attachments,
     comments: (booking.comments ?? []).map((comment) => ({
       id: comment.id,
       author: comment.user?.full_name || comment.user?.personal_id || '',

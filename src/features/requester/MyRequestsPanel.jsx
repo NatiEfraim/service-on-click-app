@@ -109,7 +109,7 @@ function HomeScrollBody({ children }) {
   return <div className="fit-fill scroll-y rq-mine-scroll">{children}</div>;
 }
 
-export function MyRequestsPanel({ full = false, extraCategories = null, category, onCategory, bucket: rawBucket = null, onBucket = () => {}, sent = null, onSentSeen = () => {}, onAll }) {
+export function MyRequestsPanel({ full = false, extraCategories = null, category, onCategory, bucket: rawBucket = null, onBucket = () => {}, sent = null, onSentSeen = () => {}, onAll, openId = null, onOpened = () => {} }) {
   const bucket = BUCKETS.some((option) => option.id === rawBucket) ? rawBucket : null;
   // the categories (topics and domains) come from GET /requester/catalog, already limited to what the user may open
   const categories = useCatalog();
@@ -235,6 +235,13 @@ export function MyRequestsPanel({ full = false, extraCategories = null, category
   const [stage, setStage] = useState('');
   const [status, setStatus] = useState('');
   const [range, setRange] = useState({ from: null, to: null });
+  // a booking to open as soon as the list has it (the one just sent: ?open=<uuid> - the requester API's key)
+  useEffect(() => {
+    if (!openId || !requests.isSuccess) return;
+    const row = ownedRows.find((candidate) => candidate.id === openId);
+    if (row) open(row);
+    onOpened();
+  }, [openId, requests.isSuccess]); // eslint-disable-line react-hooks/exhaustive-deps
   const allRows = ownedRows.filter((row) => (full || isOpen(row)) && (!current || current.typeIds.includes(row.bookingTypeId)));
   const changedRows = allRows.filter((row) => isChanged(seen, row));
   // Keep an update queued even when opening the drawer marks it as seen.

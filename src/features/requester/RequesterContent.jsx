@@ -147,7 +147,7 @@ export function RequesterContent({ name, extraCategories = null }) {
         ) : catalog.isError ? (
           <ErrorNotice error={catalog.error} title="לא ניתן לפתוח את הטופס." onRetry={() => void catalog.refetch()} />
         ) : found ? (
-          <RequestForm found={found} onHome={() => go({})} onDone={(serial) => go({ rq: 'mine', sent: serial || null })} />
+          <RequestForm found={found} onHome={() => go({})} onDone={({ serial, uuid }) => go({ rq: 'mine', sent: serial || null, open: uuid || null })} />
         ) : (
           <EmptyState title="סוג הקריאה אינו זמין לך">
             ייתכן שאין לך הרשאה לפתוח אותו, או שהוא אינו פעיל ביחידה שלך.{' '}
@@ -157,7 +157,7 @@ export function RequesterContent({ name, extraCategories = null }) {
       </FadeIn>
     ) : view === 'mine' ? (
       <FadeIn key="mine">
-        <MyRequestsPanel full extraCategories={extraCategories} category={search.get('cat')} onCategory={(cat) => setParams({ cat })} bucket={search.get('bucket')} onBucket={(bucket) => setParams({ bucket })} sent={search.get('sent')} onSentSeen={() => setParams({ sent: null })} />
+        <MyRequestsPanel full extraCategories={extraCategories} category={search.get('cat')} onCategory={(cat) => setParams({ cat })} bucket={search.get('bucket')} onBucket={(bucket) => setParams({ bucket })} sent={search.get('sent')} onSentSeen={() => setParams({ sent: null })} openId={search.get('open')} onOpened={() => setParams({ open: null })} />
       </FadeIn>
     ) : (
       <div key="home">
@@ -179,7 +179,10 @@ export function RequesterContent({ name, extraCategories = null }) {
               <span className="rq-counter-txt">
                 <b>{counts ? counts[counter.id] ?? 0 : '–'}</b>
                 <span className="lbl">{counter.label}</span>
-                {changedIn(counter.id) ? <span className="rq-changed-count">{changedIn(counter.id)} עודכנו מאז הביקור האחרון</span> : null}
+                {/* its line is always there (empty until the requests load), so the card never grows when it appears */}
+                <span className={`rq-changed-count${changedIn(counter.id) ? '' : ' empty'}`} aria-hidden={changedIn(counter.id) ? undefined : true}>
+                  {changedIn(counter.id) ? `${changedIn(counter.id)} עודכנו מאז הביקור האחרון` : ' '}
+                </span>
               </span>
             </button>
           ))}

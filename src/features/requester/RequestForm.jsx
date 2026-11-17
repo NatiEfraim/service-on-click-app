@@ -63,7 +63,8 @@ export function RequestForm({ found, onHome, onDone }) {
       // the user's own new request is already "seen": it must not stand out as changed
       if (booking?.uuid) markSeen([{ id: booking.uuid, statusId: booking.status_id ?? booking.status?.id }]);
       void client.invalidateQueries({ queryKey: REQUESTER_KEY });
-      onDone(booking?.serial_number ?? '');
+      // the requester API's key is the uuid (the number is for display and search only)
+      onDone({ serial: booking?.serial_number ?? '', uuid: booking?.uuid ?? '' });
     },
     onError: (error) => {
       const byField = {};

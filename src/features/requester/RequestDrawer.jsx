@@ -1,6 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import { RequesterRows } from '@/components/booking/RequesterRows';
 import { SerialTitle } from '@/components/booking/SerialTitle';
 import { Fragment, useEffect, useState } from 'react';
 import { DomainBadge } from '@/components/booking/DomainBadge';
@@ -8,7 +9,7 @@ import { ApprovalTrack } from '@/components/booking/RouteViz';
 import { Button } from '@/components/ui/Button';
 import { Chip, StatusChip } from '@/components/ui/Chips';
 import { Drawer } from '@/components/ui/Drawer';
-import { ErrorNotice, Loading, Notice } from '@/components/ui/Feedback';
+import { EmptyState, ErrorNotice, Loading, Notice } from '@/components/ui/Feedback';
 import { AttachmentsPanel } from '@/features/bookings/Attachments';
 import { usePresence } from '@/components/ui/usePresence';
 import { holdDescription, isHoldStatus } from '@/lib/booking-workflow';
@@ -136,7 +137,11 @@ export function RequestDrawer({ row, rows = [], onGo, onClose, celebrate = false
       }
     >
       {query.isError ? (
-        <ErrorNotice error={query.error} title="לא ניתן להציג את הקריאה." onRetry={() => void query.refetch()} />
+        query.error?.status === 404 || query.error?.status === 403 ? (
+          <EmptyState title="הקריאה לא נמצאה">ייתכן שהיא נמחקה או שאינה שייכת לך.</EmptyState>
+        ) : (
+          <ErrorNotice error={query.error} title="לא ניתן להציג את הקריאה." onRetry={() => void query.refetch()} />
+        )
       ) : query.isPending ? (
         <Loading rows={10} />
       ) : (
@@ -169,25 +174,7 @@ export function RequestDrawer({ row, rows = [], onGo, onClose, celebrate = false
               <header><h2>פרטי הקריאה</h2></header>
               <div className="body">
                 <dl className="kv">
-                  {details.requester ? (
-                    <>
-                      <dt>מבקש</dt>
-                      <dd>{details.requester.name}</dd>
-                      {details.requester.personalId ? (
-                        <>
-                          <dt>ת&quot;ז</dt>
-                          <dd><span className="ltr">{details.requester.personalId}</span></dd>
-                        </>
-                      ) : null}
-                      {details.requester.phone ? (
-                        <>
-                          <dt>טלפון</dt>
-                          {/* the number reads left to right but sits on the right, as the other values do */}
-                          <dd><span className="ltr">{details.requester.phone}</span></dd>
-                        </>
-                      ) : null}
-                    </>
-                  ) : null}
+                  {details.requester ? <RequesterRows name={details.requester.name} personalId={details.requester.personalId} phone={details.requester.phone} /> : null}
                   <dt>נפתחה</dt>
                   <dd>{when(details.createdAt)}</dd>
                   {details.updatedAt && details.updatedAt !== details.createdAt ? (

@@ -1,13 +1,14 @@
 'use client';
 
 import { Fragment, useState } from 'react';
+import { RequesterRows } from '@/components/booking/RequesterRows';
 import { DomainBadge } from '@/components/booking/DomainBadge';
 import { Rail } from '@/components/booking/RouteViz';
 import { Button } from '@/components/ui/Button';
 import { Chip, NeedsDecision, SourceTag, StatusChip } from '@/components/ui/Chips';
 import { Notice } from '@/components/ui/Feedback';
 import { auditSentence } from '@/lib/audit-sentence';
-import { describeValues } from '@/lib/booking-values';
+import { describeValues, uploadAttachments } from '@/lib/booking-values';
 import { fmtDateTime, fmtHours } from '@/lib/format';
 import { targetHoursOr } from '@/lib/targets';
 import { actionTone, STAGE_SHORT } from '@/lib/labels';
@@ -52,6 +53,8 @@ export function Body({ booking }) {
   const [resolving, setResolving] = useState(null);
 
   const lines = describeValues(booking.booking_values);
+  const valueAttachments = uploadAttachments(booking.booking_values);
+  const attachments = valueAttachments.length ? valueAttachments : booking.attachments;
   const conflict = booking.sync.open_conflict;
   const owner = booking.owner_name || booking.booking_owner?.full_name || null;
   const history = booking.history;
@@ -138,17 +141,7 @@ export function Body({ booking }) {
           </header>
           <div className="body">
             <dl className="kv">
-              <dt>מבקש</dt>
-              <dd>
-                {owner ? `${owner} ` : ''}
-                <span className="ltr">{booking.owner_personal_id ?? '—'}</span>
-              </dd>
-              {booking.booking_owner?.phone ? (
-                <>
-                  <dt>טלפון</dt>
-                  <dd className="ltr">{booking.booking_owner.phone}</dd>
-                </>
-              ) : null}
+              <RequesterRows name={owner} personalId={booking.owner_personal_id} phone={booking.booking_owner?.phone} />
               <dt>נפתחה</dt>
               <dd>{fmtDateTime(booking.opened_at)}</dd>
               <dt>שינוי סטטוס אחרון</dt>
@@ -229,7 +222,7 @@ export function Body({ booking }) {
         </div>
       </div>
 
-      {booking.attachments.length > 0 ? <AttachmentsPanel attachments={booking.attachments} /> : null}
+      {attachments.length > 0 ? <AttachmentsPanel attachments={attachments} /> : null}
 
       {booking.audit ? (
         <section className="panel">
