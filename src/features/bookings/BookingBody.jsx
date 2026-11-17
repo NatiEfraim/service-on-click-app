@@ -17,6 +17,7 @@ import { isHoldStatus } from '@/lib/booking-workflow';
 import { AttachmentsPanel } from './Attachments';
 import { ResolveConflictDialog } from './ResolveConflictDialog';
 import { useStatusAction } from './useStatusAction';
+import { topicHandlerName } from '@/lib/topicTypes';
 
 function FadingTag({ value, children }) {
   const [current, setCurrent] = useState({ value, children });
@@ -60,7 +61,7 @@ export function Body({ booking }) {
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         <DomainBadge bookingTypeId={booking.booking_type_id} />
         <FadingTag value={`${booking.status_id}:${booking.status_label}`}>
-          <StatusChip statusId={booking.status_id} label={booking.status_label} />
+          <StatusChip statusId={booking.status_id} label={booking.status_label} bookingTypeId={booking.booking_type_id} />
         </FadingTag>
         <Chip>{booking.booking_type_label}</Chip>
         <Chip>{unitName(booking.unit_id)}</Chip>
@@ -97,7 +98,10 @@ export function Body({ booking }) {
           <h2>מסלול האישור</h2>
           <span className="hint">
             {booking.stage_label}
-            {` · פתוחה ${fmtHours(booking.total_age_hours)} מתוך יעד ${fmtHours(targetHoursOr(booking.target_hours))}${booking.target_hours == null ? ' (ברירת מחדל)' : ''}`}
+            {/* ביטחון מידע / תקשוב have no handling target: only how long the booking is open */}
+            {topicHandlerName(booking.booking_type_id)
+              ? ` · פתוחה ${fmtHours(booking.total_age_hours)}`
+              : ` · פתוחה ${fmtHours(booking.total_age_hours)} מתוך יעד ${fmtHours(targetHoursOr(booking.target_hours))}${booking.target_hours == null ? ' (ברירת מחדל)' : ''}`}
           </span>
         </header>
         <div className="body">
@@ -120,7 +124,7 @@ export function Body({ booking }) {
             <p className="small muted" style={{ margin: '14px 0 0' }}>
               {booking.stage === 'closed'
                 ? 'הקריאה סגורה. אין פעולות זמינות.'
-                : `${canAct ? 'אין לך פעולה זמינה בשלב הזה.' : 'בתפקידך את/ה צופה בקריאה ואינך מאשר/ת אותה.'} הקריאה ממתינה ל${STAGE_SHORT[booking.stage] ?? 'גורם אחר'}, ורק בעל התפקיד שהתור שלו במסלול יכול לאשר או לדחות אותה כעת.`}
+                : `${canAct ? 'אין לך פעולה זמינה בשלב הזה.' : 'בתפקידך את/ה צופה בקריאה ואינך מאשר/ת אותה.'} הקריאה ממתינה ל${(booking.stage !== 'realization' && topicHandlerName(booking.booking_type_id)) || STAGE_SHORT[booking.stage] || 'גורם אחר'}, ורק בעל התפקיד שהתור שלו במסלול יכול לאשר או לדחות אותה כעת.`}
             </p>
           )}
         </div>

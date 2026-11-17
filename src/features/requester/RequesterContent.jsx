@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { FadeIn } from '@/components/ui/FadeIn';
 import { EmptyState, ErrorNotice, Loading } from '@/components/ui/Feedback';
+import { CategoryGroup } from '@/components/booking/CategoryGroup';
 import { hasTypeIcon, TypeIcon } from '@/components/booking/TypeIcon';
 import { Icon } from '@/components/ui/Icon';
 import { useFitToWindow } from '@/lib/useFitToWindow';
@@ -39,10 +40,27 @@ function Picture({ src }) {
  */
 function TopicCard({ topic, open, onToggle, onOpenType }) {
   const card = useRef(null);
-  useFitToWindow(card, 240, open);
-  useEffect(() => {
-    if (!open && card.current) card.current.style.maxHeight = '';
-  }, [open]);
+  // capped at the window's bottom open or closed: lifting the cap at once on closing let the still-open body stretch
+  // the card (and the page, and the footer) for a moment before it folded
+  useFitToWindow(card, 240);
+  // the sub-groups of more than one type fold like the categories of "הקריאות שלי" (CategoryGroup); all closed at first
+  const [openGroups, setOpenGroups] = useState(() => new Set());
+  const toggleGroup = (id) => setOpenGroups((previous) => {
+    const next = new Set(previous);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    return next;
+  });
+  const typeButton = (type) => (
+    <button key={type.id} type="button" className="rq-type" onClick={() => onOpenType(type.id)}>
+      {hasTypeIcon(type.id) ? <TypeIcon bookingTypeId={type.id} /> : <Picture src={type.img} />}
+      <span className="txt">
+        <b>{type.name}</b>
+        {type.description ? <span>{type.description}</span> : null}
+      </span>
+      <Icon name="left" className="go" />
+    </button>
+  );
   const count = topic.groups.reduce((sum, group) => sum + group.types.length, 0);
   return (
     <section ref={card} className={`card rq-topic fit-card${open ? '' : ' closed'}`} aria-label={topic.name}>
@@ -54,29 +72,34 @@ function TopicCard({ topic, open, onToggle, onOpenType }) {
         </span>
         <Icon name="down" className="chev" />
       </button>
-      {open ? (
+      {/* stays mounted so it folds open and closed smoothly, fading as it goes (grid rows 0fr ↔ 1fr); inert while closed */}
+      <div className="rq-topic-reveal" inert={!open}>
         <div className="fit-fill scroll-y rq-topic-scroll">
           <div className="rq-topic-body">
-            {topic.groups.map((group) => (
-              <div key={group.id} className="rq-group">
-                <h3>{group.name}</h3>
-                <div className="rq-types">
-                  {group.types.map((type) => (
-                    <button key={type.id} type="button" className="rq-type" onClick={() => onOpenType(type.id)}>
-                      {hasTypeIcon(type.id) ? <TypeIcon bookingTypeId={type.id} /> : <Picture src={type.img} />}
-                      <span className="txt">
-                        <b>{type.name}</b>
-                        {type.description ? <span>{type.description}</span> : null}
-                      </span>
-                      <Icon name="left" className="go" />
-                    </button>
-                  ))}
+            {topic.groups.map((group) =>
+              group.types.length > 1 ? (
+                // a group of more than one request type folds open and closed in its own box
+                <CategoryGroup
+                  key={group.id}
+                  section={{ id: `g${group.id}`, label: group.name }}
+                  className="rq-subgroup"
+                  summary={`${group.types.length} סוגי קריאות`}
+                  open={openGroups.has(group.id)}
+                  onToggle={() => toggleGroup(group.id)}
+                >
+                  <div className="rq-types">{group.types.map(typeButton)}</div>
+                </CategoryGroup>
+              ) : (
+                // a single type stays plain, under its group's name
+                <div key={group.id} className="rq-group">
+                  <h3>{group.name}</h3>
+                  <div className="rq-types">{group.types.map(typeButton)}</div>
                 </div>
-              </div>
-            ))}
+              ),
+            )}
           </div>
         </div>
-      ) : null}
+      </div>
     </section>
   );
 }

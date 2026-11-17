@@ -106,7 +106,7 @@ export function GlobalSearch() {
                       {row.booking_type_label} · <span className="serial">{row.serial_number}</span>
                     </span>
                   </span>
-                  <StatusChip statusId={row.status_id} label={row.status_label} />
+                  <StatusChip statusId={row.status_id} label={row.status_label} bookingTypeId={row.booking_type_id} />
                 </button>
               ))}
               {total > rows.length ? (

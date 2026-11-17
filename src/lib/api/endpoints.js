@@ -1,6 +1,7 @@
 /** Typed service-on-click-api calls. Reads return `data`; writes return the envelope (server `message`). */
 import { getData, getPage, http, send } from './client';
 import { validateVaticanPerson } from './vatican';
+import { topicBooking } from '@/lib/topicTypes';
 
 
 const APPROVER = '/bookings-approver-management';
@@ -61,8 +62,9 @@ export const startupApi = {
 
 
 export const bookingsApi = {
-  list: (params, signal) => getPage(`${APPROVER}/bookings`, params, signal),
-  get: (serial, signal) => getData(`${APPROVER}/bookings/${serial}`, undefined, signal),
+  // ביטחון מידע / תקשוב bookings are named by their one handler as they arrive (lib/topicTypes)
+  list: (params, signal) => getPage(`${APPROVER}/bookings`, params, signal).then((page) => ({ ...page, data: Array.isArray(page?.data) ? page.data.map(topicBooking) : page?.data })),
+  get: (serial, signal) => getData(`${APPROVER}/bookings/${serial}`, undefined, signal).then(topicBooking),
   /** One `idempotencyKey` per user action; a repeat returns the first result. */
   changeStatus: (serial, body, idempotencyKey) =>
     send('post', `${APPROVER}/bookings/${serial}/status`, body, { headers: { 'Idempotency-Key': idempotencyKey } }),

@@ -386,17 +386,17 @@ body:has(.ticket.selected, .ticket-copy, .rq-row.selected, .sync-decision-previe
 .ti-mv-arrow { transition: transform 320ms var(--ease-out); }
 .ti-mv-person { transition: transform 420ms var(--ti-spring) 80ms; }
 @media (hover: hover) and (pointer: fine) {
-  :is(.rq-type, .rq-cat, .ticket, .rq-row):hover .ti-sw-arrow { transform: translateY(2px); }
-  :is(.rq-type, .rq-cat, .ticket, .rq-row):hover .ti-sw-bar { transform: scaleX(1); }
-  :is(.rq-type, .rq-cat, .ticket, .rq-row):hover .ti-pr-paper { transform: none; }
-  :is(.rq-type, .rq-cat, .ticket, .rq-row):hover .ti-pr-led { fill: #2FA85A; }
-  :is(.rq-type, .rq-cat, .ticket, .rq-row):hover .ti-em-mail { transform: rotate(-8deg); }
-  :is(.rq-type, .rq-cat, .ticket, .rq-row):hover .ti-em-badge { transform: scale(1.18); }
-  :is(.rq-type, .rq-cat, .ticket, .rq-row):hover .ti-rn-line { stroke-dashoffset: 0; }
-  :is(.rq-type, .rq-cat, .ticket, .rq-row):hover .ti-rn-pen { transform: translate(-3px, -3px); }
-  :is(.rq-type, .rq-cat, .ticket, .rq-row):hover .ti-uo-plus { transform: rotate(90deg) scale(1.15); }
-  :is(.rq-type, .rq-cat, .ticket, .rq-row):hover .ti-mv-arrow { transform: translateX(2px); }
-  :is(.rq-type, .rq-cat, .ticket, .rq-row):hover .ti-mv-person { transform: translateX(-2px); }
+  :is(.rq-type, .rq-cat, .ticket, .rq-row, .dtile, .dgroup-item):hover .ti-sw-arrow { transform: translateY(2px); }
+  :is(.rq-type, .rq-cat, .ticket, .rq-row, .dtile, .dgroup-item):hover .ti-sw-bar { transform: scaleX(1); }
+  :is(.rq-type, .rq-cat, .ticket, .rq-row, .dtile, .dgroup-item):hover .ti-pr-paper { transform: none; }
+  :is(.rq-type, .rq-cat, .ticket, .rq-row, .dtile, .dgroup-item):hover .ti-pr-led { fill: #2FA85A; }
+  :is(.rq-type, .rq-cat, .ticket, .rq-row, .dtile, .dgroup-item):hover .ti-em-mail { transform: rotate(-8deg); }
+  :is(.rq-type, .rq-cat, .ticket, .rq-row, .dtile, .dgroup-item):hover .ti-em-badge { transform: scale(1.18); }
+  :is(.rq-type, .rq-cat, .ticket, .rq-row, .dtile, .dgroup-item):hover .ti-rn-line { stroke-dashoffset: 0; }
+  :is(.rq-type, .rq-cat, .ticket, .rq-row, .dtile, .dgroup-item):hover .ti-rn-pen { transform: translate(-3px, -3px); }
+  :is(.rq-type, .rq-cat, .ticket, .rq-row, .dtile, .dgroup-item):hover .ti-uo-plus { transform: rotate(90deg) scale(1.15); }
+  :is(.rq-type, .rq-cat, .ticket, .rq-row, .dtile, .dgroup-item):hover .ti-mv-arrow { transform: translateX(2px); }
+  :is(.rq-type, .rq-cat, .ticket, .rq-row, .dtile, .dgroup-item):hover .ti-mv-person { transform: translateX(-2px); }
 }
 /* reduced motion: only the colour changes stay; nothing moves */
 @media (prefers-reduced-motion: reduce) {

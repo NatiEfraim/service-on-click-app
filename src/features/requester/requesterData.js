@@ -7,6 +7,7 @@
 import { OPEN_STATUS_IDS, requesterApi } from '@/lib/api/endpoints';
 import { routeFor, routePosition } from '@/features/bookings/route';
 import { domainIconSrc, requesterIconSrc } from '@/lib/labels';
+import { topicStatusLabel } from '@/lib/topicTypes';
 
 /** Files a form accepts as attachments (POST /bookings/{id}: jpg, jpeg, png, gif, webp, pdf; up to 10, 10 MB each). */
 export const ATTACH_ACCEPT = 'image/jpeg,image/png,image/gif,image/webp,application/pdf';
@@ -194,7 +195,7 @@ export async function fetchMyRequests(signal, { openOnly = false } = {}) {
     createdAt: booking.created_at,
     updatedAt: booking.updated_at,
     statusId: booking.status?.id,
-    statusName: booking.status?.display_name ?? '',
+    statusName: topicStatusLabel(booking.status?.id, booking.booking_type?.id) ?? booking.status?.display_name ?? '',
   }));
 }
 
@@ -240,7 +241,7 @@ export async function fetchRequestDetails(row, signal) {
 
   return {
     statusId: booking.status?.id ?? row.statusId,
-    statusName: booking.status?.display_name ?? row.statusName,
+    statusName: topicStatusLabel(booking.status?.id ?? row.statusId, row.bookingTypeId) ?? booking.status?.display_name ?? row.statusName,
     statusMessage: booking.status?.additional_message ?? null,
     createdAt: booking.created_at ?? row.createdAt,
     updatedAt: booking.updated_at ?? null,

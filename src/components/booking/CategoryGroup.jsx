@@ -46,7 +46,10 @@ export function CategoryGroup({ section, summary, open, onToggle, badge = null, 
   return (
     <section className={`pp-group${open ? ' open' : ''}${className ? ` ${className}` : ''}`}>
       <button type="button" className="pp-group-head" aria-expanded={open} aria-controls={panelId} onClick={onToggle}>
-        <span className="pp-group-ic" style={{ '--tint': section.tint }}>{Picture ? <Picture /> : null}<CountBadge count={count} label={countLabel} /></span>
+        {/* a main category has its picture on a tinted tile; a plain group (no picture, e.g. a topic's sub-group) has none */}
+        {Picture ? (
+          <span className="pp-group-ic" style={{ '--tint': section.tint }}><Picture /><CountBadge count={count} label={countLabel} /></span>
+        ) : null}
         <span className="pp-group-txt">
           <b>{section.label}</b>
           {summary ? <span>{summary}</span> : null}

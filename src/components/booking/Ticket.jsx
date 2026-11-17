@@ -15,6 +15,7 @@ import { isHoldStatus } from '@/lib/booking-workflow';
 import { DomainBadge } from './DomainBadge';
 import { AgeBar, MiniRoute } from './RouteViz';
 import { useLeave, useArrive } from './ticketMotion';
+import { topicBooking, topicHandlerName } from '@/lib/topicTypes';
 
 /** Measures the selected row against the drawer's resting edge. */
 function useCoveredBox(ref, selected) {
@@ -68,7 +69,9 @@ function useCoveredBox(ref, selected) {
 }
 
 /** One booking in a list, with the decisions available right now; `entering` marks a row that just arrived in the list. */
-export function Ticket({ booking, showActions = true, onAction, outcome, entering = false }) {
+export function Ticket({ booking: given, showActions = true, onAction, outcome, entering = false }) {
+  // ביטחון מידע / תקשוב named by their one handler, wherever the booking came from (the dashboard's oldest too)
+  const booking = topicBooking(given);
   const { catalog, me, unitName } = useSession();
   const drawer = useBookingDrawer();
   const ref = useRef(null);
@@ -125,7 +128,7 @@ export function Ticket({ booking, showActions = true, onAction, outcome, enterin
             </span>
           ) : null}
           {booking.has_conflict || booking.sync_state === 'conflict' ? <NeedsDecision /> : null}
-          {isHoldStatus(booking.status_id) ? <StatusChip statusId={booking.status_id} label={booking.status_label} /> : null}
+          {isHoldStatus(booking.status_id) ? <StatusChip statusId={booking.status_id} label={booking.status_label} bookingTypeId={booking.booking_type_id} /> : null}
           {booking.sync_state === 'pending' ? <Chip tone="info">ממתינה לשליחה</Chip> : null}
         </div>
         <div className="t2">
@@ -133,14 +136,14 @@ export function Ticket({ booking, showActions = true, onAction, outcome, enterin
           {me.is_super_admin && booking.unit_id ? <span>· {unitName(booking.unit_id)}</span> : null}
           <span>·</span>
           <MiniRoute booking={booking} catalog={catalog} />
-          <span>{booking.stage === 'closed' ? booking.status_label : STAGE_SHORT[booking.stage]}</span>
+          <span>{booking.stage === 'closed' ? booking.status_label : (booking.stage !== 'realization' && topicHandlerName(booking.booking_type_id)) || STAGE_SHORT[booking.stage]}</span>
         </div>
       </div>
     </>
   );
   const side = (
     <div className={`side${showActions && onAction ? ' with-actions' : ''}${booking.stage === 'closed' ? ' closed-status' : ''}`}>
-      {booking.stage === 'closed' ? <StatusChip statusId={booking.status_id} label={booking.status_label} /> : <AgeBar booking={booking} />}
+      {booking.stage === 'closed' ? <StatusChip statusId={booking.status_id} label={booking.status_label} bookingTypeId={booking.booking_type_id} /> : <AgeBar booking={booking} />}
       {showActions && booking.actions.length > 0 && onAction ? (
         <div className="acts">
           {actions.slice(0, 2).map((action) => {

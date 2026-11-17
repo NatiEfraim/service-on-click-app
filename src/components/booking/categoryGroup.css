@@ -107,26 +107,21 @@
   .svc-sf-door, .svc-sf-dial, .svc-sf-item { transition-property: opacity; }
 }
 
-/* ---------- תקשוב - the satellite dish ---------- */
-/* it rests turned aside, turns upward on hover, aims fully on open; the waves leave it one by one */
-.svc-ds-dish { transform-origin: 70% 90%; transform: rotate(-22deg); transition: transform 380ms var(--ease-out); }
-.svc-ds-w { opacity: 0; transform: translate(-3px, 3px) scale(.6); transform-origin: 0% 100%; transition: transform 460ms var(--svc-spring), opacity 200ms var(--ease-out); }
-@media (hover: hover) and (pointer: fine) {
-  .pp-group-head:hover .svc-ds-dish { transform: rotate(-8deg); }
-  .pp-group-head:hover .svc-ds-w.w1 { opacity: 1; transform: none; }
-}
-.pp-group.open .svc-ds-dish { transform: none; transition: transform 480ms var(--svc-spring); }
-.pp-group.open .svc-ds-w { opacity: 1; transform: none; }
-.pp-group.open .svc-ds-w.w1 { transition-delay: 120ms; }
-.pp-group.open .svc-ds-w.w2 { transition-delay: 220ms; }
-.pp-group.open .svc-ds-w.w3 { transition-delay: 320ms; }
-
+/* ---------- תקשוב - the network: the nodes rest close to the hub; hover starts the links; opening jumps the nodes
+   out to the edges as the links draw ---------- */
+.svc-i5-node { transition: transform 360ms var(--ease-out); }
+.svc-i5-node.n1 { transform: translate(4px, 4px) scale(.85); }
+.svc-i5-node.n2 { transform: translate(4px, -4px) scale(.85); }
+.svc-i5-node.n3 { transform: translate(-5px, -4px) scale(.85); }
+.svc-i5-link { stroke-dasharray: 100; stroke-dashoffset: 50; transition: stroke-dashoffset 380ms var(--ease-out); }
+@media (hover: hover) and (pointer: fine) { .pp-group-head:hover .svc-i5-link { stroke-dashoffset: 25; } }
+.pp-group.open .svc-i5-node { transform: none; transition: transform 460ms var(--svc-spring); }
+.pp-group.open .svc-i5-link { stroke-dashoffset: 0; }
 @media (prefers-reduced-motion: reduce) {
-  .svc-ds-dish, .svc-ds-w { transition-property: opacity; }
+  .svc-i5-node { transition-property: opacity; }
 }
 
-/* the picture can carry a small count on its corner (CategoryGroup count, CountBadge) */
+/* the picture can carry a small count on its corner (CategoryGroup count, CountBadge), and its parts may move past its
+   frame (the network's nodes, the gear rising out of the toolbox): never clipped */
 .pp-group-ic { position: relative; }
-
-/* the pictures move past their own frame (the gear rising out of the toolbox, the dish's waves): never clipped */
 .pp-group-ic .svc { overflow: visible; }

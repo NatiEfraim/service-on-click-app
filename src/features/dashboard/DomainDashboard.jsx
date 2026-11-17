@@ -116,6 +116,8 @@ export function DomainDashboard() {
   const pct = (hours) => `${Math.min(100, ((hours ?? 0) / scale) * 100)}%`;
   const awaitingApproval = APPROVAL_STAGES.reduce((sum, id) => sum + (data.by_stage[id] ?? 0), 0);
   // waiting on someone outside: files from the customer, the supplier's approval or its number (statuses 8, 9, 10)
+  // only domains whose route has a third-party step (a supplier or a customer: statuses 8-10) show that card
+  const hasThirdParty = data.booking_type_ids.some((id) => (catalog?.booking_type_statuses?.[String(id)] ?? []).some((status) => THIRD_PARTY_STATUSES.includes(status)));
   const thirdPartyCounts = THIRD_PARTY_STAGES.map(({ id, label }) => ({ label, count: data.by_stage[id] ?? 0 }));
   const thirdParty = {
     total: thirdPartyCounts.reduce((sum, part) => sum + part.count, 0),
@@ -181,7 +183,8 @@ export function DomainDashboard() {
           commander and the vice approver get their work: the bookings waiting, oldest first, and what needs attention */}
       {isManager ? (
       <>
-      {/* 1. headline numbers */}
+      {/* 1. headline numbers - not for the barber: its status summary above already says it all */}
+      {single === 5 ? null : (
       <div className="card stats stagger">
         <Stat index={0} icon="list" color={STAT_COLOR.open} label="קריאות פתוחות" value={data.totals.open} foot={`מתוך ${data.totals.total} בתחומים שלך`} onClick={() => router.push(`/requests?view=open${typesParam}`)} />
         <Stat index={1} icon="inbox" color={STAT_COLOR.awaiting} label="ממתינות להחלטת מאשרים" value={awaitingApproval} foot="בשלבי האישור" onClick={() => router.push(`/requests?view=open${typesParam}`)} />
@@ -195,7 +198,7 @@ export function DomainDashboard() {
           foot={data.target ? `מעל ${fmtLongHours(data.target.target_hours)} מפתיחה` : 'נספרות רק לפי יעד שהוגדר'}
           onClick={() => router.push(`/requests?view=overdue${typesParam}`)}
           side={
-            me.is_handler_only
+            me.is_handler_only || !hasThirdParty
               ? null
               : {
                   icon: 'clip',
@@ -203,12 +206,14 @@ export function DomainDashboard() {
                   label: 'ממתינות לצד שלישי',
                   value: thirdParty.total,
                   foot: thirdParty.parts.length ? thirdParty.parts.join(' · ') : 'ספק או לקוח',
-                  onClick: thirdParty.total ? () => router.push(`/requests?view=open&statuses=${THIRD_PARTY_STATUSES.join(',')}${typesParam}`) : undefined,
+                  // always opens the list (as the other cards do), even when empty: there the user sees nothing waits
+                  onClick: () => router.push(`/requests?view=open&statuses=${THIRD_PARTY_STATUSES.join(',')}${typesParam}`),
                 }
           }
         />
         <Stat index={3} icon="pulse" color={STAT_COLOR.stale} label="ללא התקדמות" value={data.totals.stale} foot="יותר משבוע באותו שלב" />
       </div>
+      )}
 
       {/* 2. where the bookings are */}
       <Card
