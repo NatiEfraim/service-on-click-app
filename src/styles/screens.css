@@ -550,6 +550,12 @@ span.chart-fade { flex-direction: row; align-items: center; gap: 8px; white-spac
 .hatch-stack .btn { padding-block: 9px; }
 .hatch-stack .hatch-result { gap: 8px; padding-top: 12px; }
 .hatch-stack .hatch-result .notice { padding: 9px 12px; font-size: 14px; }
+/* a hatch card: its channel choice (through the FTP / straight to the bucket) above the form; its filters in a plain group,
+   dimmed while they do not apply (the bucket channel of the booking-status export) */
+.hatch-stack .card-body > .seg { margin-bottom: 12px; }
+.hatch-filters { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-wrap: wrap; align-items: flex-end; gap: inherit; transition: opacity var(--dur-fast) ease; }
+.hatch-filters:disabled { opacity: .5; }
+.hatch-form .check:has(input:disabled) { opacity: .5; }
 .report-export { display: inline-flex; align-items: center; gap: 12px; margin-inline-start: auto; }
 
 /* the two sync cards keep their own height; opening a file grows only its own card */

@@ -1,89 +1,73 @@
 /**
- * What each digital-hatch answer means, as lines for the card's result block: { tone: 'ok' | 'info' | 'warn' | 'bad', text }.
- * `info` lines are notices (switched off, busy, queued), never errors.
+ * What each digital-hatch answer means (the frontend guide of 2026-11-17), as lines for the card's result block:
+ * { tone: 'ok' | 'info' | 'warn' | 'bad', text }. `info` lines are notices (switched off, busy, queued), never errors.
+ * Every answer echoes the channel that actually ran (`data.channel`); it is shown first.
  */
 
 const BUSY = 'פעולה זו כבר מתבצעת - נסו שוב עוד רגע.';
 const QUEUED = 'הפעולה הועברה לתור - התוצאות יהיו זמינות בקרוב.';
+const FTP_OFF = 'הממשק ל-FTP כבוי בשרת - ניתן להריץ ישירות מול ה-bucket.';
+const SERVER_ERROR = 'הפעולה נכשלה בשרת. נסו שוב או בדקו את יומן השרת.';
+
+const CHANNEL_NAME = { ftp: 'דרך ה-FTP', bucket: 'ישירות ל-bucket' };
 
 const SKIPPED = {
-  digital_hatch: 'הפעולה דולגה: הצוהר הדיגיטלי פעיל ונבחר מסלול שגוי.',
   export_json_disabled: 'הייצוא כבוי בשרת (EXPORT_JSON_ENABLED=false).',
   busy: BUSY,
 };
 
 const errorLines = (...lists) => lists.flatMap((list) => list ?? []).map((text) => ({ tone: 'bad', text }));
+const channelLine = (data) => (data?.channel ? [{ tone: 'info', text: `מסלול: ${CHANNEL_NAME[data.channel] ?? data.channel}` }] : []);
 
-/** A notice that ends the read: switched off or queued; null when there is a result to read. */
-function stopped(data, offText) {
-  if (!data || data.enabled === false) return [{ tone: 'info', text: offText }];
-  if (data.queued) return [{ tone: 'info', text: QUEUED }];
-  return null;
-}
-
-/** Export booking status / users: `noun` names the counted rows, `countKey` the field of `built` that counts them. */
+/**
+ * An export: booking status, users or system references. `noun` names the counted rows, `countKey` the field of `built`
+ * that counts them (bookings / users / records).
+ */
 export function exportLines(data, noun, countKey) {
-  const stop = stopped(data, 'הצוהר הדיגיטלי מנותק בשרת.');
-  if (stop) return stop;
+  if (!data) return [{ tone: 'bad', text: SERVER_ERROR }];
+  // the FTP channel was asked for while the hatch is off: nothing ran
+  if (data.enabled === false) return [{ tone: 'info', text: FTP_OFF }];
+  if (data.queued) return [...channelLine(data), { tone: 'info', text: QUEUED }];
   const result = data.result ?? {};
-  const lines = [];
+  const lines = channelLine(data);
+  if (result.busy) return [...lines, { tone: 'info', text: BUSY }];
   if (result.skipped) lines.push({ tone: 'info', text: SKIPPED[result.skipped] ?? `הפעולה דולגה (${result.skipped}).` });
+
+  // the booking-status export on the bucket channel answers with its three files' own results (status, values, config)
+  if (!result.built && (result.status || result.values || result.config)) {
+    lines.push({ tone: 'ok', text: 'הייצוא ל-bucket הסתיים: קבצי הסטטוסים, הערכים וההגדרות נכתבו.' });
+    return [...lines, ...errorLines(result.errors, result.status?.errors, result.values?.errors, result.config?.errors)];
+  }
+
   const built = result.built;
+  const file = result.file ?? built?.file;
   if (built?.written) {
-    lines.push({ tone: 'ok', text: `נשלח: ${built[countKey] ?? 0} ${noun}${result.file ?? built.file ? ` בקובץ ${result.file ?? built.file}` : ''}.` });
+    lines.push({ tone: 'ok', text: `נשלחו ${built[countKey] ?? 0} ${noun}${file ? ` בקובץ ${file}` : ''}.` });
     if (built.in_file != null) lines.push({ tone: 'info', text: `בקובץ של היום: ${built.in_file} ${noun}.` });
   } else if (built?.reason === 'nothing_waiting') {
     lines.push({ tone: 'info', text: `אין ${noun} בהמתנה.` });
   } else if (built?.reason === 'unchanged') {
-    lines.push({ tone: 'info', text: 'הקובץ לא השתנה מאז השליחה האחרונה.' });
-  }
-  if (built && !built.written && result.file == null && built.reason !== 'nothing_waiting') {
-    lines.push({ tone: 'info', text: 'הקובץ לא נשלח (תוכן זהה לשליחה האחרונה - סמנו "שליחה בכפייה" כדי לשלוח בכל זאת).' });
+    // a skipped resend is not an error: this exact content already went (the ledger); force pushes it again
+    lines.push({ tone: 'info', text: 'הקובץ זהה לשליחה האחרונה ולכן לא נשלח שוב. סמנו "שליחה בכפייה" כדי לשלוח בכל זאת.' });
   }
   if (result.destination) lines.push({ tone: 'info', text: `יעד: ${result.destination}` });
   if (result.marked != null) lines.push({ tone: 'info', text: `סומנו כנשלחו: ${result.marked}.` });
+  if (result.errors?.length) lines.push({ tone: 'warn', text: 'הסימון לא נוקה - הריצה הבאה תנסה שוב.' });
   return [...lines, ...errorLines(result.errors)];
 }
 
-/** Import booking json / application log json; `logs` adds the "no matching booking" warning. */
-export function importJsonLines(data, logs = false) {
-  const stop = stopped(data, 'הייבוא מנותק (HATCH_ENABLED=false).');
-  if (stop) return stop;
-  const result = data.result ?? {};
-  const imported = result.imported ?? {};
-  const lines = [];
-  if (result.source) lines.push({ tone: 'info', text: `מקור: ${result.source}` });
-  const fetched = result.fetched ?? [];
-  lines.push({ tone: 'info', text: fetched.length ? `קבצים שנלקחו מה-FTP: ${fetched.join(', ')}` : 'לא נמצאו קבצים חדשים ב-FTP.' });
-  if (imported.busy) lines.push({ tone: 'info', text: BUSY });
-  if (imported.disabled) lines.push({ tone: 'info', text: 'הייבוא כבוי בשרת.' });
-
-  const files = imported.files ?? [];
-  let notFound = 0;
-  for (const file of files) {
-    const stats = file.stats ?? {};
-    const counts = logs
-      ? `${stats.created ?? 0} נשמרו`
-      : `${stats.created ?? 0} נוצרו, ${stats.updated ?? 0} עודכנו${stats.values_skipped ? `, ${stats.values_skipped} ערכים דולגו` : ''}`;
-    lines.push({ tone: file.errors?.length ? 'warn' : 'ok', text: `${file.file}: ${file.rows ?? 0} שורות - ${counts}.` });
-    notFound += stats.booking_not_found ?? 0;
-  }
-  if (!imported.busy && !imported.disabled && files.length === 0) lines.push({ tone: 'info', text: 'לא היו קבצים לייבוא.' });
-  if (logs && notFound > 0) lines.push({ tone: 'warn', text: `${notFound} לוגים לא נמצאה עבורם הזמנה - ייבאו קודם את קובץ ההזמנות והפעילו שוב.` });
-
-  return [...lines, ...errorLines(result.errors, imported.errors, ...files.map((file) => file.errors))];
+/**
+ * An import (bookings, action log, attachments): since 2026-11-15 the answer is only the outcome - the details are in
+ * the server log. `ok && ran` = done; `ran: false` = nothing ran (off, busy or queued); `ok: false` (HTTP 500) = failed
+ * or still waits, the files stay in place and retry on the next run.
+ */
+export function importLines(data) {
+  if (!data) return [{ tone: 'bad', text: SERVER_ERROR }];
+  const lines = channelLine(data);
+  if (data.ok === false) return [...lines, { tone: 'bad', text: data.error || SERVER_ERROR }, { tone: 'info', text: 'הקבצים שנכשלו נשארו במקומם וינוסו שוב בריצה הבאה.' }];
+  if (data.ran === false) return [...lines, { tone: 'info', text: 'לא בוצע - ריצה אחרת פעילה או שהייבוא כבוי.' }];
+  return [...lines, { tone: 'ok', text: 'הייבוא הסתיים בהצלחה.' }];
 }
 
-/** Import files (attachments from the bucket). */
-export function importFilesLines(data) {
-  const stop = stopped(data, 'הייבוא מנותק (HATCH_ENABLED=false).');
-  if (stop) return stop;
-  const imported = data.result?.imported ?? {};
-  if (imported.busy) return [{ tone: 'info', text: BUSY }, ...errorLines(imported.errors)];
-  const lines = [
-    { tone: 'ok', text: `נמצאו ${imported.in_bucket ?? 0} קבצים, הועתקו ${imported.moved ?? 0}, קושרו ${imported.linked ?? 0}${imported.already_linked ? `, ${imported.already_linked} כבר היו מקושרים` : ''}.` },
-  ];
-  if (imported.unclaimed > 0) lines.push({ tone: 'warn', text: `${imported.unclaimed} קבצים ממתינים להזמנה שעוד לא ייובאה.` });
-  if (imported.waiting > 0) lines.push({ tone: 'warn', text: `${imported.waiting} קבצים מצוינים בהזמנות אך טרם הגיעו.` });
-  return [...lines, ...errorLines(imported.errors)];
-}
+/** Whether an import answer is a full success (to show the next step's hint). */
+export const importSucceeded = (data) => Boolean(data?.ok && data?.ran);

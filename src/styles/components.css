@@ -419,3 +419,7 @@ body:has(.ticket.selected, .ticket-copy, .rq-row.selected, .sync-decision-previe
 }
 @starting-style { .count-badge { opacity: 0; transform: scale(.6); } }
 @media (prefers-reduced-motion: reduce) { .count-badge { transition: opacity var(--dur-base) ease; } @starting-style { .count-badge { transform: none; } } }
+
+/* a booking drawer's number beside "קריאה" (SerialTitle): a little apart, lighter */
+/* the number reads left to right, so its own "start" is its left: the space goes on its right, towards "קריאה" */
+.drawer-serial { margin-right: 10px; font-size: 16px; font-weight: 400; }

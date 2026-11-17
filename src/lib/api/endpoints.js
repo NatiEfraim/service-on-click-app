@@ -200,10 +200,12 @@ export const bookingsReportApi = {
 
 /** Digital hatch: runs the scheduler's exports (r2b) and imports (b2r) now, inline (sync=1), and returns `data`. */
 const HATCH = `${SUPER}/digital-hatch`;
-const hatchRun = async (path, body) => (await send('post', `${HATCH}/${path}`, { ...body, sync: 1 })).data;
+// an import that failed answers 500 with its own outcome ({ ok: false, error }): taken as an answer to show, not thrown
+const hatchRun = async (path, body) => (await send('post', `${HATCH}/${path}`, { ...body, sync: 1 }, { validateStatus: (status) => (status >= 200 && status < 300) || status === 500 })).data;
 export const hatchApi = {
   exportBookingStatus: (body) => hatchRun('export-booking-status', body),
   exportUsers: (body) => hatchRun('export-users', body),
+  exportSystemReferences: (body) => hatchRun('export-system-references', body),
   importBookingJson: (body) => hatchRun('import-booking-json', body),
   importApplicationLogJson: (body) => hatchRun('import-application-log-json', body),
   importFiles: (body) => hatchRun('import-files', body),

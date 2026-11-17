@@ -37,7 +37,7 @@ export function topicStatusLabel(statusId, bookingTypeId) {
     15: `בטיפול ${handler}`,
     16: `בטיפול ${handler} - לקראת ביטול`,
     3: `אושרה ע"י ${handler}`,
-    5: 'הטיפול הסתיים',
+    5: 'סיום טיפול',
     4: `נדחתה ע"י ${handler}`,
     7: `בוטלה ע"י ${handler}`,
     6: 'בוטלה ע"י המבקש',

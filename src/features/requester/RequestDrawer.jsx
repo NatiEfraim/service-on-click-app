@@ -1,6 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import { SerialTitle } from '@/components/booking/SerialTitle';
 import { Fragment, useEffect, useState } from 'react';
 import { DomainBadge } from '@/components/booking/DomainBadge';
 import { ApprovalTrack } from '@/components/booking/RouteViz';
@@ -8,7 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { Chip, StatusChip } from '@/components/ui/Chips';
 import { Drawer } from '@/components/ui/Drawer';
 import { ErrorNotice, Loading, Notice } from '@/components/ui/Feedback';
-import { Icon } from '@/components/ui/Icon';
+import { AttachmentsPanel } from '@/features/bookings/Attachments';
 import { usePresence } from '@/components/ui/usePresence';
 import { holdDescription, isHoldStatus } from '@/lib/booking-workflow';
 import { fmtDate, fmtDateTime } from '@/lib/format';
@@ -127,7 +128,7 @@ export function RequestDrawer({ row, rows = [], onGo, onClose, celebrate = false
       tools={onGo ? <RequestStepper row={row} rows={rows} onGo={onGo} /> : undefined}
       title={
         <>
-          קריאה <span className="ltr" style={{ fontSize: 16, fontWeight: 400 }}>{row.serial}</span>
+          <SerialTitle serial={row.serial} />
         </>
       }
     >
@@ -168,14 +169,18 @@ export function RequestDrawer({ row, rows = [], onGo, onClose, celebrate = false
                   {details.requester ? (
                     <>
                       <dt>מבקש</dt>
-                      <dd>
-                        {details.requester.name}{' '}
-                        <span className="ltr">{details.requester.personalId}</span>
-                      </dd>
+                      <dd>{details.requester.name}</dd>
+                      {details.requester.personalId ? (
+                        <>
+                          <dt>ת&quot;ז</dt>
+                          <dd><span className="ltr">{details.requester.personalId}</span></dd>
+                        </>
+                      ) : null}
                       {details.requester.phone ? (
                         <>
                           <dt>טלפון</dt>
-                          <dd className="ltr">{details.requester.phone}</dd>
+                          {/* the number reads left to right but sits on the right, as the other values do */}
+                          <dd><span className="ltr">{details.requester.phone}</span></dd>
                         </>
                       ) : null}
                     </>
@@ -230,25 +235,8 @@ export function RequestDrawer({ row, rows = [], onGo, onClose, celebrate = false
             </section>
           </div>
 
-          {details.files.length ? (
-            <section className="panel">
-              <header><h2>קבצים מצורפים</h2></header>
-              <div className="body">
-                <ul className="rq-files">
-                  {details.files.map((file, index) => (
-                    <li key={`${file.name}-${index}`}>
-                      <Icon name="clip" />
-                      {file.url ? (
-                        <a href={file.url} target="_blank" rel="noreferrer">{file.name}</a>
-                      ) : (
-                        <span>{file.name}</span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </section>
-          ) : null}
+          {/* the same panel as the management side: pictures shown, images and PDFs open in the viewer (Attachments) */}
+          {details.files.length ? <AttachmentsPanel attachments={details.files} /> : null}
         </div>
       )}
     </Drawer>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import { SerialTitle } from '@/components/booking/SerialTitle';
 import { useEffect, useRef, useState } from 'react';
 import { DrawerStepper } from './DrawerStepper';
 import { Drawer } from '@/components/ui/Drawer';
@@ -67,7 +68,7 @@ export function BookingDrawer({ serial, onClose, onGo }) {
       tools={<DrawerStepper serial={serial} onGo={onGo} />}
       title={
         <>
-          קריאה <span className="ltr" style={{ fontSize: 16, fontWeight: 400 }}>{serial}</span>
+          <SerialTitle serial={serial} />
         </>
       }
     >

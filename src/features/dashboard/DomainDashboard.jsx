@@ -144,7 +144,7 @@ export function DomainDashboard() {
   const attention = [
     { count: data.totals.needs_decision, title: 'קריאות דורשות הכרעה', text: 'הקריאה שונתה במקביל במערכת החיצונית.', tone: 'var(--bad)', href: `/requests?view=decide${typesParam}` },
     { count: data.totals.overdue, title: 'קריאות חורגות מיעד הטיפול', text: 'הזמן מפתיחה ארוך מהיעד שהוגדר לתחום.', tone: 'var(--bad)', href: `/requests?view=overdue${typesParam}` },
-    { count: data.totals.stale, title: 'קריאות לא התקדמו מעל שבוע', text: 'לא נרשם בהן שינוי סטטוס 7 ימים ומעלה.', tone: 'var(--warn)', href: `/requests?view=open${typesParam}` },
+    { count: data.totals.stale, title: 'קריאות לא התקדמו מעל שבוע', text: 'לא נרשם בהן שינוי סטטוס 7 ימים ומעלה.', tone: 'var(--warn)', href: `/requests?view=open&sort=stage_age_hours&dir=desc${typesParam}` },
   ].filter((row) => row.count > 0);
 
   return (
@@ -211,7 +211,8 @@ export function DomainDashboard() {
                 }
           }
         />
-        <Stat index={3} icon="pulse" color={STAT_COLOR.stale} label="ללא התקדמות" value={data.totals.stale} foot="יותר משבוע באותו שלב" />
+        {/* the API has no stalled filter: its open bookings, longest in their stage first ("הממתינות הכי הרבה זמן"), put them on top */}
+        <Stat index={3} icon="pulse" color={STAT_COLOR.stale} label="ללא התקדמות" value={data.totals.stale} foot="יותר משבוע באותו שלב" onClick={() => router.push(`/requests?view=open&sort=stage_age_hours&dir=desc${typesParam}`)} />
       </div>
       )}
 

@@ -63,6 +63,20 @@ export function requestCategories(rows, catalogCategories = [], managedCategorie
   return [...categories.values()].sort((a, b) => a.typeIds[0] - b.typeIds[0]);
 }
 
+/**
+ * A requester file as the shared attachments panel takes it (features/bookings/Attachments, as the management side):
+ * an image - by the server's type or its name - shows as a picture and opens in the viewer, so does a PDF; any other
+ * file downloads.
+ */
+export function toAttachment(entry, index) {
+  const name = entry.display_name ?? entry.name ?? 'קובץ';
+  const url = entry.url ?? null;
+  const path = `${name} ${url ?? ''}`.toLowerCase().split('?')[0];
+  const image = entry.type === 'image' || /\.(jpe?g|png|gif|webp)\b/.test(path);
+  const pdf = /\.pdf\b/.test(path) || (entry.mime_type ?? entry.mime ?? '') === 'application/pdf';
+  return { id: entry.id ?? index, kind: image ? 'image' : 'file', name, url, mime: entry.mime_type ?? entry.mime ?? (pdf ? 'application/pdf' : null), available: Boolean(url), inline: image || pdf };
+}
+
 /** The type with its topic and group, for the form's breadcrumb; null when the catalog does not offer it. */
 export function findType(catalog, typeId) {
   for (const topic of catalog?.topics ?? []) {
@@ -223,7 +237,7 @@ export async function fetchRequestDetails(row, signal) {
     if (!item) return;
     const label = item.field_display_name ?? item.field_name ?? '';
     if (Array.isArray(item.value) && item.value.some((entry) => entry?.type === 'file' || entry?.type === 'image')) {
-      for (const entry of item.value) files.push({ name: entry.display_name ?? entry.name ?? 'קובץ', url: entry.url ?? null });
+      for (const entry of item.value) files.push(toAttachment(entry, files.length));
       return;
     }
     if (item.form_fields?.length) {
@@ -248,7 +262,9 @@ export async function fetchRequestDetails(row, signal) {
     viceApprover: booking.vice_approver?.user?.full_name ?? null,
     requester: booking.user ? { name: booking.user.full_name ?? '', personalId: booking.user.personal_id ?? '', phone: booking.user.phone ?? '' } : null,
     values,
-    files,
+    // the booking's uploaded files, in the same shape as the management side (AttachmentService::describe), once the
+    // API sends them; until then, any files found among the form's values
+    files: Array.isArray(booking.attachments) && booking.attachments.length ? booking.attachments : files,
     comments: (booking.comments ?? []).map((comment) => ({
       id: comment.id,
       author: comment.user?.full_name || comment.user?.personal_id || '',
