@@ -160,7 +160,7 @@ export function RequesterContent({ name, extraCategories = null }) {
         <MyRequestsPanel full extraCategories={extraCategories} category={search.get('cat')} onCategory={(cat) => setParams({ cat })} bucket={search.get('bucket')} onBucket={(bucket) => setParams({ bucket })} sent={search.get('sent')} onSentSeen={() => setParams({ sent: null })} />
       </FadeIn>
     ) : (
-      <FadeIn key="home">
+      <div key="home">
         <div className="rq-hello">
           <h1>שלום, {name}</h1>
           <p>באיזה נושא תרצה לפתוח קריאה?</p>
@@ -212,7 +212,7 @@ export function RequesterContent({ name, extraCategories = null }) {
           </div>
           <MyRequestsPanel extraCategories={extraCategories} category={search.get('cat')} onCategory={(cat) => setParams({ cat })} onAll={() => go({ rq: 'mine', cat: search.get('cat') })} />
         </div>
-      </FadeIn>
+      </div>
     )}
     </>
   );

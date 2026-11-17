@@ -44,6 +44,15 @@
 .tabs-nav > a[aria-current="page"]::before, .tabs-nav > .dd.current > button::before { display: none; }
 .count { font-size: 12px; font-weight: 700; min-width: 20px; padding: 0 6px; line-height: 19px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-ink); text-align: center; }
 .topbar .count { background: var(--ink); color: #fff; }
+.tabs-nav > a:has(.nav-count-slot) { gap: 0; }
+.nav-count-slot {
+  display: grid; grid-template-columns: minmax(0, 0fr); opacity: 0;
+  transition: grid-template-columns 280ms var(--ease-out), opacity 220ms ease;
+}
+.nav-count-slot[data-visible="true"] { grid-template-columns: minmax(0, 1fr); opacity: 1; }
+.nav-count-clip { display: flex; overflow: hidden; }
+.nav-count-clip > .count { flex: none; margin-inline-start: 7px; }
+@media (prefers-reduced-motion: reduce) { .nav-count-slot { transition: none; } }
 
 .dd { position: relative; }
 .menu {

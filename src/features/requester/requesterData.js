@@ -224,7 +224,8 @@ export async function fetchRequestDetails(row, signal) {
   // (form_fields), chosen options (option_fields, each an ancestor chain down to the chosen one, which may carry a typed
   // value) or a plain value; upload fields hold their files. Flatten it into label/value rows, sub-fields indented.
   const values = [];
-  const files = [];
+  const attachments = Array.isArray(booking.attachments) ? booking.attachments : null;
+  const legacyFiles = [];
   const optionText = (node) => {
     const chain = [];
     for (let cursor = node; cursor; cursor = cursor.option_fields?.[0]) {
@@ -237,7 +238,11 @@ export async function fetchRequestDetails(row, signal) {
     if (!item) return;
     const label = item.field_display_name ?? item.field_name ?? '';
     if (Array.isArray(item.value) && item.value.some((entry) => entry?.type === 'file' || entry?.type === 'image')) {
-      for (const entry of item.value) files.push(toAttachment(entry, files.length));
+      if (attachments === null) {
+        for (const entry of item.value) {
+          if (entry?.type === 'file' || entry?.type === 'image') legacyFiles.push(toAttachment(entry, legacyFiles.length));
+        }
+      }
       return;
     }
     if (item.form_fields?.length) {
@@ -262,9 +267,7 @@ export async function fetchRequestDetails(row, signal) {
     viceApprover: booking.vice_approver?.user?.full_name ?? null,
     requester: booking.user ? { name: booking.user.full_name ?? '', personalId: booking.user.personal_id ?? '', phone: booking.user.phone ?? '' } : null,
     values,
-    // the booking's uploaded files, in the same shape as the management side (AttachmentService::describe), once the
-    // API sends them; until then, any files found among the form's values
-    files: Array.isArray(booking.attachments) && booking.attachments.length ? booking.attachments : files,
+    files: attachments ?? legacyFiles,
     comments: (booking.comments ?? []).map((comment) => ({
       id: comment.id,
       author: comment.user?.full_name || comment.user?.personal_id || '',

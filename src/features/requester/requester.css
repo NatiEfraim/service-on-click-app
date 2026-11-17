@@ -4,6 +4,8 @@
 
 .rq-counters { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 18px; }
 .rq-counter { display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
+/* Reserve room for the update count before its request finishes. */
+.rq-counter { min-block-size: 104px; }
 .rq-counter b { display: block; font-size: 24px; line-height: 1.1; }
 .rq-counter b + span { color: var(--mute); font-size: 14px; }
 .rq-counter .ic, .rq-form-head .ic, .rq-cat .ic {
@@ -169,23 +171,20 @@
    is a button, which otherwise centres and runs them together) */
 .rq-counter-txt { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; text-align: start; }
 .rq-counter-txt b { font-size: 24px; line-height: 1.1; }
-.rq-counter-txt .lbl { color: var(--mute); font-size: 14px; }
-.rq-counter-txt .rq-changed-count { margin-top: 0; }
+.rq-counter-txt .lbl { color: var(--mute); font-size: 14px; line-height: 1.5; }
+.rq-counter-txt .rq-changed-count { max-width: 100%; line-height: 1.5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* the home counters are buttons: each opens "הקריאות שלי" filtered to its requests. On hover a card glows softly and
-   grows a little (and settles back when the mouse leaves); a press gives a small push in */
+/* the home counters are buttons: each opens "הקריאות שלי" filtered to its requests. */
 button.rq-counter {
   font: inherit; color: inherit; text-align: start; width: 100%; cursor: pointer;
-  transition: transform 220ms var(--ease-out), box-shadow 220ms var(--ease-out), border-color 220ms var(--ease-out);
+  transition: box-shadow 220ms var(--ease-out), border-color 220ms var(--ease-out);
 }
 @media (hover: hover) and (pointer: fine) {
   button.rq-counter:hover {
-    transform: translateY(-2px) scale(1.025);
     border-color: color-mix(in srgb, var(--accent) 30%, var(--line));
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 8%, transparent), 0 10px 26px color-mix(in srgb, var(--accent) 16%, transparent);
   }
 }
-button.rq-counter:active { transform: scale(0.99); transition-duration: 90ms; }
 button.rq-counter:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* the request types in the top-bar search show their picture */
@@ -207,7 +206,7 @@ button.rq-counter:focus-visible { outline: 2px solid var(--accent); outline-offs
 .rq-toolbar > span.small.muted { justify-self: end; }
 
 @media (prefers-reduced-motion: reduce) {
-  button.rq-counter, button.rq-counter:hover { transition: none; transform: none; }
+  button.rq-counter, button.rq-counter:hover { transition: none; }
   .rq-mark-all, .rq-mark-all[data-closing] { animation: none; }
 }
 

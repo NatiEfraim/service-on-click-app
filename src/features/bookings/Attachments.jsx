@@ -52,7 +52,7 @@ function LightboxInner({ items, start, onClose }) {
         }}
       >
         {many ? (
-          <button type="button" className="lb-nav" aria-label="הקודם" onClick={() => go(-1)}>
+          <button type="button" className="lb-nav lb-prev" aria-label="הקודם" onClick={() => go(-1)}>
             <Icon name="right" />
           </button>
         ) : null}
@@ -63,7 +63,7 @@ function LightboxInner({ items, start, onClose }) {
           <img key={item.url} src={item.url} alt={item.name} />
         )}
         {many ? (
-          <button type="button" className="lb-nav" aria-label="הבא" onClick={() => go(1)}>
+          <button type="button" className="lb-nav lb-next" aria-label="הבא" onClick={() => go(1)}>
             <Icon name="left" />
           </button>
         ) : null}
@@ -78,9 +78,11 @@ export function Lightbox(props) {
   return createPortal(<LightboxInner {...props} />, document.body);
 }
 
-/** The booking's files: images open in the viewer, other documents download. */
+const hasDownload = (attachment) => attachment.available && Boolean(attachment.url?.trim());
+
+/** The booking's files: images and PDFs open in the viewer, other documents download. */
 export function AttachmentsPanel({ attachments }) {
-  const viewable = attachments.filter((attachment) => attachment.available && attachment.inline && attachment.url);
+  const viewable = attachments.filter((attachment) => hasDownload(attachment) && attachment.inline);
   const [open, setOpen] = useState(null);
 
   return (
@@ -94,7 +96,7 @@ export function AttachmentsPanel({ attachments }) {
           {attachments.map((attachment) => {
             const key = `${attachment.kind}-${attachment.id}`;
 
-            if (!attachment.available || !attachment.url) {
+            if (!hasDownload(attachment)) {
               return (
                 <span key={key} className="thumb missing" data-tip="הקובץ טרם התקבל מהאפליקציה">
                   <span className="ph">

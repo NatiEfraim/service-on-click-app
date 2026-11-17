@@ -114,6 +114,9 @@ export function RequestDrawer({ row, rows = [], onGo, onClose, celebrate = false
   const query = useQuery({
     queryKey: [...REQUESTER_KEY, 'request', row.id],
     queryFn: ({ signal }) => fetchRequestDetails(row, signal),
+    // Discard signed URLs when the drawer closes and request fresh URLs on mount.
+    gcTime: 0,
+    refetchOnMount: 'always',
     retry: false,
   });
   const details = query.data;

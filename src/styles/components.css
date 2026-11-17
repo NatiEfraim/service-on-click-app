@@ -229,12 +229,15 @@ body:has(.ticket.selected, .ticket-copy, .rq-row.selected, .sync-decision-previe
 @media (prefers-reduced-motion: reduce) { .toast-rise-in { animation-name: fade; } }
 .lightbox { position: fixed; inset: 0; z-index: 95; background: rgba(15, 23, 42, .86); display: grid; grid-template-rows: auto 1fr; animation: fade .15s; }
 .lb-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 18px; color: #fff; font-weight: 600; }
-.lb-stage { display: flex; align-items: center; justify-content: center; gap: 14px; padding: 0 18px 24px; min-height: 0; }
-.lb-stage img, .lb-stage iframe { max-width: min(1200px, 86vw); max-height: 82vh; border-radius: 10px; box-shadow: 0 20px 60px rgba(0, 0, 0, .5); background: #fff; }
+.lb-stage { --nav-size: 44px; --nav-inset: 18px; position: relative; display: flex; align-items: center; justify-content: center; padding: 0 18px 24px; min-height: 0; }
+.lb-stage:has(.lb-nav) { padding-inline: calc(var(--nav-inset) + var(--nav-size) + 8px); }
+.lb-stage img, .lb-stage iframe { max-width: min(1200px, 86vw, 100%); max-height: 82vh; border-radius: 10px; box-shadow: 0 20px 60px rgba(0, 0, 0, .5); background: #fff; }
 .lb-stage iframe { width: min(1000px, 86vw); height: 82vh; border: 0; }
-.lb-nav { border: 0; width: 44px; height: 44px; border-radius: 50%; background: rgba(255, 255, 255, .16); color: #fff; cursor: pointer; display: grid; place-items: center; flex: none; }
+.lb-nav { position: absolute; inset-block-start: calc(50% - 12px); translate: 0 -50%; border: 0; width: var(--nav-size); height: var(--nav-size); border-radius: 50%; background: rgba(255, 255, 255, .16); color: #fff; cursor: pointer; display: grid; place-items: center; flex: none; }
+.lb-prev { inset-inline-start: var(--nav-inset); }
+.lb-next { inset-inline-end: var(--nav-inset); }
 .lb-nav:hover { background: rgba(255, 255, 255, .28); }
-@media (max-width: 980px) { .lb-stage img { max-width: 92vw; } .lb-nav { width: 36px; height: 36px; } }
+@media (max-width: 980px) { .lb-stage { --nav-size: 36px; --nav-inset: 12px; } .lb-stage img { max-width: min(92vw, 100%); } }
 
 .animated-text { position: relative; display: inline-block; vertical-align: middle; flex: none; white-space: nowrap; transition: width 260ms var(--ease-out); }
 .animated-text-current { display: inline-block; white-space: nowrap; }
