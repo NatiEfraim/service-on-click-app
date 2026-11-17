@@ -1,10 +1,8 @@
 import { Icon } from './Icon';
 
-/** One half of a split stat: its own icon, label, number and note, a button when it leads somewhere. */
-function StatHalf({ icon, color, label, value, foot, onClick, className = '' }) {
-  // its own colour for the icon, when given (the side half differs from the card's)
-  const style = color ? { '--sc': color } : undefined;
-  const body = (
+/** A stat's content: its icon (when given), label, number and note - the same in a whole card and in each half of a split one. */
+function StatBody({ icon, label, value, foot }) {
+  return (
     <>
       {icon ? (
         <span className="si">
@@ -16,6 +14,13 @@ function StatHalf({ icon, color, label, value, foot, onClick, className = '' }) 
       <span className="f">{foot}</span>
     </>
   );
+}
+
+/** One half of a split stat: its own icon, label, number and note, a button when it leads somewhere. */
+function StatHalf({ icon, color, label, value, foot, onClick, className = '' }) {
+  // its own colour for the icon, when given (the side half differs from the card's)
+  const style = color ? { '--sc': color } : undefined;
+  const body = <StatBody icon={icon} label={label} value={value} foot={foot} />;
   return onClick ? (
     <button type="button" className={`stat-half ${className}`} style={style} onClick={onClick}>
       {body}
@@ -41,16 +46,7 @@ export function Stat({ icon, color, label, value, foot, bad, onClick, index = 0,
     );
   }
 
-  const body = (
-    <>
-      <span className="si">
-        <Icon name={icon} />
-      </span>
-      <span className="l">{label}</span>
-      <span className="v">{value}</span>
-      <span className="f">{foot}</span>
-    </>
-  );
+  const body = <StatBody icon={icon} label={label} value={value} foot={foot} />;
   const style = { '--sc': color, '--i': index };
   return onClick ? (
     <button type="button" className={`stat${bad ? ' bad' : ''}`} style={style} onClick={onClick}>

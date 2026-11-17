@@ -20,6 +20,7 @@ import { usePublishDrawerList } from '@/features/bookings/drawerList';
 import { useBookingDrawer } from '@/features/bookings/useBookingDrawer';
 import { useShowValue, useAuditPages } from './useAuditData';
 import { AuditPeople } from './AuditPeople';
+import { useInfiniteScroll } from '@/lib/useInfiniteScroll';
 
 /** The table never gets shorter than this when the window is small. */
 const MIN_TABLE_HEIGHT = 320;
@@ -98,16 +99,8 @@ export function AuditScreen() {
 
   // the next page loads as the bottom of the table scrolls into view
   const sentinel = useRef(null);
-  const { hasNextPage, isFetchingNextPage, fetchNextPage } = query;
-  useEffect(() => {
-    const el = sentinel.current;
-    if (!el || !hasNextPage) return;
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting && !isFetchingNextPage) void fetchNextPage();
-    }, { root: scroller.current, rootMargin: '0px 0px 400px 0px' });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage, rows.length]);
+  const { isFetchingNextPage } = query;
+  useInfiniteScroll({ sentinel, scroller, query, ahead: 400, remountKey: rows.length });
 
   const filtered = Object.values(filters).some(Boolean);
 

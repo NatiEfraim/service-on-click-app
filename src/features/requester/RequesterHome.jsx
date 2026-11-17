@@ -12,12 +12,8 @@ import { initials } from '@/lib/format';
 import { RequesterContent, useRequesterView } from './RequesterContent';
 import { useCatalog } from './useRequester';
 import './requester.css';
+import { TypePicture } from '@/components/booking/TypePicture';
 
-/** A topic's or a type's picture; a plain icon when the server's name has none. */
-function Picture({ src }) {
-  // eslint-disable-next-line @next/next/no-img-element
-  return src ? <img src={src} alt="" /> : <Icon name="layers" />;
-}
 
 /** The search box: finds a form by its name, group or topic. */
 function TypeSearch({ topics, onPick }) {
@@ -52,7 +48,7 @@ function TypeSearch({ topics, onPick }) {
         <div className="search-results">
           {hits.length ? hits.map((type) => (
             <button key={type.id} type="button" onClick={() => pick(type.id)}>
-              <span className="rq-hit-pic"><Picture src={type.img} /></span>
+              <span className="rq-hit-pic"><TypePicture typeId={type.id} src={type.img} /></span>
               <span>
                 <b>{type.name}</b>
                 <span className="small muted rq-hit-path">{type.path}</span>

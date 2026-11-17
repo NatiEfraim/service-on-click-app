@@ -121,7 +121,6 @@
 .pp-card.set header .dom { background: color-mix(in srgb, var(--dc) 12%, var(--surface)); border-color: color-mix(in srgb, var(--dc) 45%, var(--line)); }
 
 /* the change-reason field: folds open and fades in once a permission changed; reverses when the changes are undone */
-.ppl-reason-reveal { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows var(--dur-resize) var(--ease-out), opacity var(--dur-base) var(--ease-out); }
-.ppl-reason-reveal > .ppl-reason { min-height: 0; overflow: hidden; padding: 3px; margin: -3px; }
-.ppl-reason-reveal[data-open] { grid-template-rows: 1fr; opacity: 1; transition-delay: 0s, 60ms; }
-@media (prefers-reduced-motion: reduce) { .ppl-reason-reveal { transition: opacity var(--dur-base) ease; } }
+/* (the fold itself is Reveal's: components.css .reveal) - here only its own: room for the focus ring, the fade a little after */
+.ppl-reason-reveal > .ppl-reason { padding: 3px; margin: -3px; }
+.ppl-reason-reveal.open { transition-delay: 0s, 60ms; }

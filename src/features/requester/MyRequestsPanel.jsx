@@ -9,7 +9,6 @@ import { Field } from '@/components/ui/Field';
 import { Select } from '@/components/ui/Select';
 import { EmptyState, ErrorNotice, Loading, Notice } from '@/components/ui/Feedback';
 import { CategoryGroup, groupBySection, sectionOf } from '@/components/booking/CategoryGroup';
-import { hasTypeIcon, TypeIcon } from '@/components/booking/TypeIcon';
 import { CountBadge } from '@/components/ui/CountBadge';
 import { Icon } from '@/components/ui/Icon';
 import { Seg } from '@/components/ui/Controls';
@@ -27,6 +26,9 @@ import { celebrationKey, isChanged, markCelebrated, markSeen, useSeen, wasCelebr
 import { counterOf, requestCategories, stageOf } from './requesterData';
 import { STAGE_SHORT } from '@/lib/labels';
 import { useCatalog, useMyRequests } from './useRequester';
+import { TypePicture } from '@/components/booking/TypePicture';
+import { Reveal } from '@/components/ui/Reveal';
+import { useToggleSet } from '@/lib/useToggleSet';
 
 /** The home counters, as a filter on the full page (?bucket=): a counter's click lands here with it chosen. */
 const BUCKETS = [
@@ -170,13 +172,7 @@ export function MyRequestsPanel({ full = false, extraCategories = null, category
   // how many of the user's own requests are open in a category (the small red number on its icon)
   const openIn = (item) => ownedRows.filter((row) => isOpen(row) && item.typeIds.includes(row.bookingTypeId)).length;
   // the main categories that are open; the one holding the chosen category starts open
-  const [openSections, setOpenSections] = useState(() => new Set(current ? [sectionOf(current.typeIds[0])] : []));
-  const toggleSection = (id) => setOpenSections((previous) => {
-    const next = new Set(previous);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    return next;
-  });
+  const [openSections, toggleSection] = useToggleSet(() => (current ? [sectionOf(current.typeIds[0])] : []));
   // the full page filters (open / all, search by number or category), as the earlier "הקריאות שלי" screen did
   const [view, setView] = useState('all');
   // the request open in the side panel
@@ -346,7 +342,7 @@ export function MyRequestsPanel({ full = false, extraCategories = null, category
               <div className="rq-cats">
                 {section.items.map((item, index) => (
                   <button key={item.id} type="button" className="rq-cat" style={{ '--i': index }} aria-pressed={current?.id === item.id} onClick={() => pick(item.id)}>
-                    <span className="ic pic"><CountBadge count={openIn(item)} label={`${openIn(item)} קריאות פתוחות ב${item.name}`} />{hasTypeIcon(item.typeIds[0]) ? <TypeIcon bookingTypeId={item.typeIds[0]} size={32} /> : item.img ? <img src={item.img} alt="" /> : <Icon name="layers" />}</span>
+                    <span className="ic pic"><CountBadge count={openIn(item)} label={`${openIn(item)} קריאות פתוחות ב${item.name}`} /><TypePicture typeId={item.typeIds[0]} src={item.img} size={32} /></span>
                     {item.name}
                   </button>
                 ))}
@@ -389,39 +385,37 @@ export function MyRequestsPanel({ full = false, extraCategories = null, category
           </div>
         </div>
         {/* stays mounted so it can fold both ways (as in the management screen); inert while closed */}
-        <div className={`adv-wrap${filtersOpen ? ' open' : ''}`} inert={!filtersOpen}>
-          <div className="adv requests-filters">
-            <Field label="תחום">
-              <Select autoWidth className="input" value={current?.id ?? ''} onChange={(event) => onCategory(event.target.value || null)}>
-                <option value="">כל התחומים</option>
-                {list.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-              </Select>
-            </Field>
-            <Field label="מצב">
-              <Select autoWidth className="input" value={bucket ?? ''} onChange={(event) => onBucket(event.target.value || null)}>
-                <option value="">כל המצבים</option>
-                {BUCKETS.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
-              </Select>
-            </Field>
-            <Field label="שלב">
-              <Select autoWidth className="input" value={stage} onChange={(event) => setStage(event.target.value)}>
-                <option value="">כל השלבים</option>
-                {stageOptions.map((id) => <option key={id} value={id}>{STAGE_SHORT[id]}</option>)}
-              </Select>
-            </Field>
-            <Field label="סטטוס">
-              <Select autoWidth className="input" value={status} onChange={(event) => setStatus(event.target.value)}>
-                <option value="">כל הסטטוסים</option>
-                {statusNames.map((name) => <option key={name} value={name}>{name}</option>)}
-              </Select>
-            </Field>
-            {/* a div, not Field's <label>: a click on the open calendar must not be forwarded to its button */}
-            <div className="field">
-              <span>תאריך פתיחה</span>
-              <DateRangePicker label="" value={range} onChange={(next) => setRange({ from: next.from, to: next.to })} />
-            </div>
+        <Reveal open={filtersOpen} className="adv-wrap" innerClassName="adv requests-filters">
+          <Field label="תחום">
+            <Select autoWidth className="input" value={current?.id ?? ''} onChange={(event) => onCategory(event.target.value || null)}>
+              <option value="">כל התחומים</option>
+              {list.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+            </Select>
+          </Field>
+          <Field label="מצב">
+            <Select autoWidth className="input" value={bucket ?? ''} onChange={(event) => onBucket(event.target.value || null)}>
+              <option value="">כל המצבים</option>
+              {BUCKETS.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
+            </Select>
+          </Field>
+          <Field label="שלב">
+            <Select autoWidth className="input" value={stage} onChange={(event) => setStage(event.target.value)}>
+              <option value="">כל השלבים</option>
+              {stageOptions.map((id) => <option key={id} value={id}>{STAGE_SHORT[id]}</option>)}
+            </Select>
+          </Field>
+          <Field label="סטטוס">
+            <Select autoWidth className="input" value={status} onChange={(event) => setStatus(event.target.value)}>
+              <option value="">כל הסטטוסים</option>
+              {statusNames.map((name) => <option key={name} value={name}>{name}</option>)}
+            </Select>
+          </Field>
+          {/* a div, not Field's <label>: a click on the open calendar must not be forwarded to its button */}
+          <div className="field">
+            <span>תאריך פתיחה</span>
+            <DateRangePicker label="" value={range} onChange={(next) => setRange({ from: next.from, to: next.to })} />
           </div>
-        </div>
+        </Reveal>
         </>
       ) : null}
       {/* the home: switching category glides the card to its new height (SmoothSize) instead of snapping; the full page

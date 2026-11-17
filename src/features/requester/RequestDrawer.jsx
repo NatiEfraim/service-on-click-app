@@ -3,10 +3,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { RequesterRows } from '@/components/booking/RequesterRows';
 import { SerialTitle } from '@/components/booking/SerialTitle';
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useState } from 'react';
 import { DomainBadge } from '@/components/booking/DomainBadge';
 import { ApprovalTrack } from '@/components/booking/RouteViz';
-import { Button } from '@/components/ui/Button';
 import { Chip, StatusChip } from '@/components/ui/Chips';
 import { Drawer } from '@/components/ui/Drawer';
 import { EmptyState, ErrorNotice, Loading, Notice } from '@/components/ui/Feedback';
@@ -17,6 +16,8 @@ import { fmtDate, fmtDateTime } from '@/lib/format';
 import { daysSince, fetchRequestDetails, isRejectedRequest, parseDay, requestRoute, waitedLabel } from './requesterData';
 import { Celebration } from './Celebration';
 import { REQUESTER_KEY, useCatalog } from './useRequester';
+import { CommentsPanel } from '@/components/booking/CommentsPanel';
+import { StepperNav, useStepKeys } from '@/components/booking/StepperNav';
 
 /** A form value as text: plain values as they are, a list joined, an object by its name. */
 function valueText(value) {
@@ -43,41 +44,25 @@ const when = (value) => {
   return text === '—' ? String(value) : text;
 };
 
-/** Typing in a field, or a dialog open above the drawer: the arrow keys are not ours (as in the management drawer). */
-function keysBelongElsewhere(event) {
-  if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.defaultPrevented) return true;
-  if (event.target?.closest?.('input, textarea, select, [contenteditable="true"], [role="listbox"], [role="combobox"]')) return true;
-  return Boolean(document.querySelector('.modal'));
-}
-
 /** "‹ 3 מתוך 47 ›" in the drawer's head, as in the management drawer: the previous / next request of the list it was opened from (↑ / ↓ too). */
 function RequestStepper({ row, rows, onGo }) {
   const index = rows.findIndex((candidate) => candidate.id === row.id);
   const previous = index > 0 ? rows[index - 1] : null;
   const next = index >= 0 && index < rows.length - 1 ? rows[index + 1] : null;
 
-  useEffect(() => {
-    const onKey = (event) => {
-      if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
-      if (keysBelongElsewhere(event)) return;
-      event.preventDefault();
-      const target = event.key === 'ArrowUp' ? previous : next;
-      if (target) onGo(target);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [previous, next, onGo]);
+  useStepKeys(true, () => previous && onGo(previous), () => next && onGo(next));
 
   if (index < 0 || rows.length < 2) return null;
 
   return (
-    <nav className="drawer-stepper" aria-label="מעבר בין קריאות">
-      <Button size="sm" variant="ghost" icon="right" aria-label="הקריאה הקודמת (חץ למעלה)" data-tip="הקריאה הקודמת (↑)" disabled={!previous} onClick={() => onGo(previous)} />
-      <span className="pos" aria-live="polite">
-        {index + 1} מתוך {rows.length}
-      </span>
-      <Button size="sm" variant="ghost" icon="left" aria-label="הקריאה הבאה (חץ למטה)" data-tip="הקריאה הבאה (↓)" disabled={!next} onClick={() => onGo(next)} />
-    </nav>
+    <StepperNav
+      index={index}
+      count={rows.length}
+      onPrevious={() => onGo(previous)}
+      onNext={() => onGo(next)}
+      canPrevious={Boolean(previous)}
+      canNext={Boolean(next)}
+    />
   );
 }
 
@@ -201,28 +186,7 @@ export function RequestDrawer({ row, rows = [], onGo, onClose, celebrate = false
               </div>
             </section>
 
-            <section className="panel">
-              <header>
-                <h2>הערות</h2>
-                <span className="small muted">{details.comments.length}</span>
-              </header>
-              <div className="body">
-                {details.comments.length ? (
-                  <ul className="rq-comments">
-                    {details.comments.map((comment) => (
-                      <li key={comment.id}>
-                        <div className="small muted">
-                          <b className="rq-comment-by">{comment.author || 'מערכת'}</b> {when(comment.createdAt)}
-                        </div>
-                        <div>{comment.text}</div>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <span className="muted">אין הערות.</span>
-                )}
-              </div>
-            </section>
+            <CommentsPanel comments={details.comments.map((comment) => ({ id: comment.id, author: comment.author || 'מערכת', when: when(comment.createdAt), text: comment.text }))} />
           </div>
 
           {/* the same panel as the management side: pictures shown, images and PDFs open in the viewer (Attachments) */}

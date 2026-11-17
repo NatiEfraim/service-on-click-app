@@ -1,7 +1,7 @@
 'use client';
 
 import { useInfiniteQuery, useMutation } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { DateRangePicker } from '@/components/ui/DateRangePicker';
 import { EmptyState, ErrorNotice, Loading, Notice } from '@/components/ui/Feedback';
@@ -16,6 +16,8 @@ import { fmtDateTime } from '@/lib/format';
 import { useFitToWindow } from '@/lib/useFitToWindow';
 import { useSession } from '@/providers/SessionProvider';
 import { usePublishDrawerList } from '@/features/bookings/drawerList';
+import { useInfiniteScroll } from '@/lib/useInfiniteScroll';
+import { downloadBlob } from '@/lib/export/download';
 
 const PER_PAGE = 25;
 /** The table never gets shorter than this when the window is small. */
@@ -31,17 +33,6 @@ function exportMessage(error) {
   return error.message || 'ההורדה נכשלה. נסו שוב.';
 }
 
-/** Hands the browser the file to save. */
-function saveFile(blob, fileName) {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
-}
 
 /** Bookings report: filter, preview page by page, and export every matching row to Excel (the same filters). */
 export function BookingsReportScreen() {
@@ -71,20 +62,12 @@ export function BookingsReportScreen() {
   const scroller = useRef(null);
   const sentinel = useRef(null);
   useFitToWindow(card, MIN_TABLE_HEIGHT);
-  const { hasNextPage, isFetchingNextPage, fetchNextPage } = query;
-  useEffect(() => {
-    const el = sentinel.current;
-    if (!el || !hasNextPage) return;
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting && !isFetchingNextPage) void fetchNextPage();
-    }, { root: scroller.current, rootMargin: '0px 0px 400px 0px' });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage, rows.length]);
+  const { isFetchingNextPage } = query;
+  useInfiniteScroll({ sentinel, scroller, query, ahead: 400, remountKey: rows.length });
 
   const exporting = useMutation({
     mutationFn: () => bookingsReportApi.exportExcel(sent),
-    onSuccess: ({ blob, fileName }) => saveFile(blob, fileName),
+    onSuccess: ({ blob, fileName }) => downloadBlob(blob, fileName),
   });
 
   const filtered = Object.keys(sent).length > 0;

@@ -26,6 +26,7 @@ import {
 import { invalidatePeople, usePerson } from './queries';
 import { PermissionsCards } from './PermissionsPicker';
 import { SAVED_PART_LABEL } from './constants';
+import { Reveal } from '@/components/ui/Reveal';
 
 
 
@@ -308,29 +309,27 @@ export function PermissionsDialog({ target, onClose }) {
 
           {/* shown only once a permission was changed; stays mounted (keeps the typed text) and fades / folds away when
               the changes are undone. Stays in view above the buttons while the table scrolls. */}
-          <div className="ppl-reason-reveal" data-open={changes.length > 0 ? '' : undefined} inert={changes.length > 0 ? undefined : true}>
-          <div className="ppl-reason">
+          <Reveal open={changes.length > 0} className="ppl-reason-reveal" innerClassName="ppl-reason">
             <Field label="סיבת שינוי ההרשאות (חובה כשמשנים הרשאות)">
-              <input
-                className="input"
-                value={reason}
-                maxLength={REASON_MAX}
-                placeholder="לדוגמה: מינוי לגורם מטפל בתחום המזון"
-                aria-required="true"
-                aria-invalid={reasonProblem ? true : undefined}
-                aria-describedby={reasonProblem ? reasonErrorId : undefined}
-                disabled={busy}
-                onChange={(event) => {
-                  setReason(event.target.value);
-                  if (reasonProblem) setReasonProblem('');
-                }}
-              />
+            <input
+              className="input"
+              value={reason}
+              maxLength={REASON_MAX}
+              placeholder="לדוגמה: מינוי לגורם מטפל בתחום המזון"
+              aria-required="true"
+              aria-invalid={reasonProblem ? true : undefined}
+              aria-describedby={reasonProblem ? reasonErrorId : undefined}
+              disabled={busy}
+              onChange={(event) => {
+                setReason(event.target.value);
+                if (reasonProblem) setReasonProblem('');
+              }}
+            />
             </Field>
             <div id={reasonErrorId} className="err" aria-live="polite">
-              {reasonProblem}
+            {reasonProblem}
             </div>
-          </div>
-          </div>
+          </Reveal>
 
           {alreadySaved ? <Notice tone="warn">{alreadySaved}</Notice> : null}
           <FormError>{formError}</FormError>

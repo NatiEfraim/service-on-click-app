@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Seg } from '@/components/ui/Controls';
 import { FadeIn } from '@/components/ui/FadeIn';
@@ -19,6 +19,7 @@ import { usePeopleInfinite, useRoleHolders } from './queries';
 import { LOAD_AHEAD_PX } from '@/features/queue/constants';
 import { matchesSearch, parseSearch } from './search';
 import './people.css';
+import { useInfiniteScroll } from '@/lib/useInfiniteScroll';
 
 
 
@@ -50,16 +51,8 @@ export function UsersScreen() {
   // all users: the next 20 load as the bottom of the table scrolls into view
   const scroller = useRef(null);
   const sentinel = useRef(null);
-  const { hasNextPage, isFetchingNextPage, fetchNextPage } = everyone;
-  useEffect(() => {
-    const el = sentinel.current;
-    if (tab !== 'all' || !el || !hasNextPage) return;
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting && !isFetchingNextPage) void fetchNextPage();
-    }, { root: scroller.current, rootMargin: `0px 0px ${LOAD_AHEAD_PX}px 0px` });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [tab, hasNextPage, isFetchingNextPage, fetchNextPage]);
+  const { hasNextPage, isFetchingNextPage } = everyone;
+  useInfiniteScroll({ sentinel, scroller, query: everyone, ahead: LOAD_AHEAD_PX, enabled: tab === 'all' });
 
   const openPermissions = (row) => setPermissionsFor({ uuid: row.uuid, name: row.name, personalNumber: row.personalNumber, personalId: row.personalId });
 

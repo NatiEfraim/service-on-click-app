@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
-import { Fragment, useLayoutEffect, useRef, useState } from 'react';
+import { Fragment, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -22,6 +22,7 @@ import { DRAWER_EXIT_MS } from '@/lib/motion';
 import { useToast } from '@/providers/UiProvider';
 import { BookingLink } from './BookingLink';
 import { FileRecords } from './FileRecords';
+import { useWindowMeasure } from '@/components/ui/useWindowMeasure';
 
 const KIND_LABEL = { booking_status: 'סטטוסים של קריאות', booking_values: 'תיקוני ערכים', system_config: 'הגדרות מערכת' };
 const STATE = {
@@ -40,34 +41,24 @@ function PendingDecisionRow({ row, selected }) {
   const [position, setPosition] = useState(null);
   const presence = usePresence(selected, DRAWER_EXIT_MS);
 
-  useLayoutEffect(() => {
-    if (!selected) return;
-    const measure = () => {
-      const bounds = source.current.getBoundingClientRect();
-      const scroller = source.current.closest('.sync-pending');
-      const viewport = scroller.getBoundingClientRect();
-      const headerBottom = scroller.querySelector('thead').getBoundingClientRect().bottom;
-      if (bounds.top < headerBottom || bounds.bottom > viewport.bottom) {
-        setPosition(null);
-        return;
-      }
-      // the row's own column widths (px), so the tab's text sits exactly over the row's while the tab reaches to the panel
-      const columns = Array.from(source.current.cells, (cell) => `${cell.getBoundingClientRect().width}px`);
-      setPosition({
-        '--decision-columns': columns.join(' '),
-        '--decision-top': `${bounds.top}px`,
-        '--decision-left': `${bounds.left}px`,
-        '--decision-right': `${window.innerWidth - bounds.right}px`,
-        '--decision-height': `${bounds.height}px`,
-      });
-    };
-    measure();
-    window.addEventListener('resize', measure);
-    window.addEventListener('scroll', measure, true);
-    return () => {
-      window.removeEventListener('resize', measure);
-      window.removeEventListener('scroll', measure, true);
-    };
+  useWindowMeasure(Boolean(selected), () => {
+    const bounds = source.current.getBoundingClientRect();
+    const scroller = source.current.closest('.sync-pending');
+    const viewport = scroller.getBoundingClientRect();
+    const headerBottom = scroller.querySelector('thead').getBoundingClientRect().bottom;
+    if (bounds.top < headerBottom || bounds.bottom > viewport.bottom) {
+      setPosition(null);
+      return;
+    }
+    // the row's own column widths (px), so the tab's text sits exactly over the row's while the tab reaches to the panel
+    const columns = Array.from(source.current.cells, (cell) => `${cell.getBoundingClientRect().width}px`);
+    setPosition({
+      '--decision-columns': columns.join(' '),
+      '--decision-top': `${bounds.top}px`,
+      '--decision-left': `${bounds.left}px`,
+      '--decision-right': `${window.innerWidth - bounds.right}px`,
+      '--decision-height': `${bounds.height}px`,
+    });
   }, [selected]);
 
   const showPreview = presence.mounted && position;

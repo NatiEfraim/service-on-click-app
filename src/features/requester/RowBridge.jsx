@@ -1,7 +1,8 @@
 'use client';
 
-import { useLayoutEffect, useState } from 'react';
+import { useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useWindowMeasure } from '@/components/ui/useWindowMeasure';
 
 /** How far the strip reaches over the row's own edge: covers the row's corners while they square off (no notch). */
 const OVERLAP = 10;
@@ -13,33 +14,17 @@ const OVERLAP = 10;
  */
 export function RowBridge() {
   const [box, setBox] = useState(null);
-  useLayoutEffect(() => {
-    const measure = () => {
-      const row = document.querySelector('.rq-row.selected');
-      const drawer = document.querySelector('.drawer');
-      if (!row || !drawer) return setBox(null);
-      const bounds = row.getBoundingClientRect();
-      // the panel's inner edge (it sits on the right of the rtl page)
-      const edge = drawer.getBoundingClientRect().left;
-      const next = edge - bounds.right > 0.5 ? { top: bounds.top, height: bounds.height, left: bounds.right - OVERLAP, width: edge - bounds.right + OVERLAP } : null;
-      setBox((previous) => (previous && next && Object.keys(next).every((key) => previous[key] === next[key]) ? previous : next));
-    };
-    measure();
-    let frame = 0;
-    const started = performance.now();
-    const follow = () => {
-      measure();
-      if (performance.now() - started < 450) frame = requestAnimationFrame(follow);
-    };
-    frame = requestAnimationFrame(follow);
-    window.addEventListener('resize', measure);
-    window.addEventListener('scroll', measure, true);
-    return () => {
-      cancelAnimationFrame(frame);
-      window.removeEventListener('resize', measure);
-      window.removeEventListener('scroll', measure, true);
-    };
-  }, []);
+  // followed frame by frame while the panel slides in (450ms), then on resize / scroll
+  useWindowMeasure(true, () => {
+    const row = document.querySelector('.rq-row.selected');
+    const drawer = document.querySelector('.drawer');
+    if (!row || !drawer) return setBox(null);
+    const bounds = row.getBoundingClientRect();
+    // the panel's inner edge (it sits on the right of the rtl page)
+    const edge = drawer.getBoundingClientRect().left;
+    const next = edge - bounds.right > 0.5 ? { top: bounds.top, height: bounds.height, left: bounds.right - OVERLAP, width: edge - bounds.right + OVERLAP } : null;
+    setBox((previous) => (previous && next && Object.keys(next).every((key) => previous[key] === next[key]) ? previous : next));
+  }, [], { followMs: 450 });
   if (!box) return null;
   return createPortal(<div className="rq-row-bridge" style={box} aria-hidden="true" />, document.body);
 }

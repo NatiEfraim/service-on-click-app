@@ -8,9 +8,12 @@ component instead of raw markup, CSS or logic written in place.
 1. **Look for an existing component or hook that already does it**, and use it:
    - `src/components/ui/`: Button, Select, Field, FormDialog, Modal, Drawer, Feedback (Loading, EmptyState, ErrorNotice,
      Notice, FormError), ClearFilters, SearchField, DateRangePicker, TimePicker, Chips, Controls (Seg), Card, Stat,
-     Tooltip, AnimatedText, SmoothSize, FadeIn, ExpandRow, DataTable, usePresence, useExitGhost.
-   - `src/components/booking/`: DomainBadge / DomainIcon, Ticket, RouteViz, useRowPreview.
-   - Hooks in `src/lib/` (useDebounced, useFitToWindow, …) and each feature's own folder.
+     Tooltip, AnimatedText, SmoothSize, FadeIn, ExpandRow, DataTable, CountBadge, Reveal (fold open / closed),
+     usePresence, useExitGhost, useOutsideClose (outside click / Escape), useWindowMeasure (position on screen).
+   - `src/components/booking/`: DomainBadge / DomainIcon, TypePicture (a type's picture or its fallback), TypeIcon,
+     Ticket, RouteViz, useRowPreview, CategoryGroup, SerialTitle, RequesterRows, CommentsPanel, StepperNav / useStepKeys.
+   - Hooks in `src/lib/` (useDebounced, useFitToWindow, useInfiniteScroll, useToggleSet, useSaveMutation /
+     handleWriteError, …) and each feature's own folder.
 2. **Extend it rather than copy it.** If a component almost fits, add a prop to it instead of writing a near-copy.
 3. **Make a new component or hook when the same markup, styles or logic would now exist in two or more places**, or
    when it is a self-contained piece of UI with its own behaviour (state, motion, measuring). Shared pieces go in

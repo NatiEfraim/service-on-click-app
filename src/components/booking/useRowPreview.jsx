@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { usePresence } from '@/components/ui/usePresence';
 import { DRAWER_EXIT_MS } from '@/lib/motion';
+import { useWindowMeasure } from '@/components/ui/useWindowMeasure';
 
 /**
  * A copy of the table row whose booking is open in the side panel, brought forward: above the panel's dimming, joined to
@@ -20,45 +21,28 @@ function RowCopy({ rowKey, closing }) {
     closingRef.current = closing;
   });
 
-  useLayoutEffect(() => {
-    const find = () => document.querySelector(`tr[data-preview-row="${CSS.escape(String(rowKey))}"]`);
-    const measure = () => {
-      const tr = find();
-      const scroller = tr?.closest('.queue-scroll');
-      if (!tr || !scroller) return closingRef.current ? undefined : setBox(null);
-      const bounds = tr.getBoundingClientRect();
-      const view = scroller.getBoundingClientRect();
-      const headerBottom = scroller.querySelector('thead')?.getBoundingClientRect().bottom ?? view.top;
-      // out of the table's view: no copy (the row itself is not visible either)
-      if (bounds.top < headerBottom || bounds.bottom > view.bottom) return closingRef.current ? undefined : setBox(null);
-      const widths = Array.from(tr.cells, (cell) => cell.getBoundingClientRect().width);
-      const next = {
-        '--row-top': `${bounds.top}px`,
-        '--row-left': `${bounds.left}px`,
-        '--row-height': `${bounds.height}px`,
-        // the row's own proportions, squeezed into the room the panel leaves
-        '--row-columns': widths.map((width) => `minmax(0, ${width}fr)`).join(' '),
-        cells: widths.length,
-      };
-      // a new object only when something moved, so a still row never re-renders
-      setBox((previous) => (previous && Object.keys(next).every((key) => previous[key] === next[key]) ? previous : next));
+  // followed frame by frame through the panel's opening (450ms), then on resize / scroll
+  useWindowMeasure(true, () => {
+    const tr = document.querySelector(`tr[data-preview-row="${CSS.escape(String(rowKey))}"]`);
+    const scroller = tr?.closest('.queue-scroll');
+    if (!tr || !scroller) return closingRef.current ? undefined : setBox(null);
+    const bounds = tr.getBoundingClientRect();
+    const view = scroller.getBoundingClientRect();
+    const headerBottom = scroller.querySelector('thead')?.getBoundingClientRect().bottom ?? view.top;
+    // out of the table's view: no copy (the row itself is not visible either)
+    if (bounds.top < headerBottom || bounds.bottom > view.bottom) return closingRef.current ? undefined : setBox(null);
+    const widths = Array.from(tr.cells, (cell) => cell.getBoundingClientRect().width);
+    const next = {
+      '--row-top': `${bounds.top}px`,
+      '--row-left': `${bounds.left}px`,
+      '--row-height': `${bounds.height}px`,
+      // the row's own proportions, squeezed into the room the panel leaves
+      '--row-columns': widths.map((width) => `minmax(0, ${width}fr)`).join(' '),
+      cells: widths.length,
     };
-    measure();
-    let frame = 0;
-    const started = performance.now();
-    const follow = () => {
-      measure();
-      if (performance.now() - started < 450) frame = requestAnimationFrame(follow);
-    };
-    frame = requestAnimationFrame(follow);
-    window.addEventListener('resize', measure);
-    window.addEventListener('scroll', measure, true);
-    return () => {
-      cancelAnimationFrame(frame);
-      window.removeEventListener('resize', measure);
-      window.removeEventListener('scroll', measure, true);
-    };
-  }, [rowKey]);
+    // a new object only when something moved, so a still row never re-renders
+    setBox((previous) => (previous && Object.keys(next).every((key) => previous[key] === next[key]) ? previous : next));
+  }, [rowKey], { followMs: 450 });
 
   // the cells' content, copied from the row (a snapshot: the row does not change while its booking is open)
   const cellCount = box?.cells ?? 0;

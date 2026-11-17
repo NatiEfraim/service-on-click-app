@@ -2,7 +2,6 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
-import { hasTypeIcon, TypeIcon } from '@/components/booking/TypeIcon';
 import { Button } from '@/components/ui/Button';
 import { DatePicker } from '@/components/ui/DateRangePicker';
 import { EmptyState, ErrorNotice, FormError, Loading } from '@/components/ui/Feedback';
@@ -12,6 +11,7 @@ import { ChoiceField } from './ChoiceField';
 import { ATTACH_ACCEPT, choicePath, fetchForm, MAX_FILE_BYTES, MAX_FILES, submitRequest } from './requesterData';
 import { markSeen } from './seen';
 import { REQUESTER_KEY } from './useRequester';
+import { TypePicture } from '@/components/booking/TypePicture';
 
 /** The file types POST /bookings/{id} accepts (jpg, jpeg, png, gif, webp, pdf). */
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
@@ -139,7 +139,7 @@ export function RequestForm({ found, onHome, onDone }) {
       <section className="card">
         <div className="rq-form-head">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <span className="ic">{hasTypeIcon(type.id) ? <TypeIcon bookingTypeId={type.id} /> : type.img ? <img src={type.img} alt="" /> : <Icon name="layers" />}</span>
+          <span className="ic"><TypePicture typeId={type.id} src={type.img} /></span>
           <div>
             <h1>{type.name}</h1>
             {type.description ? <p className="muted">{type.description}</p> : null}

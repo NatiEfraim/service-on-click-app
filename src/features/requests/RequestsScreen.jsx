@@ -29,6 +29,8 @@ import { useSession } from '@/providers/SessionProvider';
 import { workflowFilterOptions, normalizeWorkflowFilters } from './workflow-filters';
 import { advancedCount, DEFAULT_FILTERS, parseFilters, SORTS, toApiParams, toSearchParams } from './filters';
 import { usePublishDrawerList } from '@/features/bookings/drawerList';
+import { useInfiniteScroll } from '@/lib/useInfiniteScroll';
+import { Reveal } from '@/components/ui/Reveal';
 
 /** Every booking the user may see; filters live in the URL so links and Back reproduce the list. */
 export function RequestsScreen() {
@@ -118,17 +120,9 @@ export function RequestsScreen() {
     const fades = [...list.children].slice(before).map((el) => el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: CONTENT_FADE_MS, easing: EASE_OUT }));
     return () => fades.forEach((fade) => fade.cancel());
   }, [rows.length]);
-  const { hasNextPage, isFetchingNextPage, fetchNextPage } = query;
-  useEffect(() => {
-    const el = sentinel.current;
-    if (!el || !hasNextPage) return;
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting && !isFetchingNextPage) void fetchNextPage();
-    }, { root: scroller.current, rootMargin: `0px 0px ${LOAD_AHEAD_PX}px 0px` });
-    observer.observe(el);
-    return () => observer.disconnect();
-    // hasRows: the sentinel mounts only with the rows, which can come after the first page (the exit delay)
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage, hasRows]);
+  const { hasNextPage, isFetchingNextPage } = query;
+  // hasRows: the sentinel mounts only with the rows, which can come after the first page (the exit delay)
+  useInfiniteScroll({ sentinel, scroller, query, ahead: LOAD_AHEAD_PX, remountKey: hasRows });
 
   // Handler filter options; only for users who manage users.
   const handlers = useQuery({ queryKey: keys.approvers(''), queryFn: ({ signal }) => peopleApi.approvers('', signal), enabled: can('users.manage'), staleTime: 5 * 60_000 });
@@ -192,70 +186,67 @@ export function RequestsScreen() {
 
 
         {/* stays mounted so it can fade and fold both ways; inert while closed */}
-        <div className={`adv-wrap${advancedOpen ? ' open' : ''}`} inert={!advancedOpen}>
-          <div className="adv requests-filters">
-            <Field label="תחום">
-              <Select autoWidth className="input" value={filters.types} onChange={(event) => update({ types: event.target.value })}>
-                <option value="">כל התחומים</option>
-                {managedTypes.map((type) => (
-                  <option key={type.id} value={type.id}>
-                    {type.display_name}
+        <Reveal open={advancedOpen} className="adv-wrap" innerClassName="adv requests-filters">
+          <Field label="תחום">
+            <Select autoWidth className="input" value={filters.types} onChange={(event) => update({ types: event.target.value })}>
+              <option value="">כל התחומים</option>
+              {managedTypes.map((type) => (
+                <option key={type.id} value={type.id}>
+                  {type.display_name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="שלב">
+            <Select autoWidth className="input" value={filters.stage} onChange={(event) => update({ stage: event.target.value })}>
+              <option value="">כל השלבים</option>
+              {filterOptions.stages.map((id) => (
+                <option key={id} value={id}>
+                  {STAGE_SHORT[id]}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="סטטוס">
+            <Select autoWidth className="input requests-status-select" value={filters.statuses} onChange={(event) => update({ statuses: event.target.value })}>
+              <option value="">כל הסטטוסים</option>
+              {filterOptions.statuses.map((status) => (
+                <option key={status.id} value={status.id}>
+                  {status.display_name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          {handlers.data?.length ? (
+            <Field label="גורם מטפל">
+              <Select autoWidth className="input" value={filters.handler} onChange={(event) => update({ handler: event.target.value })}>
+                <option value="">כל הגורמים המטפלים</option>
+                {handlers.data.map((person) => (
+                  <option key={person.uuid} value={person.uuid}>
+                    {person.full_name}
                   </option>
                 ))}
               </Select>
             </Field>
-            <Field label="שלב">
-              <Select autoWidth className="input" value={filters.stage} onChange={(event) => update({ stage: event.target.value })}>
-                <option value="">כל השלבים</option>
-                {filterOptions.stages.map((id) => (
-                  <option key={id} value={id}>
-                    {STAGE_SHORT[id]}
-                  </option>
-                ))}
-
-              </Select>
-            </Field>
-            <Field label="סטטוס">
-              <Select autoWidth className="input requests-status-select" value={filters.statuses} onChange={(event) => update({ statuses: event.target.value })}>
-                <option value="">כל הסטטוסים</option>
-                {filterOptions.statuses.map((status) => (
-                  <option key={status.id} value={status.id}>
-                    {status.display_name}
+          ) : null}
+          {me.is_super_admin ? (
+            <Field label="יחידה">
+              <Select autoWidth className="input" value={filters.units} onChange={(event) => update({ units: event.target.value })}>
+                <option value="">כל היחידות</option>
+                {catalog.units.map((unit) => (
+                  <option key={unit.id} value={unit.id}>
+                    {unit.name}
                   </option>
                 ))}
               </Select>
             </Field>
-            {handlers.data?.length ? (
-              <Field label="גורם מטפל">
-                <Select autoWidth className="input" value={filters.handler} onChange={(event) => update({ handler: event.target.value })}>
-                  <option value="">כל הגורמים המטפלים</option>
-                  {handlers.data.map((person) => (
-                    <option key={person.uuid} value={person.uuid}>
-                      {person.full_name}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-            ) : null}
-            {me.is_super_admin ? (
-              <Field label="יחידה">
-                <Select autoWidth className="input" value={filters.units} onChange={(event) => update({ units: event.target.value })}>
-                  <option value="">כל היחידות</option>
-                  {catalog.units.map((unit) => (
-                    <option key={unit.id} value={unit.id}>
-                      {unit.name}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-            ) : null}
-            {/* a div, not Field's <label>: a click on the open calendar must not be forwarded to its button */}
-            <div className="field">
-              <span>תאריך פתיחה</span>
-              <DateRangePicker label="" value={{ from: filters.from, to: filters.to }} onChange={(range) => update({ from: range.from, to: range.to })} />
-            </div>
+          ) : null}
+          {/* a div, not Field's <label>: a click on the open calendar must not be forwarded to its button */}
+          <div className="field">
+            <span>תאריך פתיחה</span>
+            <DateRangePicker label="" value={{ from: filters.from, to: filters.to }} onChange={(range) => update({ from: range.from, to: range.to })} />
           </div>
-        </div>
+        </Reveal>
 
         {filters.ids ? (
           <div className="toolbar" style={{ background: 'var(--info-w)' }}>

@@ -130,10 +130,6 @@
 .rq-drawer-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .rq-drawer-pic { width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--line); display: grid; place-items: center; background: var(--surface); }
 .rq-drawer-pic img { width: 26px; height: 26px; }
-.rq-comments { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
-.rq-comments li { padding-bottom: 10px; border-bottom: 1px solid var(--line-2); }
-.rq-comments li:last-child { border-bottom: 0; padding-bottom: 0; }
-.rq-comment-by { color: var(--ink); }
 .rq-files a { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--accent); }
 /* the scroll bar on the right, as in every other list (tokens.css): the scroller ltr, its rows back to rtl */
 .rq-mine.full .rq-list { direction: ltr; }
@@ -399,14 +395,15 @@ button.rq-counter:focus-visible { outline: 2px solid var(--accent); outline-offs
 
 /* a topic card (ביטחון מידע / תקשוב) folds open and closed smoothly: its body glides between 0 and its height and fades
    (closing: fades first, then folds; opening: folds, then fades in). It fills the window-fitted card and scrolls inside */
-.rq-topic-reveal {
-  flex: 1 1 auto; min-height: 0; display: grid; grid-template-rows: 1fr; opacity: 1;
-  transition: grid-template-rows var(--dur-resize) var(--ease-out), opacity var(--dur-base) var(--ease-out) 60ms;
-}
-.rq-topic-reveal > .rq-topic-scroll { min-height: 0; }
-.rq-topic.closed .rq-topic-reveal { grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows var(--dur-resize) var(--ease-out) 60ms, opacity 150ms var(--ease-out); }
-.rq-topic.closed .rq-topic-scroll { overflow: hidden; }
-@media (prefers-reduced-motion: reduce) { .rq-topic-reveal, .rq-topic.closed .rq-topic-reveal { transition: opacity var(--dur-base) ease; } }
+/* (the fold itself is Reveal's: components.css .reveal) - here only its own: it fills the card, opens folding then fading
+   in, closes fading out then folding */
+.rq-topic-reveal { flex: 1 1 auto; min-height: 0; }
+.rq-topic-reveal.open { transition: grid-template-rows var(--dur-resize) var(--ease-out), opacity var(--dur-base) var(--ease-out) 60ms; }
+.rq-topic-reveal:not(.open) { transition: grid-template-rows var(--dur-resize) var(--ease-out) 60ms, opacity 150ms var(--ease-out); }
+.rq-topic-reveal:not(.open) > .rq-topic-scroll { overflow: hidden; }
+/* open, its list scrolls inside the card (the shared fold clips its content box) */
+.rq-topic-reveal.open > .rq-topic-scroll { overflow-y: auto; }
+@media (prefers-reduced-motion: reduce) { .rq-topic-reveal.open, .rq-topic-reveal:not(.open) { transition: opacity var(--dur-base) ease; } }
 
 /* the head: the title with "הכל" right beside it on one side, the actions (mark all read, all requests) on the other */
 .rq-mine-title, .rq-mine-actions { display: flex; align-items: center; gap: 10px; min-width: 0; }

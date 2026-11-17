@@ -8,7 +8,20 @@ import { useOverlay } from '@/components/ui/overlay';
 import { useIsClient } from '@/components/ui/useIsClient';
 
 
-const isPdf = (attachment) => (attachment.mime ?? '').toLowerCase() === 'application/pdf' || attachment.name.toLowerCase().endsWith('.pdf');
+/** A stored identifier rather than a real name: a uuid (or long hex), with or without an extension. */
+const STORED_NAME = /^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}(\.[a-z0-9]+)?$|^[0-9a-f]{24,}(\.[a-z0-9]+)?$/i;
+
+/**
+ * The name to show for an attachment: its own when it is a real name; a readable label ("תמונה 2", "קובץ 3") when the
+ * server sent only a stored identifier (web uploads, until the API returns the original name). `number` is 1-based.
+ */
+export function attachmentLabel(attachment, number) {
+  const name = (attachment.name ?? '').trim();
+  if (name && !STORED_NAME.test(name)) return name;
+  return `${attachment.kind === 'image' ? 'תמונה' : isPdf(attachment) ? 'מסמך PDF' : 'קובץ'} ${number}`;
+}
+
+const isPdf = (attachment) => (attachment.mime ?? '').toLowerCase() === 'application/pdf' || (attachment.name ?? '').toLowerCase().endsWith('.pdf');
 
 /** Full-screen viewer for images and PDFs; arrow keys are mirrored in RTL (right = previous). */
 function LightboxInner({ items, start, onClose }) {
@@ -34,11 +47,12 @@ function LightboxInner({ items, start, onClose }) {
   if (!item?.url) return null;
 
   return (
-    <div ref={ref} className="lightbox" role="dialog" aria-modal="true" aria-label={item.name}>
+    <div ref={ref} className="lightbox" role="dialog" aria-modal="true" aria-label={item.label ?? item.name}>
       <div className="lb-top">
-        <span>
-          {item.name}
-          {many ? ` · ${index + 1} מתוך ${items.length}` : ''}
+        <span className="lb-title">
+          <span className="lb-name">{item.label ?? item.name}</span>
+          {/* the counter apart, isolated: a Latin file name beside it cannot reorder it */}
+          {many ? <bdi className="lb-count">{index + 1} מתוך {items.length}</bdi> : null}
         </span>
         <Button size="sm" onClick={onClose} aria-label="סגירה">
           <Icon name="x" />
@@ -57,10 +71,10 @@ function LightboxInner({ items, start, onClose }) {
           </button>
         ) : null}
         {isPdf(item) ? (
-          <iframe key={item.url} src={item.url} title={item.name} />
+          <iframe key={item.url} src={item.url} title={item.label ?? item.name} />
         ) : (
           // eslint-disable-next-line @next/next/no-img-element -- needs the login cookie, so not next/image
-          <img key={item.url} src={item.url} alt={item.name} />
+          <img key={item.url} src={item.url} alt={item.label ?? item.name} />
         )}
         {many ? (
           <button type="button" className="lb-nav lb-next" aria-label="הבא" onClick={() => go(1)}>
@@ -81,7 +95,9 @@ export function Lightbox(props) {
 const hasDownload = (attachment) => attachment.available && Boolean(attachment.url?.trim());
 
 /** The booking's files: images and PDFs open in the viewer, other documents download. */
-export function AttachmentsPanel({ attachments }) {
+export function AttachmentsPanel({ attachments: given }) {
+  // readable names, numbered in the panel's order (a stored identifier is not a name to show)
+  const attachments = given.map((attachment, index) => ({ ...attachment, label: attachmentLabel(attachment, index + 1) }));
   const viewable = attachments.filter((attachment) => hasDownload(attachment) && attachment.inline);
   const [open, setOpen] = useState(null);
 
@@ -102,20 +118,20 @@ export function AttachmentsPanel({ attachments }) {
                   <span className="ph">
                     <Icon name={attachment.kind === 'image' ? 'image' : 'file'} />
                   </span>
-                  <span className="nm">{attachment.name} · טרם התקבל</span>
+                  <span className="nm">{attachment.label} · טרם התקבל</span>
                 </span>
               );
             }
 
             if (!attachment.inline) {
               return (
-                <a key={key} className="thumb" href={attachment.url} download={attachment.name} aria-label={`הורדת ${attachment.name}`}>
+                <a key={key} className="thumb" href={attachment.url} download={attachment.label} aria-label={`הורדת ${attachment.label}`}>
                   <span className="ph">
                     <Icon name="download" />
                   </span>
                   <span className="nm">
                     <Icon name="file" />
-                    {attachment.name}
+                    {attachment.label}
                   </span>
                 </a>
               );
@@ -123,7 +139,7 @@ export function AttachmentsPanel({ attachments }) {
 
             const position = viewable.findIndex((item) => item.kind === attachment.kind && item.id === attachment.id);
             return (
-              <button key={key} type="button" className="thumb" aria-label={`פתיחת ${attachment.name}`} onClick={() => setOpen(position)}>
+              <button key={key} type="button" className="thumb" aria-label={`פתיחת ${attachment.label}`} onClick={() => setOpen(position)}>
                 {isPdf(attachment) ? (
                   <span className="ph">
                     <Icon name="file" />
@@ -134,7 +150,7 @@ export function AttachmentsPanel({ attachments }) {
                 )}
                 <span className="nm">
                   <Icon name={attachment.kind === 'image' ? 'image' : 'file'} />
-                  {attachment.name}
+                  {attachment.label}
                 </span>
               </button>
             );

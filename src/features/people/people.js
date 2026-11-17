@@ -34,21 +34,24 @@ export function compareByName(a, b) {
   return NAME_COLLATOR.compare(a.name, b.name);
 }
 
+/** One role holder as the people list shows them: from their API row, with their phone and grants. */
+const holderRow = (row, phone, grants) => ({
+  uuid: row.uuid,
+  name: row.full_name,
+  personalNumber: row.personal_number,
+  personalId: null,
+  phone,
+  affiliation: null,
+  isSuperAdmin: false,
+  grants,
+});
+
 /** Approvers and vice approvers, plus (for the super admin) the camp commanders - one row per person. */
 export function mergeRoleHolders(approvers, admins) {
   const people = new Map();
 
   for (const row of approvers) {
-    people.set(row.uuid, {
-      uuid: row.uuid,
-      name: row.full_name,
-      personalNumber: row.personal_number,
-      personalId: null,
-      phone: row.phone,
-      affiliation: null,
-      isSuperAdmin: false,
-      grants: grantsFromApprover(row),
-    });
+    people.set(row.uuid, holderRow(row, row.phone, grantsFromApprover(row)));
   }
 
   for (const row of admins) {
@@ -56,16 +59,7 @@ export function mergeRoleHolders(approvers, admins) {
     if (existing) {
       if (!existing.grants.some((grant) => grant.role === 'admin')) existing.grants = [adminGrant(), ...existing.grants];
     } else {
-      people.set(row.uuid, {
-        uuid: row.uuid,
-        name: row.full_name,
-        personalNumber: row.personal_number,
-        personalId: null,
-        phone: null,
-        affiliation: null,
-        isSuperAdmin: false,
-        grants: [adminGrant()],
-      });
+      people.set(row.uuid, holderRow(row, null, [adminGrant()]));
     }
   }
 

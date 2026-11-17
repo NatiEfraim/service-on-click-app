@@ -14,6 +14,7 @@ import { isHoldStatus } from '@/lib/booking-workflow';
 import { actionTone, COMMENT_MAX, commentError } from '@/lib/labels';
 import { useSession } from '@/providers/SessionProvider';
 import { useToast } from '@/providers/UiProvider';
+import { handleWriteError } from '@/lib/useSaveMutation';
 
 
 
@@ -62,14 +63,12 @@ export function ActionDialog({ booking, action, onClose, onDone, onDecided }) {
       // A server answer (not a lost connection) ends this attempt.
       if (!apiError.offline && apiError.status < 500) attempt.current = { key: newKey(), fingerprint: '' };
 
-      if (apiError.stale || apiError.denied) {
-        // Booking changed or no longer ours: show the message once and reload.
-        toast(apiError.message, 'bad');
+      // booking changed or no longer ours: the message once, reload and close (the console's one write-error handling)
+      const shown = await handleWriteError(apiError, toast, async () => {
         await invalidateWork(client);
         onClose();
-        return;
-      }
-      setError(apiError.message);
+      });
+      if (shown) setError(shown.message);
     },
   });
 

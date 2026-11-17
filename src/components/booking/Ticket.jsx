@@ -16,55 +16,32 @@ import { DomainBadge } from './DomainBadge';
 import { AgeBar, MiniRoute } from './RouteViz';
 import { useLeave, useArrive } from './ticketMotion';
 import { topicBooking, topicHandlerName } from '@/lib/topicTypes';
+import { useWindowMeasure } from '@/components/ui/useWindowMeasure';
 
 /** Measures the selected row against the drawer's resting edge. */
 function useCoveredBox(ref, selected) {
   const [box, setBox] = useState(null);
   useLayoutEffect(() => {
-    if (!selected) {
-      setBox(null);
-      return undefined;
-    }
-
-    let previous = null;
-    const measure = () => {
-      const row = ref.current;
-      const drawer = document.querySelector('.drawer[role="dialog"]');
-      const bounds = row?.getBoundingClientRect();
-      const width = drawer ? document.documentElement.clientWidth - drawer.offsetWidth : 0;
-      const page = row?.closest('.page');
-      const left = page ? page.getBoundingClientRect().left + parseFloat(getComputedStyle(page).paddingLeft) : 12;
-      const previewWidth = width - left;
-      const next = bounds && previewWidth > 36
-        ? { drawer, top: bounds.top, height: bounds.height, width: previewWidth, gap: width - bounds.right }
-        : null;
-      if (next === previous || (
-        next && previous && next.drawer === previous.drawer && next.top === previous.top
-        && next.height === previous.height && next.width === previous.width && next.gap === previous.gap
-      )) return;
-      previous = next;
-      setBox(next);
-    };
-    measure();
-
-    let frame;
-    const started = performance.now();
-    const follow = () => {
-      measure();
-      if (performance.now() - started < 320) frame = requestAnimationFrame(follow);
-    };
-    frame = requestAnimationFrame(follow);
-    const observer = new ResizeObserver(measure);
-    if (ref.current) observer.observe(ref.current);
-    window.addEventListener('resize', measure);
-    window.addEventListener('scroll', measure, true);
-    return () => {
-      cancelAnimationFrame(frame);
-      observer.disconnect();
-      window.removeEventListener('resize', measure);
-      window.removeEventListener('scroll', measure, true);
-    };
-  }, [ref, selected]);
+    if (!selected) setBox(null);
+  }, [selected]);
+  // followed frame by frame while the drawer slides in (320ms), then on resize / scroll / the row's own size
+  useWindowMeasure(Boolean(selected), () => {
+    const row = ref.current;
+    const drawer = document.querySelector('.drawer[role="dialog"]');
+    const bounds = row?.getBoundingClientRect();
+    const width = drawer ? document.documentElement.clientWidth - drawer.offsetWidth : 0;
+    const page = row?.closest('.page');
+    const left = page ? page.getBoundingClientRect().left + parseFloat(getComputedStyle(page).paddingLeft) : 12;
+    const previewWidth = width - left;
+    const next = bounds && previewWidth > 36
+      ? { drawer, top: bounds.top, height: bounds.height, width: previewWidth, gap: width - bounds.right }
+      : null;
+    // a new object only when something moved, so a still row never re-renders
+    setBox((previous) => (next === previous || (
+      next && previous && next.drawer === previous.drawer && next.top === previous.top
+      && next.height === previous.height && next.width === previous.width && next.gap === previous.gap
+    ) ? previous : next));
+  }, [ref, selected], { followMs: 320, observe: ref });
   return selected ? box : null;
 }
 

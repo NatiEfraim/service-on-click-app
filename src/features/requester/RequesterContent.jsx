@@ -5,7 +5,6 @@ import { useEffect, useRef, useState } from 'react';
 import { FadeIn } from '@/components/ui/FadeIn';
 import { EmptyState, ErrorNotice, Loading } from '@/components/ui/Feedback';
 import { CategoryGroup } from '@/components/booking/CategoryGroup';
-import { hasTypeIcon, TypeIcon } from '@/components/booking/TypeIcon';
 import { Icon } from '@/components/ui/Icon';
 import { useFitToWindow } from '@/lib/useFitToWindow';
 import { useSetSearchParams } from '@/lib/useSetSearchParams';
@@ -15,6 +14,9 @@ import { counterOf, findType } from './requesterData';
 import { isChanged, rememberFirstVisit, useSeen } from './seen';
 import { useCatalog, useCounters, useMyRequests } from './useRequester';
 import './requester.css';
+import { TypePicture } from '@/components/booking/TypePicture';
+import { Reveal } from '@/components/ui/Reveal';
+import { useToggleSet } from '@/lib/useToggleSet';
 
 const COUNTERS = [
   { id: 'open', label: 'קריאות פתוחות', icon: 'inbox' },
@@ -23,11 +25,6 @@ const COUNTERS = [
   { id: 'done', label: 'הושלמו', icon: 'check' },
 ];
 
-/** A topic's or a type's picture; a plain icon when the server's name has none. */
-function Picture({ src }) {
-  // eslint-disable-next-line @next/next/no-img-element
-  return src ? <img src={src} alt="" /> : <Icon name="layers" />;
-}
 
 /**
  * Where the requester screen is (home / "הקריאות שלי" / a form), from the URL (`?rq=`, `?type=<booking type id>`),
@@ -44,16 +41,10 @@ function TopicCard({ topic, open, onToggle, onOpenType }) {
   // the card (and the page, and the footer) for a moment before it folded
   useFitToWindow(card, 240);
   // the sub-groups of more than one type fold like the categories of "הקריאות שלי" (CategoryGroup); all closed at first
-  const [openGroups, setOpenGroups] = useState(() => new Set());
-  const toggleGroup = (id) => setOpenGroups((previous) => {
-    const next = new Set(previous);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    return next;
-  });
+  const [openGroups, toggleGroup] = useToggleSet();
   const typeButton = (type) => (
     <button key={type.id} type="button" className="rq-type" onClick={() => onOpenType(type.id)}>
-      {hasTypeIcon(type.id) ? <TypeIcon bookingTypeId={type.id} /> : <Picture src={type.img} />}
+      <TypePicture typeId={type.id} src={type.img} />
       <span className="txt">
         <b>{type.name}</b>
         {type.description ? <span>{type.description}</span> : null}
@@ -65,7 +56,7 @@ function TopicCard({ topic, open, onToggle, onOpenType }) {
   return (
     <section ref={card} className={`card rq-topic fit-card${open ? '' : ' closed'}`} aria-label={topic.name}>
       <button type="button" className="rq-topic-head" aria-expanded={open} onClick={onToggle}>
-        <span className="pic"><Picture src={topic.img} /></span>
+        <span className="pic"><TypePicture src={topic.img} /></span>
         <span className="txt">
           <b>{topic.name}</b>
           <span>{count} סוגי קריאות</span>
@@ -73,33 +64,31 @@ function TopicCard({ topic, open, onToggle, onOpenType }) {
         <Icon name="down" className="chev" />
       </button>
       {/* stays mounted so it folds open and closed smoothly, fading as it goes (grid rows 0fr ↔ 1fr); inert while closed */}
-      <div className="rq-topic-reveal" inert={!open}>
-        <div className="fit-fill scroll-y rq-topic-scroll">
-          <div className="rq-topic-body">
-            {topic.groups.map((group) =>
-              group.types.length > 1 ? (
-                // a group of more than one request type folds open and closed in its own box
-                <CategoryGroup
-                  key={group.id}
-                  section={{ id: `g${group.id}`, label: group.name }}
-                  className="rq-subgroup"
-                  summary={`${group.types.length} סוגי קריאות`}
-                  open={openGroups.has(group.id)}
-                  onToggle={() => toggleGroup(group.id)}
-                >
-                  <div className="rq-types">{group.types.map(typeButton)}</div>
-                </CategoryGroup>
-              ) : (
-                // a single type stays plain, under its group's name
-                <div key={group.id} className="rq-group">
-                  <h3>{group.name}</h3>
-                  <div className="rq-types">{group.types.map(typeButton)}</div>
-                </div>
-              ),
-            )}
-          </div>
+      <Reveal open={open} className="rq-topic-reveal" innerClassName="fit-fill scroll-y rq-topic-scroll">
+        <div className="rq-topic-body">
+          {topic.groups.map((group) =>
+            group.types.length > 1 ? (
+              // a group of more than one request type folds open and closed in its own box
+              <CategoryGroup
+                key={group.id}
+                section={{ id: `g${group.id}`, label: group.name }}
+                className="rq-subgroup"
+                summary={`${group.types.length} סוגי קריאות`}
+                open={openGroups.has(group.id)}
+                onToggle={() => toggleGroup(group.id)}
+              >
+                <div className="rq-types">{group.types.map(typeButton)}</div>
+              </CategoryGroup>
+            ) : (
+              // a single type stays plain, under its group's name
+              <div key={group.id} className="rq-group">
+                <h3>{group.name}</h3>
+                <div className="rq-types">{group.types.map(typeButton)}</div>
+              </div>
+            ),
+          )}
         </div>
-      </div>
+      </Reveal>
     </section>
   );
 }

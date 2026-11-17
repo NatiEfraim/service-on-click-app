@@ -17,6 +17,7 @@ function PendingTag({ show }) {
 }
 import { domainColor } from '@/lib/labels';
 import { cellKey, roleLabel, shownValue } from './permissions';
+import { useToggleSet } from '@/lib/useToggleSet';
 
 /**
  * The permissions grid as domain cards, inside three main categories that open and close: מפקדת מחנה, ביטחון מידע,
@@ -70,13 +71,7 @@ function DomainCard({ index = 0, row, roles, edits, busy, changed, onSetRole, ty
  * change waiting; pressing it opens (or closes) its domain cards.
  */
 export function PermissionsCards({ matrix, edits, busy, changed, onSetRole, typeName }) {
-  const [open, setOpen] = useState(() => new Set());
-  const toggle = (id) => setOpen((previous) => {
-    const next = new Set(previous);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    return next;
-  });
+  const [open, toggle] = useToggleSet();
   // the main categories (CategoryGroup): the service domains, ביטחון מידע, תקשוב
   const sections = groupBySection(matrix.rows, (row) => row.bookingTypeId).map((section) => ({ ...section, rows: section.items }));
 

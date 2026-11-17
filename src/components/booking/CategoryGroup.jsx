@@ -6,6 +6,7 @@ import { Icon } from '@/components/ui/Icon';
 import { topicHandlerRole } from '@/lib/topicTypes';
 import { CATEGORY_ICONS } from './ServiceIcon';
 import './categoryGroup.css';
+import { Reveal } from '@/components/ui/Reveal';
 
 /**
  * The three main categories of booking types (the roles & permissions guide), in this order, each with its interactive
@@ -57,9 +58,9 @@ export function CategoryGroup({ section, summary, open, onToggle, badge = null, 
         {badge}
         <Icon name="down" className="pp-group-chev" />
       </button>
-      <div id={panelId} className="pp-group-body" inert={!open}>
-        <div className="pp-group-inner">{children}</div>
-      </div>
+      <Reveal id={panelId} open={open} fade={false} className="pp-group-body" innerClassName="pp-group-inner">
+        {children}
+      </Reveal>
     </section>
   );
 }

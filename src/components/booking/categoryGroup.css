@@ -41,13 +41,10 @@
 .pp-group-head:active .pp-group-ic { transform: scale(.96); transition-duration: 100ms; }
 
 /* opening and closing: the body's row glides between 0 and its content's height (260ms = --dur-resize) */
-.pp-group-body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows var(--dur-resize) var(--ease-out); }
-.pp-group.open .pp-group-body { grid-template-rows: 1fr; }
-.pp-group-inner { overflow: hidden; min-height: 0; }
+/* (the body folds with Reveal: components.css .reveal) */
 
 /* reduced motion: fewer and gentler - opacity and colour stay, movement and scaling go */
 @media (prefers-reduced-motion: reduce) {
-  .pp-group-body { transition: none; }
   .pp-group-chev, .pp-group-ic { transition-property: color, background-color, border-color; }
   .pp-group-head:hover .pp-group-ic, .pp-group-head:active .pp-group-ic { transform: none; }
   @starting-style { .pp-group-pending { transform: none; } }

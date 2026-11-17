@@ -19,6 +19,7 @@ import { AttachmentsPanel } from './Attachments';
 import { ResolveConflictDialog } from './ResolveConflictDialog';
 import { useStatusAction } from './useStatusAction';
 import { topicHandlerName } from '@/lib/topicTypes';
+import { CommentsPanel } from '@/components/booking/CommentsPanel';
 
 function FadingTag({ value, children }) {
   const [current, setCurrent] = useState({ value, children });
@@ -169,26 +170,14 @@ export function Body({ booking }) {
 
         {/* comments with the status history under them: they fill the column beside the (taller) details */}
         <div className="drawer-stack">
-        <section className="panel">
-          <header>
-            <h2>הערות</h2>
-            <span className="hint">{booking.comments.length}</span>
-          </header>
-          <div className="body">
-            {booking.comments.length ? (
-              booking.comments.map((comment) => (
-                <div key={comment.id} style={{ padding: '7px 0', borderBottom: '1px solid var(--line-2)' }}>
-                  <div className="small">
-                    <b>{comment.user?.full_name || comment.user?.personal_id || 'מבקש'}</b> <span className="muted">{comment.created_at}</span>
-                  </div>
-                  {comment.comment}
-                </div>
-              ))
-            ) : (
-              <div className="muted small">אין הערות</div>
-            )}
-          </div>
-        </section>
+        <CommentsPanel
+          comments={booking.comments.map((comment) => ({
+            id: comment.id,
+            author: comment.user?.full_name || comment.user?.personal_id || 'מבקש',
+            when: comment.created_at,
+            text: comment.comment,
+          }))}
+        />
 
         <section className="panel">
           <header>
