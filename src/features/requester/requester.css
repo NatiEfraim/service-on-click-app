@@ -370,3 +370,19 @@ button.rq-counter:focus-visible { outline: 2px solid var(--accent); outline-offs
 .rq-choice-step { transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out); }
 @starting-style { .rq-choice-step { opacity: 0; transform: translateY(-4px); } }
 @media (prefers-reduced-motion: reduce) { .rq-choice-step { transition-property: opacity; transform: none; } }
+
+/* "הקריאות שלי": "הכל", then the three main categories (CategoryGroup), each opening into its categories. A category
+   button comes in one after another as its group opens (30ms apart), as the permissions window's domain cards do */
+.rq-cat-groups { display: grid; gap: 8px; margin-bottom: 12px; }
+.rq-cat-groups > .rq-cat-all { flex-direction: row; justify-content: flex-start; gap: 10px; padding: 8px 10px; justify-self: start; }
+.rq-cat-groups .rq-cats { margin: 0; padding: 4px 12px 12px; }
+.rq-cat-groups .pp-group .rq-cat { opacity: 0; transform: translateY(4px); transition: opacity 120ms ease, transform 120ms ease, background-color .15s ease, border-color .15s ease; }
+.rq-cat-groups .pp-group.open .rq-cat { opacity: 1; transform: none; transition: opacity 200ms var(--ease-out) calc(var(--i, 0) * 30ms), transform 240ms var(--ease-out) calc(var(--i, 0) * 30ms), background-color .15s ease, border-color .15s ease; }
+/* the group holding the chosen category is marked, so a closed group still shows where the filter is */
+.rq-cat-groups .pp-group.holds-current { border-color: var(--accent-soft); }
+@media (prefers-reduced-motion: reduce) {
+  .rq-cat-groups .pp-group .rq-cat, .rq-cat-groups .pp-group.open .rq-cat { transform: none; transition: opacity 120ms ease; }
+}
+
+/* the category icons carry their open-requests count (CountBadge) on their corner */
+.rq-cat .ic { position: relative; }

@@ -408,3 +408,14 @@ body:has(.ticket.selected, .ticket-copy, .rq-row.selected, .sync-decision-previe
 .modal header .modal-x { margin-inline-start: auto; flex: none; }
 /* a dialog opened over another: its dimming blurs the dialog underneath, so only the top one reads as active */
 .scrim.stacked { background: rgba(43, 36, 51, .22); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+
+/* CountBadge: a small red count on an icon's top-right corner (right in rtl: the inline start). It pops in from a
+   little smaller and settles (keyed by the count, so a new number pops again); a white ring separates it from the icon */
+.count-badge {
+  position: absolute; top: -6px; inset-inline-start: -6px; z-index: 1; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box;
+  display: grid; place-items: center; border-radius: 999px; background: #D93636; color: #fff; font-size: 11px; font-weight: 700; line-height: 1;
+  box-shadow: 0 0 0 2px var(--surface); pointer-events: none; font-variant-numeric: tabular-nums;
+  transition: opacity var(--dur-base) var(--ease-out), transform 260ms cubic-bezier(.34, 1.56, .64, 1);
+}
+@starting-style { .count-badge { opacity: 0; transform: scale(.6); } }
+@media (prefers-reduced-motion: reduce) { .count-badge { transition: opacity var(--dur-base) ease; } @starting-style { .count-badge { transform: none; } } }

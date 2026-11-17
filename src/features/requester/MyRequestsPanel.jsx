@@ -8,7 +8,9 @@ import { DateRangePicker } from '@/components/ui/DateRangePicker';
 import { Field } from '@/components/ui/Field';
 import { Select } from '@/components/ui/Select';
 import { EmptyState, ErrorNotice, Loading, Notice } from '@/components/ui/Feedback';
+import { CategoryGroup, groupBySection, sectionOf } from '@/components/booking/CategoryGroup';
 import { hasTypeIcon, TypeIcon } from '@/components/booking/TypeIcon';
+import { CountBadge } from '@/components/ui/CountBadge';
 import { Icon } from '@/components/ui/Icon';
 import { Seg } from '@/components/ui/Controls';
 import { SearchField } from '@/components/ui/SearchField';
@@ -87,8 +89,20 @@ export function MyRequestsPanel({ full = false, extraCategories = null, category
   const list = requestCategories(ownedRows, categories.data?.categories, extraCategories ?? []);
   // a ביטחון מידע / תקשוב type's own picture (by booking type id); other domains show their domain badge
   const typeImg = Object.fromEntries((categories.data?.topics ?? []).flatMap((topic) => topic.groups.flatMap((group) => group.types.map((type) => [type.id, type.img]))));
-  const chips = list.filter((item) => item.typeIds.some((id) => openTypeIds.has(id)));
-  const current = (full ? list : chips).find((candidate) => candidate.id === category) ?? null;
+  // every category the user may use (the requester catalog, the domains they manage, and any of their own requests'),
+  // split into the three main categories - as in the permissions window (CategoryGroup)
+  const current = list.find((candidate) => candidate.id === category) ?? null;
+  const sections = groupBySection(list, (item) => item.typeIds[0]);
+  // how many of the user's own requests are open in a category (the small red number on its icon)
+  const openIn = (item) => ownedRows.filter((row) => isOpen(row) && item.typeIds.includes(row.bookingTypeId)).length;
+  // the main categories that are open; the one holding the chosen category starts open
+  const [openSections, setOpenSections] = useState(() => new Set(current ? [sectionOf(current.typeIds[0])] : []));
+  const toggleSection = (id) => setOpenSections((previous) => {
+    const next = new Set(previous);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    return next;
+  });
   // the full page filters (open / all, search by number or category), as the earlier "הקריאות שלי" screen did
   const [view, setView] = useState('all');
   // the request open in the side panel
@@ -187,17 +201,36 @@ export function MyRequestsPanel({ full = false, extraCategories = null, category
         ) : null}
       </div>
       {full ? null : (
-      <div className="rq-cats" role="group" aria-label="קטגוריות">
-        <button type="button" className="rq-cat" aria-pressed={!current} onClick={() => onCategory(null)}>
+      <div className="rq-cat-groups" role="group" aria-label="קטגוריות">
+        <button type="button" className="rq-cat rq-cat-all" aria-pressed={!current} onClick={() => onCategory(null)}>
           <span className="ic"><Icon name="list" /></span>
           הכל
         </button>
-        {chips.map((item) => (
-          <button key={item.id} type="button" className="rq-cat" aria-pressed={current?.id === item.id} onClick={() => onCategory(item.id)}>
-            <span className="ic pic">{hasTypeIcon(item.typeIds[0]) ? <TypeIcon bookingTypeId={item.typeIds[0]} size={32} /> : item.img ? <img src={item.img} alt="" /> : <Icon name="layers" />}</span>
-            {item.name}
-          </button>
-        ))}
+        {sections.map((section) => {
+          const withOpen = section.items.filter((item) => item.typeIds.some((id) => openTypeIds.has(id))).length;
+          const sectionOpen = section.items.reduce((sum, item) => sum + openIn(item), 0);
+          return (
+            <CategoryGroup
+              key={section.id}
+              section={section}
+              className={current && sectionOf(current.typeIds[0]) === section.id ? 'holds-current' : ''}
+              open={openSections.has(section.id)}
+              onToggle={() => toggleSection(section.id)}
+              count={sectionOpen}
+              countLabel={`${sectionOpen} קריאות פתוחות ב${section.label}`}
+              summary={`${section.items.length} קטגוריות${withOpen ? ` · ${withOpen} עם קריאות פתוחות` : ''}`}
+            >
+              <div className="rq-cats">
+                {section.items.map((item, index) => (
+                  <button key={item.id} type="button" className="rq-cat" style={{ '--i': index }} aria-pressed={current?.id === item.id} onClick={() => onCategory(item.id)}>
+                    <span className="ic pic"><CountBadge count={openIn(item)} label={`${openIn(item)} קריאות פתוחות ב${item.name}`} />{hasTypeIcon(item.typeIds[0]) ? <TypeIcon bookingTypeId={item.typeIds[0]} size={32} /> : item.img ? <img src={item.img} alt="" /> : <Icon name="layers" />}</span>
+                    {item.name}
+                  </button>
+                ))}
+              </div>
+            </CategoryGroup>
+          );
+        })}
       </div>
       )}
       {full && sent ? (
