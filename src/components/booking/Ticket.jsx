@@ -8,7 +8,8 @@ import { Icon } from '@/components/ui/Icon';
 import { useBookingDrawer } from '@/features/bookings/useBookingDrawer';
 
 import { actionTone, domainColor, STAGE_SHORT } from '@/lib/labels';
-import { EASE_DRAWER, prefersReducedMotion, ROW_STAMP_MS } from '@/lib/motion';
+import { DRAWER_EXIT_MS, EASE_DRAWER, prefersReducedMotion, ROW_STAMP_MS } from '@/lib/motion';
+import { usePresence } from '@/components/ui/usePresence';
 import { useSession } from '@/providers/SessionProvider';
 import { bookingActions } from '@/lib/booking-actions';
 import { isHoldStatus } from '@/lib/booking-workflow';
@@ -59,6 +60,11 @@ export function Ticket({ booking: given, showActions = true, onAction, outcome, 
   const open = () => drawer.open(booking.serial_number);
   // the booking open in the side panel: its row stands out above the panel's dimming (the same look as the requester's list)
   const selected = drawer.serial === booking.serial_number && !outcome;
+  // when the side panel closes, the row keeps its lifted look until the panel and its dimming are gone (DRAWER_EXIT_MS),
+  // and only then settles into the list: dropped at once, the dimming would cover it (dark) and it would shrink under it.
+  // Not when stepping to another booking (the panel stays) nor when the booking leaves after a decision (its own motion)
+  const lingering = usePresence(selected, DRAWER_EXIT_MS);
+  const lifted = selected || (lingering.closing && !outcome && drawer.serial == null);
   useEffect(() => {
     if (selected) ref.current?.scrollIntoView({ block: 'nearest', behavior: prefersReducedMotion() ? 'instant' : 'smooth' });
   }, [selected]);
@@ -141,7 +147,7 @@ export function Ticket({ booking: given, showActions = true, onAction, outcome, 
     <>
       <div
         ref={ref}
-        className={`ticket${outcome ? ` leaving ${outcome}` : ''}${selected ? ' selected' : ''}${covered ? ' covered' : ''}`}
+        className={`ticket${outcome ? ` leaving ${outcome}` : ''}${lifted ? ' selected' : ''}${covered ? ' covered' : ''}`}
         aria-current={selected ? 'true' : undefined}
         aria-hidden={outcome || covered ? true : undefined}
         inert={covered ? true : undefined}
