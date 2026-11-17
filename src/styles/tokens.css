@@ -55,8 +55,8 @@ h1, h2, h3, p { overflow-wrap: anywhere; }
    content is laid out exactly as before. The page's own bar: html ltr, body rtl. */
 html { direction: ltr; }
 body { direction: rtl; }
-.scroll-y, .queue-scroll, .drawer .scroll, .modal, .st-form-preview, .st-opt-nav, .st-serials, .ppl-matrix-wrap, .sync-files, .tp-popup.menu { direction: ltr; }
-.scroll-y > *, .queue-scroll > *, .drawer .scroll > *, .modal > *, .st-form-preview > *, .st-opt-nav > *, .st-serials > *, .ppl-matrix-wrap > *, .sync-files > *, .tp-popup.menu > * { direction: rtl; }
+.scroll-y, .queue-scroll, .drawer .scroll, .modal, .st-form-preview, .st-opt-nav, .st-serials, .ppl-matrix-wrap, .sync-files, .tp-popup.menu, .st-dialog-options .st-field-options-list, .rq-mine.full .rq-list { direction: ltr; }
+.scroll-y > *, .queue-scroll > *, .drawer .scroll > *, .modal > *, .st-form-preview > *, .st-opt-nav > *, .st-serials > *, .ppl-matrix-wrap > *, .sync-files > *, .tp-popup.menu > *, .st-dialog-options .st-field-options-list > *, .rq-mine.full .rq-list > * { direction: rtl; }
 /* a wrapping row keeps its right-to-left order inside an ltr scroller */
 .st-serials { flex-direction: row-reverse; }
 

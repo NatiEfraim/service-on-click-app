@@ -258,8 +258,10 @@ button.rq-counter:focus-visible { outline: 2px solid var(--accent); outline-offs
 @keyframes rq-check {
   0% { transform: scale(0); opacity: 0; }
   18% { transform: scale(1.15); opacity: 1; }
-  28%, 75% { transform: scale(1); opacity: 1; }
-  100% { transform: scale(.9); opacity: 0; }
+  28% { transform: scale(1); opacity: 1; }
+  /* the pop-in springs; the fade-out must not (an overshooting curve drops opacity to nothing at once): a smooth ease */
+  62% { transform: scale(1); opacity: 1; animation-timing-function: cubic-bezier(0.77, 0, 0.175, 1); }
+  100% { transform: scale(.92); opacity: 0; }
 }
 @keyframes rq-confetti {
   0% { transform: translate(0, 0) rotate(0) scale(.4); opacity: 0; }
@@ -289,7 +291,10 @@ button.rq-counter:focus-visible { outline: 2px solid var(--accent); outline-offs
 @media (prefers-reduced-motion: reduce) { .rq-ticket { transition: none; } }
 /* in the side panel the celebration sits on the route's "סגירה" station, so it is where the user looks */
 .station { position: relative; }
-.rq-celebrate.on-station { position: absolute; top: -8px; left: 50%; margin-left: -11px; z-index: 2; }
+/* above its station's dot (not on it); the rail scrolls sideways, which clips anything above its box, so while it plays
+   the rail gets headroom, taken back by a negative margin so nothing on the page moves */
+.rq-celebrate.on-station { position: absolute; top: -30px; left: 50%; margin-left: -11px; z-index: 2; }
+.rail:has(.rq-celebrate.on-station) { padding-top: 40px; margin-top: -34px; }
 /* the flowing border covers the 4px domain-colour edge too (it sits outside the padding box, where ::before starts),
    so the white of the selected row never shows outside its frame */
 .rq-ticket::before { inset-inline-start: -4px; }
@@ -348,3 +353,36 @@ button.rq-counter:focus-visible { outline: 2px solid var(--accent); outline-offs
 @keyframes rq-bridge-in { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
 @media (prefers-reduced-motion: reduce) { .rq-row-bridge { animation: rq-bridge-fade 200ms ease both; } }
 @keyframes rq-bridge-fade { from { opacity: 0; } }
+
+/* the station's celebration fades out smoothly whenever it ends (RequestDrawer keeps it mounted for 450ms) */
+.rq-celebrate.on-station { transition: opacity 450ms cubic-bezier(0.77, 0, 0.175, 1), transform 450ms cubic-bezier(0.77, 0, 0.175, 1); }
+.rq-celebrate.on-station.leaving { opacity: 0; transform: scale(.92); }
+
+/* a topic card ends at the bottom of the window; its list scrolls inside it (TopicCard), never the page */
+.rq-topic-scroll { overflow-y: auto; overscroll-behavior: contain; }
+
+/* "סימון הכל כנקרא" never makes the head taller than its 32px (it overlaps the space around it instead), so a category
+   with updates and one without line up exactly and the card does not shift when switching between them */
+.rq-mine-head .rq-mark-all { margin-block: -8px; }
+
+/* a choice field: its sub-choice dropdown and its "type in a value" box fade and rise in as they appear (ChoiceField) */
+.rq-choice { display: grid; gap: 8px; }
+.rq-choice-step { transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out); }
+@starting-style { .rq-choice-step { opacity: 0; transform: translateY(-4px); } }
+@media (prefers-reduced-motion: reduce) { .rq-choice-step { transition-property: opacity; transform: none; } }
+
+/* "הקריאות שלי": "הכל", then the three main categories (CategoryGroup), each opening into its categories. A category
+   button comes in one after another as its group opens (30ms apart), as the permissions window's domain cards do */
+.rq-cat-groups { display: grid; gap: 8px; margin-bottom: 12px; }
+.rq-cat-groups > .rq-cat-all { flex-direction: row; justify-content: flex-start; gap: 10px; padding: 8px 10px; justify-self: start; }
+.rq-cat-groups .rq-cats { margin: 0; padding: 4px 12px 12px; }
+.rq-cat-groups .pp-group .rq-cat { opacity: 0; transform: translateY(4px); transition: opacity 120ms ease, transform 120ms ease, background-color .15s ease, border-color .15s ease; }
+.rq-cat-groups .pp-group.open .rq-cat { opacity: 1; transform: none; transition: opacity 200ms var(--ease-out) calc(var(--i, 0) * 30ms), transform 240ms var(--ease-out) calc(var(--i, 0) * 30ms), background-color .15s ease, border-color .15s ease; }
+/* the group holding the chosen category is marked, so a closed group still shows where the filter is */
+.rq-cat-groups .pp-group.holds-current { border-color: var(--accent-soft); }
+@media (prefers-reduced-motion: reduce) {
+  .rq-cat-groups .pp-group .rq-cat, .rq-cat-groups .pp-group.open .rq-cat { transform: none; transition: opacity 120ms ease; }
+}
+
+/* the category icons carry their open-requests count (CountBadge) on their corner */
+.rq-cat .ic { position: relative; }

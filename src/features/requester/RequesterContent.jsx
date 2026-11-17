@@ -1,10 +1,12 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { FadeIn } from '@/components/ui/FadeIn';
 import { EmptyState, ErrorNotice, Loading } from '@/components/ui/Feedback';
+import { hasTypeIcon, TypeIcon } from '@/components/booking/TypeIcon';
 import { Icon } from '@/components/ui/Icon';
+import { useFitToWindow } from '@/lib/useFitToWindow';
 import { useSetSearchParams } from '@/lib/useSetSearchParams';
 import { MyRequestsPanel } from './MyRequestsPanel';
 import { RequestForm } from './RequestForm';
@@ -30,6 +32,55 @@ function Picture({ src }) {
  * Where the requester screen is (home / "הקריאות שלי" / a form), from the URL (`?rq=`, `?type=<booking type id>`),
  * and how to move: `go` pushes a history entry, so Back works. Shared by the content and the regular user's top bar.
  */
+/**
+ * A topic's card (ביטחון מידע, תקשוב): its head folds it, its body lists the request types by group. The card ends at
+ * the bottom of the window and only its body scrolls (useFitToWindow, scroll bar on the right), so a long topic never
+ * makes the page itself scroll.
+ */
+function TopicCard({ topic, open, onToggle, onOpenType }) {
+  const card = useRef(null);
+  useFitToWindow(card, 240, open);
+  useEffect(() => {
+    if (!open && card.current) card.current.style.maxHeight = '';
+  }, [open]);
+  const count = topic.groups.reduce((sum, group) => sum + group.types.length, 0);
+  return (
+    <section ref={card} className={`card rq-topic fit-card${open ? '' : ' closed'}`} aria-label={topic.name}>
+      <button type="button" className="rq-topic-head" aria-expanded={open} onClick={onToggle}>
+        <span className="pic"><Picture src={topic.img} /></span>
+        <span className="txt">
+          <b>{topic.name}</b>
+          <span>{count} סוגי קריאות</span>
+        </span>
+        <Icon name="down" className="chev" />
+      </button>
+      {open ? (
+        <div className="fit-fill scroll-y rq-topic-scroll">
+          <div className="rq-topic-body">
+            {topic.groups.map((group) => (
+              <div key={group.id} className="rq-group">
+                <h3>{group.name}</h3>
+                <div className="rq-types">
+                  {group.types.map((type) => (
+                    <button key={type.id} type="button" className="rq-type" onClick={() => onOpenType(type.id)}>
+                      {hasTypeIcon(type.id) ? <TypeIcon bookingTypeId={type.id} /> : <Picture src={type.img} />}
+                      <span className="txt">
+                        <b>{type.name}</b>
+                        {type.description ? <span>{type.description}</span> : null}
+                      </span>
+                      <Icon name="left" className="go" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 export function useRequesterView() {
   const search = useSearchParams();
   const setParams = useSetSearchParams();
@@ -50,7 +101,7 @@ export function RequesterContent({ name, extraCategories = null }) {
   const catalog = useCatalog();
   const counters = useCounters();
   // the user's requests (shared with the "הקריאות שלי" panel's cache): which of them changed since the last visit
-  const mine = useMyRequests(null);
+  const mine = useMyRequests();
   const seen = useSeen();
   useEffect(() => {
     if (mine.data) rememberFirstVisit(mine.data);
@@ -124,44 +175,14 @@ export function RequesterContent({ name, extraCategories = null }) {
             ) : (
               topics.map((topic) => {
                 const open = !closed.includes(topic.id);
-                const count = topic.groups.reduce((sum, group) => sum + group.types.length, 0);
                 return (
-                  <section key={topic.id} className={`card rq-topic${open ? '' : ' closed'}`} aria-label={topic.name}>
-                    <button
-                      type="button"
-                      className="rq-topic-head"
-                      aria-expanded={open}
-                      onClick={() => setClosed((previous) => (open ? [...previous, topic.id] : previous.filter((id) => id !== topic.id)))}
-                    >
-                      <span className="pic"><Picture src={topic.img} /></span>
-                      <span className="txt">
-                        <b>{topic.name}</b>
-                        <span>{count} סוגי קריאות</span>
-                      </span>
-                      <Icon name="down" className="chev" />
-                    </button>
-                    {open ? (
-                      <div className="rq-topic-body">
-                        {topic.groups.map((group) => (
-                          <div key={group.id} className="rq-group">
-                            <h3>{group.name}</h3>
-                            <div className="rq-types">
-                              {group.types.map((type) => (
-                                <button key={type.id} type="button" className="rq-type" onClick={() => openType(type.id)}>
-                                  <Picture src={type.img} />
-                                  <span className="txt">
-                                    <b>{type.name}</b>
-                                    {type.description ? <span>{type.description}</span> : null}
-                                  </span>
-                                  <Icon name="left" className="go" />
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : null}
-                  </section>
+                  <TopicCard
+                    key={topic.id}
+                    topic={topic}
+                    open={open}
+                    onToggle={() => setClosed((previous) => (open ? [...previous, topic.id] : previous.filter((id) => id !== topic.id)))}
+                    onOpenType={openType}
+                  />
                 );
               })
             )}

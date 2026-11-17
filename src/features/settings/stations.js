@@ -1,4 +1,6 @@
 import { routeFor } from '@/features/bookings/route';
+import { ROLE_NAME } from '@/lib/labels';
+import { topicHandlerRole } from '@/lib/topicTypes';
 
 
 /** Statuses only a control officer sets (14, 17, 18); a type reaching them has that station. */
@@ -28,6 +30,10 @@ export function campCommanders(managers) {
 
 /** Stations of a booking type with their holders, inferred from its reachable statuses. */
 export function stationsForType(bookingTypeId, catalog, managers) {
+  // ביטחון מידע / תקשוב: no approval route, one role handles the request (קצין ביטחון מידע / מנהל תקשוב)
+  const handler = topicHandlerRole(bookingTypeId);
+  if (handler) return [{ id: handler, label: ROLE_NAME[handler], people: peopleWithRoles(managers, [handler]) }];
+
   const reachable = catalog.booking_type_statuses?.[String(bookingTypeId)] ?? [];
   const hasControlOfficer = reachable.some((statusId) => CONTROL_OFFICER_STATUSES.includes(statusId));
 

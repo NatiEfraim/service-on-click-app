@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { AnimatedText } from '@/components/ui/AnimatedText';
 import { Button } from '@/components/ui/Button';
 import { ClearFilters } from '@/components/ui/ClearFilters';
@@ -8,9 +8,13 @@ import { DateRangePicker } from '@/components/ui/DateRangePicker';
 import { Field } from '@/components/ui/Field';
 import { Select } from '@/components/ui/Select';
 import { EmptyState, ErrorNotice, Loading, Notice } from '@/components/ui/Feedback';
+import { CategoryGroup, groupBySection, sectionOf } from '@/components/booking/CategoryGroup';
+import { hasTypeIcon, TypeIcon } from '@/components/booking/TypeIcon';
+import { CountBadge } from '@/components/ui/CountBadge';
 import { Icon } from '@/components/ui/Icon';
 import { Seg } from '@/components/ui/Controls';
 import { SearchField } from '@/components/ui/SearchField';
+import { SmoothSize } from '@/components/ui/SmoothSize';
 import { usePresence } from '@/components/ui/usePresence';
 import { OPEN_STATUS_IDS } from '@/lib/api/endpoints';
 import { useDebounced } from '@/lib/useDebounced';
@@ -19,7 +23,7 @@ import { RequestDrawer } from './RequestDrawer';
 import { RequestRow } from './RequestRow';
 import { RowBridge } from './RowBridge';
 import { celebrationKey, isChanged, markCelebrated, markSeen, useSeen, wasCelebrated } from './seen';
-import { counterOf, stageOf } from './requesterData';
+import { counterOf, requestCategories, stageOf } from './requesterData';
 import { STAGE_SHORT } from '@/lib/labels';
 import { useCatalog, useMyRequests } from './useRequester';
 
@@ -71,20 +75,34 @@ const SORTS = [
 const statusNameOf = (row) => row.statusName;
 
 /**
- * "הקריאות שלי": an icon and name for every category the user may open requests in (the new topics and the service
- * domains); picking one lists their requests in it. `full` is the whole-page version, otherwise the home's side panel.
+ * "הקריאות שלי": an icon and name for every category the user has an open request in (of those the user may open
+ * or manage); picking one lists their requests in it. `full` is the whole-page version, otherwise the home's side panel.
  */
 export function MyRequestsPanel({ full = false, extraCategories = null, category, onCategory, bucket: rawBucket = null, onBucket = () => {}, sent = null, onSentSeen = () => {}, onAll }) {
   const bucket = BUCKETS.some((option) => option.id === rawBucket) ? rawBucket : null;
   // the categories (topics and domains) come from GET /requester/catalog, already limited to what the user may open
   const categories = useCatalog();
-  // a management role passes its own list (the domains it manages - the super admin: all); a regular user gets the
-  // catalog's categories (what they may open). In domain order, so nothing moves or swaps once data arrives.
-  const list = [...(extraCategories ?? categories.data?.categories ?? [])].sort((a, b) => a.typeIds[0] - b.typeIds[0]);
+  const requests = useMyRequests({ openOnly: !full });
+  const ListBox = full ? Fragment : SmoothSize;
+  const ownedRows = requests.data ?? [];
+  const openTypeIds = new Set(ownedRows.filter(isOpen).map((row) => row.bookingTypeId));
+  const list = requestCategories(ownedRows, categories.data?.categories, extraCategories ?? []);
   // a ביטחון מידע / תקשוב type's own picture (by booking type id); other domains show their domain badge
   const typeImg = Object.fromEntries((categories.data?.topics ?? []).flatMap((topic) => topic.groups.flatMap((group) => group.types.map((type) => [type.id, type.img]))));
+  // every category the user may use (the requester catalog, the domains they manage, and any of their own requests'),
+  // split into the three main categories - as in the permissions window (CategoryGroup)
   const current = list.find((candidate) => candidate.id === category) ?? null;
-  const requests = useMyRequests(current, { enabled: categories.isSuccess });
+  const sections = groupBySection(list, (item) => item.typeIds[0]);
+  // how many of the user's own requests are open in a category (the small red number on its icon)
+  const openIn = (item) => ownedRows.filter((row) => isOpen(row) && item.typeIds.includes(row.bookingTypeId)).length;
+  // the main categories that are open; the one holding the chosen category starts open
+  const [openSections, setOpenSections] = useState(() => new Set(current ? [sectionOf(current.typeIds[0])] : []));
+  const toggleSection = (id) => setOpenSections((previous) => {
+    const next = new Set(previous);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    return next;
+  });
   // the full page filters (open / all, search by number or category), as the earlier "הקריאות שלי" screen did
   const [view, setView] = useState('all');
   // the request open in the side panel
@@ -111,7 +129,7 @@ export function MyRequestsPanel({ full = false, extraCategories = null, category
   const [stage, setStage] = useState('');
   const [status, setStatus] = useState('');
   const [range, setRange] = useState({ from: null, to: null });
-  const allRows = requests.data ?? [];
+  const allRows = ownedRows.filter((row) => (full || isOpen(row)) && (!current || current.typeIds.includes(row.bookingTypeId)));
   const changedRows = allRows.filter((row) => isChanged(seen, row));
   // Keep an update queued even when opening the drawer marks it as seen.
   const [celebrated, setCelebrated] = useState(() => new Set());
@@ -183,17 +201,36 @@ export function MyRequestsPanel({ full = false, extraCategories = null, category
         ) : null}
       </div>
       {full ? null : (
-      <div className="rq-cats" role="group" aria-label="קטגוריות">
-        <button type="button" className="rq-cat" aria-pressed={!current} onClick={() => onCategory(null)}>
+      <div className="rq-cat-groups" role="group" aria-label="קטגוריות">
+        <button type="button" className="rq-cat rq-cat-all" aria-pressed={!current} onClick={() => onCategory(null)}>
           <span className="ic"><Icon name="list" /></span>
           הכל
         </button>
-        {list.map((item) => (
-          <button key={item.id} type="button" className="rq-cat" aria-pressed={current?.id === item.id} onClick={() => onCategory(item.id)}>
-            <span className="ic pic">{item.img ? <img src={item.img} alt="" /> : <Icon name="layers" />}</span>
-            {item.name}
-          </button>
-        ))}
+        {sections.map((section) => {
+          const withOpen = section.items.filter((item) => item.typeIds.some((id) => openTypeIds.has(id))).length;
+          const sectionOpen = section.items.reduce((sum, item) => sum + openIn(item), 0);
+          return (
+            <CategoryGroup
+              key={section.id}
+              section={section}
+              className={current && sectionOf(current.typeIds[0]) === section.id ? 'holds-current' : ''}
+              open={openSections.has(section.id)}
+              onToggle={() => toggleSection(section.id)}
+              count={sectionOpen}
+              countLabel={`${sectionOpen} קריאות פתוחות ב${section.label}`}
+              summary={`${section.items.length} קטגוריות${withOpen ? ` · ${withOpen} עם קריאות פתוחות` : ''}`}
+            >
+              <div className="rq-cats">
+                {section.items.map((item, index) => (
+                  <button key={item.id} type="button" className="rq-cat" style={{ '--i': index }} aria-pressed={current?.id === item.id} onClick={() => onCategory(item.id)}>
+                    <span className="ic pic"><CountBadge count={openIn(item)} label={`${openIn(item)} קריאות פתוחות ב${item.name}`} />{hasTypeIcon(item.typeIds[0]) ? <TypeIcon bookingTypeId={item.typeIds[0]} size={32} /> : item.img ? <img src={item.img} alt="" /> : <Icon name="layers" />}</span>
+                    {item.name}
+                  </button>
+                ))}
+              </div>
+            </CategoryGroup>
+          );
+        })}
       </div>
       )}
       {full && sent ? (
@@ -264,13 +301,16 @@ export function MyRequestsPanel({ full = false, extraCategories = null, category
         </div>
         </>
       ) : null}
+      {/* the home: switching category glides the card to its new height (SmoothSize) instead of snapping; the full page
+          keeps its window-fitted list */}
+      <ListBox>
       {categories.isPending || requests.isPending ? (
         <div className="card-body"><Loading rows={3} /></div>
       ) : requests.isError ? (
         <ErrorNotice error={requests.error} title="לא ניתן להציג את הקריאות." onRetry={() => void requests.refetch()} />
       ) : rows.length ? (
         <>
-        <ul className="rq-list" data-loading={requests.isPlaceholderData ? '' : undefined} aria-busy={requests.isPlaceholderData || undefined}>
+        <ul className="rq-list">
           {rows.map((row) => (
             <li key={row.id}>
               <RequestRow
@@ -293,12 +333,13 @@ export function MyRequestsPanel({ full = false, extraCategories = null, category
         ) : null}
         </>
       ) : (
-        full && allRows.length ? (
+        !full ? <EmptyState title="אין לך קריאות פתוחות" /> : allRows.length ? (
         <EmptyState title={query ? 'לא נמצאו קריאות התואמות לחיפוש' : 'אין לך קריאות פתוחות'}>{query ? 'נסה מספר קריאה או קטגוריה אחרים, או נקה את החיפוש.' : 'לכל הקריאות, כולל סגורות, בחר הכל.'}</EmptyState>
       ) : (
         <EmptyState title={current ? `אין לך קריאות ב${current.name}` : 'עוד לא פתחת קריאות'}>בחר סוג קריאה כדי לפתוח קריאה ראשונה</EmptyState>
       )
       )}
+      </ListBox>
       {opened ? <RowBridge key={opened.id} /> : null}
       {opened ? <RequestDrawer row={opened} rows={rows} onGo={open} onClose={() => setOpened(null)} celebrate={celebrating(opened) ? celebrationKey(opened) : null} onCelebrated={() => finishCelebration(opened)} /> : null}
     </section>
