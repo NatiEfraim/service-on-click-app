@@ -10,6 +10,20 @@ import { useEffect, useState } from 'react';
  */
 const cache = new Map();
 
+/**
+ * Whether the file needs the cookie-less fetch at all: only when it sits on the site's own host (e.g. localhost and
+ * localhost:9000), where the browser would send the site's cookies with it. On another host (a deployment's own store)
+ * the cookies never go there, so the direct address is used as is - no extra request that the store's CORS would block.
+ */
+export function needsCookieless(url) {
+  if (typeof window === 'undefined' || !url) return false;
+  try {
+    return new URL(url, window.location.href).hostname === window.location.hostname;
+  } catch {
+    return false;
+  }
+}
+
 /** The file at `url` as an object URL, fetched without cookies (once per address); rejects when it cannot be fetched. */
 export function fetchCookieless(url) {
   if (!cache.has(url)) {
@@ -37,6 +51,11 @@ export function useCookielessFile(url) {
   useEffect(() => {
     if (!url) {
       setState({ src: null, failed: true });
+      return undefined;
+    }
+    // on another host: the direct address only (one request)
+    if (!needsCookieless(url)) {
+      setState({ src: url, failed: false });
       return undefined;
     }
     let current = true;

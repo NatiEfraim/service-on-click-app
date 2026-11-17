@@ -7,7 +7,7 @@ import { Icon } from '@/components/ui/Icon';
 import { useOverlay } from '@/components/ui/overlay';
 import { useIsClient } from '@/components/ui/useIsClient';
 import { downloadBlob } from '@/lib/export/download';
-import { fetchCookieless, useCookielessFile } from './cookielessFile';
+import { fetchCookieless, needsCookieless, useCookielessFile } from './cookielessFile';
 
 /** One file in the viewer, from its cookie-less copy (cookielessFile): a PDF in a frame, an image as itself. */
 function ViewerMedia({ item }) {
@@ -32,6 +32,11 @@ function ThumbImage({ attachment }) {
 
 /** Saves a non-viewable attachment from its cookie-less copy (a plain link would carry the app's cookies to the store). */
 async function downloadAttachment(attachment) {
+  // on another host: open the direct address (one request)
+  if (!needsCookieless(attachment.url)) {
+    window.open(attachment.url, '_blank', 'noopener');
+    return;
+  }
   let src;
   try {
     src = await fetchCookieless(attachment.url);
