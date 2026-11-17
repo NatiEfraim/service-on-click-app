@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
-import { Fragment, useLayoutEffect, useRef, useState } from 'react';
+import { Fragment, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -22,6 +22,7 @@ import { DRAWER_EXIT_MS } from '@/lib/motion';
 import { useToast } from '@/providers/UiProvider';
 import { BookingLink } from './BookingLink';
 import { FileRecords } from './FileRecords';
+import { useWindowMeasure } from '@/components/ui/useWindowMeasure';
 
 const KIND_LABEL = { booking_status: 'סטטוסים של קריאות', booking_values: 'תיקוני ערכים', system_config: 'הגדרות מערכת' };
 const STATE = {
@@ -40,34 +41,24 @@ function PendingDecisionRow({ row, selected }) {
   const [position, setPosition] = useState(null);
   const presence = usePresence(selected, DRAWER_EXIT_MS);
 
-  useLayoutEffect(() => {
-    if (!selected) return;
-    const measure = () => {
-      const bounds = source.current.getBoundingClientRect();
-      const scroller = source.current.closest('.sync-pending');
-      const viewport = scroller.getBoundingClientRect();
-      const headerBottom = scroller.querySelector('thead').getBoundingClientRect().bottom;
-      if (bounds.top < headerBottom || bounds.bottom > viewport.bottom) {
-        setPosition(null);
-        return;
-      }
-      // the row's own column widths (px), so the tab's text sits exactly over the row's while the tab reaches to the panel
-      const columns = Array.from(source.current.cells, (cell) => `${cell.getBoundingClientRect().width}px`);
-      setPosition({
-        '--decision-columns': columns.join(' '),
-        '--decision-top': `${bounds.top}px`,
-        '--decision-left': `${bounds.left}px`,
-        '--decision-right': `${window.innerWidth - bounds.right}px`,
-        '--decision-height': `${bounds.height}px`,
-      });
-    };
-    measure();
-    window.addEventListener('resize', measure);
-    window.addEventListener('scroll', measure, true);
-    return () => {
-      window.removeEventListener('resize', measure);
-      window.removeEventListener('scroll', measure, true);
-    };
+  useWindowMeasure(Boolean(selected), () => {
+    const bounds = source.current.getBoundingClientRect();
+    const scroller = source.current.closest('.sync-pending');
+    const viewport = scroller.getBoundingClientRect();
+    const headerBottom = scroller.querySelector('thead').getBoundingClientRect().bottom;
+    if (bounds.top < headerBottom || bounds.bottom > viewport.bottom) {
+      setPosition(null);
+      return;
+    }
+    // the row's own column widths (px), so the tab's text sits exactly over the row's while the tab reaches to the panel
+    const columns = Array.from(source.current.cells, (cell) => `${cell.getBoundingClientRect().width}px`);
+    setPosition({
+      '--decision-columns': columns.join(' '),
+      '--decision-top': `${bounds.top}px`,
+      '--decision-left': `${bounds.left}px`,
+      '--decision-right': `${window.innerWidth - bounds.right}px`,
+      '--decision-height': `${bounds.height}px`,
+    });
   }, [selected]);
 
   const showPreview = presence.mounted && position;
@@ -76,7 +67,7 @@ function PendingDecisionRow({ row, selected }) {
   return (
     <>
       <tr ref={source} data-preview={Boolean(showPreview) || undefined} data-closing={presence.closing || undefined}>
-        <td><BookingLink serial={row.booking_serial} /></td>
+        <td><BookingLink serial={row.booking_serial} uuid={row.booking_uuid} /></td>
         <td><span>{label}</span></td>
         <td style={{ whiteSpace: 'nowrap' }}><span>{time}</span></td>
       </tr>
@@ -96,7 +87,7 @@ function PendingDecisionRow({ row, selected }) {
 export function SyncScreen() {
   const client = useQueryClient();
   const toast = useToast();
-  const { serial: openedSerial } = useBookingDrawer();
+  const drawer = useBookingDrawer();
   const query = useQuery({ queryKey: keys.sync, queryFn: ({ signal }) => syncApi.overview(signal), refetchInterval: 30_000 });
   const [openFile, setOpenFile] = useState(null);
   const [resolving, setResolving] = useState(null);
@@ -176,7 +167,7 @@ export function SyncScreen() {
               <div key={`c${conflict.id}`} className="sync-problem">
                 <span className="chip bad">התנגשות</span>
                 <span>
-                  קריאה <BookingLink serial={conflict.booking_serial} />
+                  קריאה <BookingLink serial={conflict.booking_serial} uuid={conflict.booking_uuid} />
                   {conflict.booking_type_label ? ` · ${conflict.booking_type_label}` : ''}: כאן <b>{conflict.internal_label ?? conflict.internal_status_id}</b>, באפליקציה <b>{conflict.external_label ?? conflict.external_status_id}</b>
                   <span className="hint"> · {fmtDateTime(conflict.detected_at)}</span>
                 </span>
@@ -253,7 +244,7 @@ export function SyncScreen() {
                 </thead>
                 <tbody>
                   {pending.map((row) => (
-                    <PendingDecisionRow key={row.booking_serial} row={row} selected={openedSerial === Number(row.booking_serial)} />
+                    <PendingDecisionRow key={row.booking_serial} row={row} selected={drawer.matches({ uuid: row.booking_uuid, serial_number: row.booking_serial })} />
                   ))}
                 </tbody>
               </table>

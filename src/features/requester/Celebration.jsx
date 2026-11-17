@@ -69,7 +69,8 @@ export function Celebration({ onDone, className = '', variant = 'burst', rejecte
   if (variant === 'row') {
     return (
       <span ref={ref} className={`rq-celebrate-row${playing ? ' play' : ''}${rejected ? ' rejected' : ''}`} aria-hidden="true">
-        {rejected ? <span className="rq-sad-face">☹</span> : ROW_PIECES.map((piece, index) => (
+        {/* a rejected request: only the soft red glow, no face and no confetti */}
+        {rejected ? null : ROW_PIECES.map((piece, index) => (
           <i
             key={index}
             className={piece.round ? 'round' : ''}
@@ -82,7 +83,8 @@ export function Celebration({ onDone, className = '', variant = 'burst', rejecte
 
   return (
     <span ref={ref} className={`rq-celebrate${playing ? ' play' : ''}${rejected ? ' rejected' : ''}${className ? ` ${className}` : ''}`} aria-hidden="true">
-      {rejected ? <span className="rq-sad-face">☹</span> : <span className="check"><Icon name="check" /></span>}
+      {/* a rejected request has nothing on its station (no face, no check) */}
+      {rejected ? null : <span className="check"><Icon name="check" /></span>}
       {!rejected && PIECES.map((piece, index) => (
         <i
           key={index}

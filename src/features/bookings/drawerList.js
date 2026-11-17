@@ -4,10 +4,10 @@ import { useEffect, useRef, useSyncExternalStore } from 'react';
 
 /**
  * The list the booking drawer was opened from, so it can step to the previous / next booking.
- * A list screen publishes the serials it shows, in its order; the drawer reads them.
+ * A list screen publishes the keys (uuids) of the bookings it shows, in its order; the drawer reads them.
  * Only one list is on screen at a time; when it unmounts it takes its list away.
  *
- * shape: { serials: number[], total: number | null, hasMore: boolean, loadMore: () => void }
+ * shape: { keys: string[], total: number | null, hasMore: boolean, loadMore: () => void }
  */
 let current = null;
 const listeners = new Set();
@@ -26,17 +26,17 @@ export function useDrawerList() {
   return useSyncExternalStore(subscribe, () => current, () => null);
 }
 
-/** A list screen calls this with the serials it shows; `loadMore` fetches the next page of a paged list. */
-export function usePublishDrawerList(serials, { total = null, hasMore = false, loadMore } = {}) {
+/** A list screen calls this with its bookings' keys (bookingKey: the uuid); `loadMore` fetches a paged list's next page. */
+export function usePublishDrawerList(bookingKeys, { total = null, hasMore = false, loadMore } = {}) {
   const owner = useRef({});
   const loadMoreRef = useRef(loadMore);
   loadMoreRef.current = loadMore;
-  const signature = serials.join(',');
+  const signature = bookingKeys.filter(Boolean).join(',');
 
   useEffect(() => {
     current = {
       owner: owner.current,
-      serials: signature ? signature.split(',').map(Number) : [],
+      keys: signature ? signature.split(',') : [],
       total,
       hasMore,
       loadMore: () => loadMoreRef.current?.(),
@@ -55,17 +55,17 @@ export function usePublishDrawerList(serials, { total = null, hasMore = false, l
   }, []);
 }
 
-/** Where `serial` sits in the list: its index and its neighbours (null when it is not in the list). */
-export function placeInList(list, serial) {
+/** Where the booking `key` sits in the list: its index and its neighbours (null when it is not in the list). */
+export function placeInList(list, key) {
   if (!list) return null;
-  const index = list.serials.indexOf(serial);
+  const index = list.keys.indexOf(key);
   if (index < 0) return null;
   return {
     index,
-    count: list.total ?? list.serials.length,
-    previous: index > 0 ? list.serials[index - 1] : null,
-    next: index < list.serials.length - 1 ? list.serials[index + 1] : null,
+    count: list.total ?? list.keys.length,
+    previous: index > 0 ? list.keys[index - 1] : null,
+    next: index < list.keys.length - 1 ? list.keys[index + 1] : null,
     // the last loaded row of a paged list: the next one is on the page not loaded yet
-    nextNeedsLoad: index === list.serials.length - 1 && list.hasMore,
+    nextNeedsLoad: index === list.keys.length - 1 && list.hasMore,
   };
 }

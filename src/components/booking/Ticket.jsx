@@ -8,67 +8,48 @@ import { Icon } from '@/components/ui/Icon';
 import { useBookingDrawer } from '@/features/bookings/useBookingDrawer';
 
 import { actionTone, domainColor, STAGE_SHORT } from '@/lib/labels';
-import { EASE_DRAWER, prefersReducedMotion, ROW_STAMP_MS } from '@/lib/motion';
+import { DRAWER_EXIT_MS, EASE_DRAWER, prefersReducedMotion, ROW_STAMP_MS } from '@/lib/motion';
+import { usePresence } from '@/components/ui/usePresence';
 import { useSession } from '@/providers/SessionProvider';
 import { bookingActions } from '@/lib/booking-actions';
 import { isHoldStatus } from '@/lib/booking-workflow';
 import { DomainBadge } from './DomainBadge';
 import { AgeBar, MiniRoute } from './RouteViz';
 import { useLeave, useArrive } from './ticketMotion';
+import { topicBooking, topicHandlerName } from '@/lib/topicTypes';
+import { useWindowMeasure } from '@/components/ui/useWindowMeasure';
 
 /** Measures the selected row against the drawer's resting edge. */
 function useCoveredBox(ref, selected) {
   const [box, setBox] = useState(null);
   useLayoutEffect(() => {
-    if (!selected) {
-      setBox(null);
-      return undefined;
-    }
-
-    let previous = null;
-    const measure = () => {
-      const row = ref.current;
-      const drawer = document.querySelector('.drawer[role="dialog"]');
-      const bounds = row?.getBoundingClientRect();
-      const width = drawer ? document.documentElement.clientWidth - drawer.offsetWidth : 0;
-      const page = row?.closest('.page');
-      const left = page ? page.getBoundingClientRect().left + parseFloat(getComputedStyle(page).paddingLeft) : 12;
-      const previewWidth = width - left;
-      const next = bounds && previewWidth > 36
-        ? { drawer, top: bounds.top, height: bounds.height, width: previewWidth, gap: width - bounds.right }
-        : null;
-      if (next === previous || (
-        next && previous && next.drawer === previous.drawer && next.top === previous.top
-        && next.height === previous.height && next.width === previous.width && next.gap === previous.gap
-      )) return;
-      previous = next;
-      setBox(next);
-    };
-    measure();
-
-    let frame;
-    const started = performance.now();
-    const follow = () => {
-      measure();
-      if (performance.now() - started < 320) frame = requestAnimationFrame(follow);
-    };
-    frame = requestAnimationFrame(follow);
-    const observer = new ResizeObserver(measure);
-    if (ref.current) observer.observe(ref.current);
-    window.addEventListener('resize', measure);
-    window.addEventListener('scroll', measure, true);
-    return () => {
-      cancelAnimationFrame(frame);
-      observer.disconnect();
-      window.removeEventListener('resize', measure);
-      window.removeEventListener('scroll', measure, true);
-    };
-  }, [ref, selected]);
+    if (!selected) setBox(null);
+  }, [selected]);
+  // followed frame by frame while the drawer slides in (320ms), then on resize / scroll / the row's own size
+  useWindowMeasure(Boolean(selected), () => {
+    const row = ref.current;
+    const drawer = document.querySelector('.drawer[role="dialog"]');
+    const bounds = row?.getBoundingClientRect();
+    const width = drawer ? document.documentElement.clientWidth - drawer.offsetWidth : 0;
+    const page = row?.closest('.page');
+    const left = page ? page.getBoundingClientRect().left + parseFloat(getComputedStyle(page).paddingLeft) : 12;
+    const previewWidth = width - left;
+    const next = bounds && previewWidth > 36
+      ? { drawer, top: bounds.top, height: bounds.height, width: previewWidth, gap: width - bounds.right }
+      : null;
+    // a new object only when something moved, so a still row never re-renders
+    setBox((previous) => (next === previous || (
+      next && previous && next.drawer === previous.drawer && next.top === previous.top
+      && next.height === previous.height && next.width === previous.width && next.gap === previous.gap
+    ) ? previous : next));
+  }, [ref, selected], { followMs: 320, observe: ref });
   return selected ? box : null;
 }
 
 /** One booking in a list, with the decisions available right now; `entering` marks a row that just arrived in the list. */
-export function Ticket({ booking, showActions = true, onAction, outcome, entering = false }) {
+export function Ticket({ booking: given, showActions = true, onAction, outcome, entering = false }) {
+  // ביטחון מידע / תקשוב named by their one handler, wherever the booking came from (the dashboard's oldest too)
+  const booking = topicBooking(given);
   const { catalog, me, unitName } = useSession();
   const drawer = useBookingDrawer();
   const ref = useRef(null);
@@ -76,9 +57,14 @@ export function Ticket({ booking, showActions = true, onAction, outcome, enterin
   useArrive(ref, entering);
   const actions = bookingActions(booking.actions);
   const owner = booking.owner_name || booking.owner_personal_id || '—';
-  const open = () => drawer.open(booking.serial_number);
+  const open = () => drawer.open(booking.uuid ?? booking.serial_number);
   // the booking open in the side panel: its row stands out above the panel's dimming (the same look as the requester's list)
-  const selected = drawer.serial === booking.serial_number && !outcome;
+  const selected = drawer.matches(booking) && !outcome;
+  // when the side panel closes, the row keeps its lifted look until the panel and its dimming are gone (DRAWER_EXIT_MS),
+  // and only then settles into the list: dropped at once, the dimming would cover it (dark) and it would shrink under it.
+  // Not when stepping to another booking (the panel stays) nor when the booking leaves after a decision (its own motion)
+  const lingering = usePresence(selected, DRAWER_EXIT_MS);
+  const lifted = selected || (lingering.closing && !outcome && drawer.key == null);
   useEffect(() => {
     if (selected) ref.current?.scrollIntoView({ block: 'nearest', behavior: prefersReducedMotion() ? 'instant' : 'smooth' });
   }, [selected]);
@@ -125,7 +111,7 @@ export function Ticket({ booking, showActions = true, onAction, outcome, enterin
             </span>
           ) : null}
           {booking.has_conflict || booking.sync_state === 'conflict' ? <NeedsDecision /> : null}
-          {isHoldStatus(booking.status_id) ? <StatusChip statusId={booking.status_id} label={booking.status_label} /> : null}
+          {isHoldStatus(booking.status_id) ? <StatusChip statusId={booking.status_id} label={booking.status_label} bookingTypeId={booking.booking_type_id} /> : null}
           {booking.sync_state === 'pending' ? <Chip tone="info">ממתינה לשליחה</Chip> : null}
         </div>
         <div className="t2">
@@ -133,14 +119,14 @@ export function Ticket({ booking, showActions = true, onAction, outcome, enterin
           {me.is_super_admin && booking.unit_id ? <span>· {unitName(booking.unit_id)}</span> : null}
           <span>·</span>
           <MiniRoute booking={booking} catalog={catalog} />
-          <span>{booking.stage === 'closed' ? booking.status_label : STAGE_SHORT[booking.stage]}</span>
+          <span>{booking.stage === 'closed' ? booking.status_label : (booking.stage !== 'realization' && topicHandlerName(booking.booking_type_id)) || STAGE_SHORT[booking.stage]}</span>
         </div>
       </div>
     </>
   );
   const side = (
     <div className={`side${showActions && onAction ? ' with-actions' : ''}${booking.stage === 'closed' ? ' closed-status' : ''}`}>
-      {booking.stage === 'closed' ? <StatusChip statusId={booking.status_id} label={booking.status_label} /> : <AgeBar booking={booking} />}
+      {booking.stage === 'closed' ? <StatusChip statusId={booking.status_id} label={booking.status_label} bookingTypeId={booking.booking_type_id} /> : <AgeBar booking={booking} />}
       {showActions && booking.actions.length > 0 && onAction ? (
         <div className="acts">
           {actions.slice(0, 2).map((action) => {
@@ -161,7 +147,7 @@ export function Ticket({ booking, showActions = true, onAction, outcome, enterin
     <>
       <div
         ref={ref}
-        className={`ticket${outcome ? ` leaving ${outcome}` : ''}${selected ? ' selected' : ''}${covered ? ' covered' : ''}`}
+        className={`ticket${outcome ? ` leaving ${outcome}` : ''}${lifted ? ' selected' : ''}${covered ? ' covered' : ''}`}
         aria-current={selected ? 'true' : undefined}
         aria-hidden={outcome || covered ? true : undefined}
         inert={covered ? true : undefined}

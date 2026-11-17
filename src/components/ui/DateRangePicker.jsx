@@ -6,6 +6,8 @@ import { AnimatedText } from './AnimatedText';
 import { Icon } from './Icon';
 import { usePresence } from './usePresence';
 import { toIso, fromIso, show, presets, monthGrid } from './date-range-utils';
+import { useOutsideClose } from './useOutsideClose';
+import { useWindowMeasure } from './useWindowMeasure';
 
 const MONTH = new Intl.DateTimeFormat('he', { month: 'long', year: 'numeric' });
 /** Matches .drp-pop's width in components.css (used to keep the calendar inside the window). */
@@ -42,39 +44,16 @@ export function DateRangePicker({ value, onChange, label = 'תאריך', placeho
   // the calendar renders in <body> (so no clipping container can hide it) and is placed under its button
   const [place, setPlace] = useState(null);
 
-  useEffect(() => {
-    if (!open) return;
-    // outside = neither the button area nor the calendar (which lives elsewhere in the page)
-    const onPointer = (event) => {
-      if (ref.current?.contains(event.target) || popRef.current?.contains(event.target)) return;
-      setOpen(false);
-    };
-    const onKey = (event) => event.key === 'Escape' && setOpen(false);
-    document.addEventListener('mousedown', onPointer);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onPointer);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [open]);
+  // outside = neither the button area nor the calendar (which lives elsewhere in the page)
+  useOutsideClose(open, () => setOpen(false), [ref, popRef]);
 
-  useLayoutEffect(() => {
-    if (!presence.mounted) return;
-    const measure = () => {
-      const box = ref.current?.getBoundingClientRect();
-      if (!box) return;
-      // the calendar's right edge on the button's right edge (rtl start), kept inside the window
-      const right = Math.max(8, window.innerWidth - box.right);
-      setPlace({ top: box.bottom + 8, right: Math.min(right, window.innerWidth - CALENDAR_WIDTH - 8) });
-    };
-    measure();
-    window.addEventListener('resize', measure);
-    window.addEventListener('scroll', measure, true);
-    return () => {
-      window.removeEventListener('resize', measure);
-      window.removeEventListener('scroll', measure, true);
-    };
-  }, [presence.mounted]);
+  useWindowMeasure(presence.mounted, () => {
+    const box = ref.current?.getBoundingClientRect();
+    if (!box) return;
+    // the calendar's right edge on the button's right edge (rtl start), kept inside the window
+    const right = Math.max(8, window.innerWidth - box.right);
+    setPlace({ top: box.bottom + 8, right: Math.min(right, window.innerWidth - CALENDAR_WIDTH - 8) });
+  }, []);
 
   const toggle = () => {
     if (!open) {

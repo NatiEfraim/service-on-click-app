@@ -1,16 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { CATEGORY_ICONS } from './ServiceIcon';
-
-/** A main category's interactive picture (ServiceIcon). */
-function CategoryIcon({ id }) {
-  const Picture = CATEGORY_ICONS[id];
-  return Picture ? <Picture /> : null;
-}
+import { CategoryGroup, groupBySection } from '@/components/booking/CategoryGroup';
 import { DomainBadge } from '@/components/booking/DomainBadge';
 import { AnimatedText } from '@/components/ui/AnimatedText';
-import { Icon } from '@/components/ui/Icon';
 import { usePresence } from '@/components/ui/usePresence';
 
 /** How long "שינויים ממתינים" takes to fade out (matches .pp-group-pending[data-closing] in people.css). */
@@ -24,20 +16,13 @@ function PendingTag({ show }) {
 }
 import { domainColor } from '@/lib/labels';
 import { cellKey, roleLabel, shownValue } from './permissions';
+import { useToggleSet } from '@/lib/useToggleSet';
 
 /**
- * The permissions grid as domain cards, inside three main categories that open and close: תחומי שירות, ביטחון מידע,
+ * The permissions grid as domain cards, inside three main categories that open and close: מפקדת מחנה, ביטחון מידע,
  * תקשוב. A person holds at most one role per domain, so each card is a choice among the roles that domain actually has
  * (no column per role, no "—" for the roles it does not have). Built on the same matrix, edits and locks as before.
  */
-
-/** The main categories (the roles & permissions guide): the service domains, ביטחון מידע (14-16), תקשוב (17-19). */
-const SECTIONS = [
-  // each with its interactive picture (ServiceIcon) on a tile tinted with the picture's main colour
-  { id: 'service', label: 'תחומי שירות', tint: '#E8826A', has: (id) => id < 14 || id > 19 },
-  { id: 'infosec', label: 'ביטחון מידע', tint: '#8FB3E8', has: (id) => id >= 14 && id <= 16 },
-  { id: 'ict', label: 'תקשוב', tint: '#9ED3F0', has: (id) => id >= 17 && id <= 19 },
-];
 
 /** The role a domain is set to now (with the edits), or null. */
 function currentRole(row, edits) {
@@ -85,14 +70,9 @@ function DomainCard({ index = 0, row, roles, edits, busy, changed, onSetRole, ty
  * change waiting; pressing it opens (or closes) its domain cards.
  */
 export function PermissionsCards({ matrix, edits, busy, changed, onSetRole, typeName }) {
-  const [open, setOpen] = useState(() => new Set());
-  const toggle = (id) => setOpen((previous) => {
-    const next = new Set(previous);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    return next;
-  });
-  const sections = SECTIONS.map((section) => ({ ...section, rows: matrix.rows.filter((row) => section.has(row.bookingTypeId)) })).filter((section) => section.rows.length);
+  const [open, toggle] = useToggleSet();
+  // the main categories (CategoryGroup): the service domains, ביטחון מידע, תקשוב
+  const sections = groupBySection(matrix.rows, (row) => row.bookingTypeId).map((section) => ({ ...section, rows: section.items }));
 
   return (
     <div className="pp-cards">
@@ -100,30 +80,23 @@ export function PermissionsCards({ matrix, edits, busy, changed, onSetRole, type
         const isOpen = open.has(section.id);
         const assigned = section.rows.filter((row) => currentRole(row, edits)).length;
         const pending = section.rows.some((row) => isChanged(row, changed));
-        const panelId = `pp-section-${section.id}`;
         return (
-          <section key={section.id} className={`pp-group${isOpen ? ' open' : ''}${pending ? ' pending' : ''}`}>
-            <button type="button" className="pp-group-head" aria-expanded={isOpen} aria-controls={panelId} onClick={() => toggle(section.id)}>
-              <span className="pp-group-ic" style={{ '--tint': section.tint }}><CategoryIcon id={section.id} /></span>
-              <span className="pp-group-txt">
-                <b>{section.label}</b>
-                {/* the count crossfades when it changes (the old text fades out as the new one fades in) */}
-                <span><AnimatedText>{assigned ? `${assigned} מתוך ${section.rows.length} תחומים משובצים` : `${section.rows.length} תחומים, אין שיבוץ`}</AnimatedText></span>
-              </span>
-              <PendingTag show={pending} />
-              <Icon name="down" className="pp-group-chev" />
-            </button>
-            {/* stays mounted so it can open and close smoothly (grid rows 0fr ↔ 1fr); inert while closed */}
-            <div id={panelId} className="pp-group-body" inert={!isOpen}>
-              <div className="pp-group-inner">
-                <div className="pp-cards-grid">
-                  {section.rows.map((row, index) => (
-                    <DomainCard key={row.bookingTypeId} index={index} row={row} roles={matrix.roles} edits={edits} busy={busy} changed={changed} onSetRole={onSetRole} typeName={typeName} />
-                  ))}
-                </div>
-              </div>
+          <CategoryGroup
+            key={section.id}
+            section={section}
+            className={pending ? 'pending' : ''}
+            open={isOpen}
+            onToggle={() => toggle(section.id)}
+            // the count crossfades when it changes (the old text fades out as the new one fades in)
+            summary={<AnimatedText>{assigned ? `${assigned} מתוך ${section.rows.length} תחומים משובצים` : `${section.rows.length} תחומים, אין שיבוץ`}</AnimatedText>}
+            badge={<PendingTag show={pending} />}
+          >
+            <div className="pp-cards-grid">
+              {section.rows.map((row, index) => (
+                <DomainCard key={row.bookingTypeId} index={index} row={row} roles={matrix.roles} edits={edits} busy={busy} changed={changed} onSetRole={onSetRole} typeName={typeName} />
+              ))}
             </div>
-          </section>
+          </CategoryGroup>
         );
       })}
     </div>

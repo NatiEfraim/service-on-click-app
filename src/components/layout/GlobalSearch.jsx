@@ -55,11 +55,11 @@ export function GlobalSearch() {
     router.push(`/requests?view=all&q=${encodeURIComponent(q)}`);
   };
 
-  const pick = (serial) => {
+  const pick = (key) => {
     setOpen(false);
     setValue('');
     setQuery('');
-    drawer.open(serial);
+    drawer.open(key);
   };
 
   const rows = results.data?.data ?? [];
@@ -97,7 +97,7 @@ export function GlobalSearch() {
           ) : (
             <>
               {rows.map((row) => (
-                <button key={row.serial_number} type="button" onClick={() => pick(row.serial_number)}>
+                <button key={row.serial_number} type="button" onClick={() => pick(row.uuid ?? row.serial_number)}>
                   <DomainBadge bookingTypeId={row.booking_type_id} size="sm" />
                   <span style={{ flex: 1 }}>
                     <b>{row.owner_name || row.owner_personal_id}</b>
@@ -106,7 +106,7 @@ export function GlobalSearch() {
                       {row.booking_type_label} · <span className="serial">{row.serial_number}</span>
                     </span>
                   </span>
-                  <StatusChip statusId={row.status_id} label={row.status_label} />
+                  <StatusChip statusId={row.status_id} label={row.status_label} bookingTypeId={row.booking_type_id} />
                 </button>
               ))}
               {total > rows.length ? (

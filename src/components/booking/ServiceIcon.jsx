@@ -3,7 +3,7 @@
 /**
  * The pictures of the permissions window's three main categories, drawn inline so their parts can move. All three in one
  * style: a container that opens and something that springs out of it - a toolbox (תחומי שירות), a safe (ביטחון מידע), a
- * satellite dish (תקשוב). Hover (a real pointer) gives a taste; opening the category plays the whole sequence;
+ * network (תקשוב). Hover (a real pointer) gives a taste; opening the category plays the whole sequence;
  * closing reverses it. In the style of the site's other pictures: soft fills with a dark outline. Motion: people.css (.svc-*).
  */
 const STROKE = { stroke: '#26232B', strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round' };
@@ -56,24 +56,24 @@ function SafeIcon() {
   );
 }
 
-/** תקשוב - a satellite dish: hover turns it upward; opening aims it fully and three waves leave it one after another. */
-function DishIcon() {
+/** תקשוב - a network: hover starts drawing its links; opening jumps the nodes out from the hub to its edges as the links draw. */
+function NetworkIcon() {
+  const node = (cls, cx, cy, fill) => <circle className={`svc-i5-node ${cls}`} cx={cx} cy={cy} r="3.2" fill={fill} {...STROKE} />;
   return (
-    <svg className="svc svc-dish" viewBox="0 0 32 32" width="26" height="26" aria-hidden="true">
-      <g fill="none" stroke="#2FA85A" strokeWidth="1.6" strokeLinecap="round">
-        <path className="svc-ds-w w1" d="M20 9 a3 3 0 0 1 3 3" />
-        <path className="svc-ds-w w2" d="M20.5 5.5 a6.5 6.5 0 0 1 6 6" />
-        <path className="svc-ds-w w3" d="M21 2 a10 10 0 0 1 9 9" />
+    <svg className="svc svc-i5" viewBox="0 0 32 32" width="26" height="26" aria-hidden="true">
+      <g stroke="#26232B" strokeWidth="1.5" strokeLinecap="round">
+        <path className="svc-i5-link" d="M15 18 L6 9" pathLength="100" />
+        <path className="svc-i5-link" d="M15 18 L6 27" pathLength="100" />
+        <path className="svc-i5-link" d="M15 18 L26 26" pathLength="100" />
       </g>
-      <path d="M12 21 L9 28 H17 L14.5 21" fill="#C9CDD8" {...STROKE} />
-      <g className="svc-ds-dish">
-        <path d="M5 13 A9.5 9.5 0 0 0 19 23 Z" fill="#9ED3F0" {...STROKE} />
-        <path d="M12 18 L18.5 11.5" {...STROKE} />
-        <circle cx="19" cy="11" r="1.6" fill="#E8826A" {...STROKE} />
-      </g>
+      {node('n1', 6, 9, '#F2C46D')}
+      {node('n2', 6, 27, '#8CC79A')}
+      {node('n3', 26, 26, '#E8826A')}
+      <circle cx="15" cy="18" r="4.2" fill="#3E5C8A" {...STROKE} />
+      <circle cx="15" cy="18" r="1.5" fill="#9ED3F0" />
     </svg>
   );
 }
 
 /** The picture of each main category (by its id in PermissionsCards). */
-export const CATEGORY_ICONS = { service: ToolboxIcon, infosec: SafeIcon, ict: DishIcon };
+export const CATEGORY_ICONS = { service: ToolboxIcon, infosec: SafeIcon, ict: NetworkIcon };

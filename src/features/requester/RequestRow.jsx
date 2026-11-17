@@ -96,7 +96,7 @@ export function RequestRow({ row, img, changed, selected, celebrating, onOpen, o
           <span>·</span>
           <MiniSteps route={route} />
           {/* as the management list: the stage it waits at, or its closing status */}
-          <span>{closed ? row.statusName : STAGE_SHORT[route.stage]}</span>
+          <span>{closed ? row.statusName : route.stations.some((station) => station.id === 'handler') ? route.stations[route.here]?.label : STAGE_SHORT[route.stage]}</span>
         </span>
       </span>
       <span className="rq-ticket-side">

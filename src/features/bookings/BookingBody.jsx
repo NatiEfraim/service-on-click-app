@@ -1,13 +1,14 @@
 'use client';
 
 import { Fragment, useState } from 'react';
+import { RequesterRows } from '@/components/booking/RequesterRows';
 import { DomainBadge } from '@/components/booking/DomainBadge';
 import { Rail } from '@/components/booking/RouteViz';
 import { Button } from '@/components/ui/Button';
 import { Chip, NeedsDecision, SourceTag, StatusChip } from '@/components/ui/Chips';
 import { Notice } from '@/components/ui/Feedback';
 import { auditSentence } from '@/lib/audit-sentence';
-import { describeValues } from '@/lib/booking-values';
+import { describeValues, uploadAttachments } from '@/lib/booking-values';
 import { fmtDateTime, fmtHours } from '@/lib/format';
 import { targetHoursOr } from '@/lib/targets';
 import { actionTone, STAGE_SHORT } from '@/lib/labels';
@@ -17,6 +18,8 @@ import { isHoldStatus } from '@/lib/booking-workflow';
 import { AttachmentsPanel } from './Attachments';
 import { ResolveConflictDialog } from './ResolveConflictDialog';
 import { useStatusAction } from './useStatusAction';
+import { topicHandlerName } from '@/lib/topicTypes';
+import { CommentsPanel } from '@/components/booking/CommentsPanel';
 
 function FadingTag({ value, children }) {
   const [current, setCurrent] = useState({ value, children });
@@ -51,6 +54,8 @@ export function Body({ booking }) {
   const [resolving, setResolving] = useState(null);
 
   const lines = describeValues(booking.booking_values);
+  const valueAttachments = uploadAttachments(booking.booking_values);
+  const attachments = valueAttachments.length ? valueAttachments : booking.attachments;
   const conflict = booking.sync.open_conflict;
   const owner = booking.owner_name || booking.booking_owner?.full_name || null;
   const history = booking.history;
@@ -60,7 +65,7 @@ export function Body({ booking }) {
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         <DomainBadge bookingTypeId={booking.booking_type_id} />
         <FadingTag value={`${booking.status_id}:${booking.status_label}`}>
-          <StatusChip statusId={booking.status_id} label={booking.status_label} />
+          <StatusChip statusId={booking.status_id} label={booking.status_label} bookingTypeId={booking.booking_type_id} />
         </FadingTag>
         <Chip>{booking.booking_type_label}</Chip>
         <Chip>{unitName(booking.unit_id)}</Chip>
@@ -97,7 +102,10 @@ export function Body({ booking }) {
           <h2>מסלול האישור</h2>
           <span className="hint">
             {booking.stage_label}
-            {` · פתוחה ${fmtHours(booking.total_age_hours)} מתוך יעד ${fmtHours(targetHoursOr(booking.target_hours))}${booking.target_hours == null ? ' (ברירת מחדל)' : ''}`}
+            {/* ביטחון מידע / תקשוב have no handling target: only how long the booking is open */}
+            {topicHandlerName(booking.booking_type_id)
+              ? ` · פתוחה ${fmtHours(booking.total_age_hours)}`
+              : ` · פתוחה ${fmtHours(booking.total_age_hours)} מתוך יעד ${fmtHours(targetHoursOr(booking.target_hours))}${booking.target_hours == null ? ' (ברירת מחדל)' : ''}`}
           </span>
         </header>
         <div className="body">
@@ -120,7 +128,7 @@ export function Body({ booking }) {
             <p className="small muted" style={{ margin: '14px 0 0' }}>
               {booking.stage === 'closed'
                 ? 'הקריאה סגורה. אין פעולות זמינות.'
-                : `${canAct ? 'אין לך פעולה זמינה בשלב הזה.' : 'בתפקידך את/ה צופה בקריאה ואינך מאשר/ת אותה.'} הקריאה ממתינה ל${STAGE_SHORT[booking.stage] ?? 'גורם אחר'}, ורק בעל התפקיד שהתור שלו במסלול יכול לאשר או לדחות אותה כעת.`}
+                : `${canAct ? 'אין לך פעולה זמינה בשלב הזה.' : 'בתפקידך את/ה צופה בקריאה ואינך מאשר/ת אותה.'} הקריאה ממתינה ל${(booking.stage !== 'realization' && topicHandlerName(booking.booking_type_id)) || STAGE_SHORT[booking.stage] || 'גורם אחר'}, ורק בעל התפקיד שהתור שלו במסלול יכול לאשר או לדחות אותה כעת.`}
             </p>
           )}
         </div>
@@ -134,17 +142,7 @@ export function Body({ booking }) {
           </header>
           <div className="body">
             <dl className="kv">
-              <dt>מבקש</dt>
-              <dd>
-                {owner ? `${owner} ` : ''}
-                <span className="ltr">{booking.owner_personal_id ?? '—'}</span>
-              </dd>
-              {booking.booking_owner?.phone ? (
-                <>
-                  <dt>טלפון</dt>
-                  <dd className="ltr">{booking.booking_owner.phone}</dd>
-                </>
-              ) : null}
+              <RequesterRows name={owner} personalId={booking.owner_personal_id} phone={booking.booking_owner?.phone} />
               <dt>נפתחה</dt>
               <dd>{fmtDateTime(booking.opened_at)}</dd>
               <dt>שינוי סטטוס אחרון</dt>
@@ -172,26 +170,14 @@ export function Body({ booking }) {
 
         {/* comments with the status history under them: they fill the column beside the (taller) details */}
         <div className="drawer-stack">
-        <section className="panel">
-          <header>
-            <h2>הערות</h2>
-            <span className="hint">{booking.comments.length}</span>
-          </header>
-          <div className="body">
-            {booking.comments.length ? (
-              booking.comments.map((comment) => (
-                <div key={comment.id} style={{ padding: '7px 0', borderBottom: '1px solid var(--line-2)' }}>
-                  <div className="small">
-                    <b>{comment.user?.full_name || comment.user?.personal_id || 'מבקש'}</b> <span className="muted">{comment.created_at}</span>
-                  </div>
-                  {comment.comment}
-                </div>
-              ))
-            ) : (
-              <div className="muted small">אין הערות</div>
-            )}
-          </div>
-        </section>
+        <CommentsPanel
+          comments={booking.comments.map((comment) => ({
+            id: comment.id,
+            author: comment.user?.full_name || comment.user?.personal_id || 'מבקש',
+            when: comment.created_at,
+            text: comment.comment,
+          }))}
+        />
 
         <section className="panel">
           <header>
@@ -225,7 +211,7 @@ export function Body({ booking }) {
         </div>
       </div>
 
-      {booking.attachments.length > 0 ? <AttachmentsPanel attachments={booking.attachments} /> : null}
+      {attachments.length > 0 ? <AttachmentsPanel attachments={attachments} /> : null}
 
       {booking.audit ? (
         <section className="panel">

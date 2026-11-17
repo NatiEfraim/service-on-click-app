@@ -1,6 +1,7 @@
 /** Typed service-on-click-api calls. Reads return `data`; writes return the envelope (server `message`). */
 import { getData, getPage, http, send } from './client';
 import { validateVaticanPerson } from './vatican';
+import { topicBooking } from '@/lib/topicTypes';
 
 
 const APPROVER = '/bookings-approver-management';
@@ -61,14 +62,16 @@ export const startupApi = {
 
 
 export const bookingsApi = {
-  list: (params, signal) => getPage(`${APPROVER}/bookings`, params, signal),
-  get: (serial, signal) => getData(`${APPROVER}/bookings/${serial}`, undefined, signal),
+  // ביטחון מידע / תקשוב bookings are named by their one handler as they arrive (lib/topicTypes)
+  list: (params, signal) => getPage(`${APPROVER}/bookings`, params, signal).then((page) => ({ ...page, data: Array.isArray(page?.data) ? page.data.map(topicBooking) : page?.data })),
+  // one booking, by its uuid (the management API's key; the serial number is for display and search only)
+  get: (uuid, signal) => getData(`${APPROVER}/bookings/${uuid}`, undefined, signal).then(topicBooking),
   /** One `idempotencyKey` per user action; a repeat returns the first result. */
-  changeStatus: (serial, body, idempotencyKey) =>
-    send('post', `${APPROVER}/bookings/${serial}/status`, body, { headers: { 'Idempotency-Key': idempotencyKey } }),
+  changeStatus: (uuid, body, idempotencyKey) =>
+    send('post', `${APPROVER}/bookings/${uuid}/status`, body, { headers: { 'Idempotency-Key': idempotencyKey } }),
   /** `values`: form_field_id -> new value (`Y-m-d` for a date, `HH:MM` for a time). */
-  updateValues: (serial, body) =>
-    send('put', `${APPROVER}/bookings/${serial}/values`, body),
+  updateValues: (uuid, body) =>
+    send('put', `${APPROVER}/bookings/${uuid}/values`, body),
 };
 
 
@@ -198,10 +201,12 @@ export const bookingsReportApi = {
 
 /** Digital hatch: runs the scheduler's exports (r2b) and imports (b2r) now, inline (sync=1), and returns `data`. */
 const HATCH = `${SUPER}/digital-hatch`;
-const hatchRun = async (path, body) => (await send('post', `${HATCH}/${path}`, { ...body, sync: 1 })).data;
+// an import that failed answers 500 with its own outcome ({ ok: false, error }): taken as an answer to show, not thrown
+const hatchRun = async (path, body) => (await send('post', `${HATCH}/${path}`, { ...body, sync: 1 }, { validateStatus: (status) => (status >= 200 && status < 300) || status === 500 })).data;
 export const hatchApi = {
   exportBookingStatus: (body) => hatchRun('export-booking-status', body),
   exportUsers: (body) => hatchRun('export-users', body),
+  exportSystemReferences: (body) => hatchRun('export-system-references', body),
   importBookingJson: (body) => hatchRun('import-booking-json', body),
   importApplicationLogJson: (body) => hatchRun('import-application-log-json', body),
   importFiles: (body) => hatchRun('import-files', body),

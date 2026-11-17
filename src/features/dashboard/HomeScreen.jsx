@@ -15,7 +15,9 @@ import { domainColor, STAGE_COLOR, STAGE_ORDER, STAGE_SHORT } from '@/lib/labels
 import { useSession } from '@/providers/SessionProvider';
 import { StageDonut } from './StageDonut';
 import { StageColumns } from './StageBars';
+import { GroupTile } from './GroupTile';
 import { TileBody } from './TileBody';
+import { ICT_TYPES, INFOSEC_TYPES } from '@/lib/topicTypes';
 
 /** Matches the .chart-fade transition in screens.css. */
 const CHART_FADE_MS = 130;
@@ -28,9 +30,24 @@ const TILE_GROUPS = [
   { name: 'רכב', types: [1, 2], iconType: 1, iconSrc: '/icons/groups/car.svg' },
   { name: 'ציוד', types: [3, 4], iconType: 3, iconSrc: '/icons/groups/equipment.svg' },
   { name: 'מזון', types: [10, 11], iconType: 10, iconSrc: '/icons/groups/food.svg' },
-  { name: 'ביטחון מידע', types: [14, 15, 16], iconType: 14, iconSrc: '/icons/requester/infosec.svg' },
-  { name: 'תקשוב', types: [17, 18, 19], iconType: 17, iconSrc: '/icons/requester/it.svg' },
+  // the two request topics, all their types in one tile each (lib/topicTypes: תקשוב is 17-25)
+  { name: 'ביטחון מידע', types: INFOSEC_TYPES, iconType: 14, iconSrc: '/icons/requester/infosec.svg' },
+  { name: 'תקשוב', types: ICT_TYPES, iconType: 17, iconSrc: '/icons/requester/it.svg' },
 ];
+
+/**
+ * A group tile's domains by their sub-group (the API's `group`: הרשאות, התקנות…), in the order of their first domain;
+ * one entry when the domains have no sub-group (רכב, ציוד, מזון) or all share one.
+ */
+function subGroups(members) {
+  const byName = new Map();
+  for (const domain of [...members].sort((a, b) => a.booking_type_id - b.booking_type_id)) {
+    const name = domain.group ?? '';
+    if (!byName.has(name)) byName.set(name, { name, members: [] });
+    byName.get(name).members.push(domain);
+  }
+  return [...byName.values()];
+}
 
 /**
  * The home data for a domain commander of several domains, built from GET overview (GET admin/home is admin-only on
@@ -136,6 +153,10 @@ export function HomeScreen() {
                 <TileBody iconType={tile.members[0].booking_type_id} name={tile.name} open={tile.open} overdue={tile.overdue} />
               </Link>
             ) : (
+              subGroups(tile.members).length > 1 ? (
+                // several sub-groups (תקשוב): a panel under the tile, wide enough to read (GroupTile)
+                <GroupTile key={tile.key} tile={tile} subs={subGroups(tile.members)} index={index} />
+              ) : (
               // Hover (or focus) opens the group into its domains; each one links to its own dashboard.
               <div key={tile.key} className="dtile dgroup" tabIndex={0} aria-label={`${tile.name}: ${tile.members.map((m) => m.name).join(', ')}`} style={{ '--dc': domainColor(tile.members[0].booking_type_id), '--i': index }}>
                 <TileBody iconType={tile.iconType} iconSrc={tile.iconSrc} name={tile.name} open={tile.open} overdue={tile.overdue} />
@@ -147,6 +168,7 @@ export function HomeScreen() {
                   ))}
                 </div>
               </div>
+              )
             ),
           )}
         </section>

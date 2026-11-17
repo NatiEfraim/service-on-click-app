@@ -7,6 +7,8 @@
 import { OPEN_STATUS_IDS, requesterApi } from '@/lib/api/endpoints';
 import { routeFor, routePosition } from '@/features/bookings/route';
 import { domainIconSrc, requesterIconSrc } from '@/lib/labels';
+import { topicStatusLabel } from '@/lib/topicTypes';
+import { uploadAttachment, uploadAttachments } from '@/lib/booking-values';
 
 /** Files a form accepts as attachments (POST /bookings/{id}: jpg, jpeg, png, gif, webp, pdf; up to 10, 10 MB each). */
 export const ATTACH_ACCEPT = 'image/jpeg,image/png,image/gif,image/webp,application/pdf';
@@ -60,6 +62,15 @@ export function requestCategories(rows, catalogCategories = [], managedCategorie
     }
   }
   return [...categories.values()].sort((a, b) => a.typeIds[0] - b.typeIds[0]);
+}
+
+/**
+ * A requester file as the shared attachments panel takes it (features/bookings/Attachments, as the management side):
+ * an image - by the server's type or its name - shows as a picture and opens in the viewer, so does a PDF; any other
+ * file downloads.
+ */
+export function toAttachment(entry, index) {
+  return uploadAttachment(entry, index);
 }
 
 /** The type with its topic and group, for the form's breadcrumb; null when the catalog does not offer it. */
@@ -194,7 +205,7 @@ export async function fetchMyRequests(signal, { openOnly = false } = {}) {
     createdAt: booking.created_at,
     updatedAt: booking.updated_at,
     statusId: booking.status?.id,
-    statusName: booking.status?.display_name ?? '',
+    statusName: topicStatusLabel(booking.status?.id, booking.booking_type?.id) ?? booking.status?.display_name ?? '',
   }));
 }
 
@@ -209,7 +220,8 @@ export async function fetchRequestDetails(row, signal) {
   // (form_fields), chosen options (option_fields, each an ancestor chain down to the chosen one, which may carry a typed
   // value) or a plain value; upload fields hold their files. Flatten it into label/value rows, sub-fields indented.
   const values = [];
-  const files = [];
+  const attachments = Array.isArray(booking.attachments) ? booking.attachments : [];
+  const legacyFiles = uploadAttachments(booking.booking_values);
   const optionText = (node) => {
     const chain = [];
     for (let cursor = node; cursor; cursor = cursor.option_fields?.[0]) {
@@ -222,7 +234,6 @@ export async function fetchRequestDetails(row, signal) {
     if (!item) return;
     const label = item.field_display_name ?? item.field_name ?? '';
     if (Array.isArray(item.value) && item.value.some((entry) => entry?.type === 'file' || entry?.type === 'image')) {
-      for (const entry of item.value) files.push({ name: entry.display_name ?? entry.name ?? 'קובץ', url: entry.url ?? null });
       return;
     }
     if (item.form_fields?.length) {
@@ -240,14 +251,15 @@ export async function fetchRequestDetails(row, signal) {
 
   return {
     statusId: booking.status?.id ?? row.statusId,
-    statusName: booking.status?.display_name ?? row.statusName,
+    statusName: topicStatusLabel(booking.status?.id ?? row.statusId, row.bookingTypeId) ?? booking.status?.display_name ?? row.statusName,
     statusMessage: booking.status?.additional_message ?? null,
     createdAt: booking.created_at ?? row.createdAt,
     updatedAt: booking.updated_at ?? null,
     viceApprover: booking.vice_approver?.user?.full_name ?? null,
     requester: booking.user ? { name: booking.user.full_name ?? '', personalId: booking.user.personal_id ?? '', phone: booking.user.phone ?? '' } : null,
     values,
-    files,
+    // booking_values is the established source and still carries working URLs. The newer attachments URLs are a fallback.
+    files: legacyFiles.length ? legacyFiles : attachments,
     comments: (booking.comments ?? []).map((comment) => ({
       id: comment.id,
       author: comment.user?.full_name || comment.user?.personal_id || '',

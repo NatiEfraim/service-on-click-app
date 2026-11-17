@@ -32,9 +32,44 @@ export function optionText(options) {
 
 const UPLOAD_FIELD_TYPES = new Set(['file', 'image']);
 
-/** Upload nodes carry presigned bucket URLs the app never uses; uploads are shown from `attachments`. */
+/** Upload nodes are omitted from the textual details and displayed in the attachments panel. */
 export function isUploadNode(node) {
   return UPLOAD_FIELD_TYPES.has(node.field_type?.name) || (Array.isArray(node.value) && node.value.length > 0 && node.value.every((item) => typeof item === 'object' && item !== null && 'type' in item && ['file', 'image'].includes(String((item).type))));
+}
+
+/** Normalizes a file stored in booking_values to the shape used by the shared attachments panel. */
+export function uploadAttachment(entry, index = 0) {
+  const name = entry.display_name ?? entry.name ?? 'קובץ';
+  const url = entry.url ?? null;
+  const path = `${name} ${url ?? ''}`.toLowerCase().split('?')[0];
+  const image = entry.type === 'image' || /\.(jpe?g|png|gif|webp)\b/.test(path);
+  const pdf = /\.pdf\b/.test(path) || (entry.mime_type ?? entry.mime ?? '') === 'application/pdf';
+  return {
+    id: entry.id ?? index,
+    kind: image ? 'image' : 'file',
+    name,
+    url,
+    mime: entry.mime_type ?? entry.mime ?? (pdf ? 'application/pdf' : null),
+    available: Boolean(url),
+    inline: image || pdf,
+  };
+}
+
+/** Files embedded in the booking_values tree, including files inside nested form groups. */
+export function uploadAttachments(nodes) {
+  const entries = [];
+  const walk = (items) => {
+    for (const node of items ?? []) {
+      if (Array.isArray(node?.value)) {
+        for (const entry of node.value) {
+          if (entry?.type === 'file' || entry?.type === 'image') entries.push(uploadAttachment(entry, entries.length));
+        }
+      }
+      walk(node?.form_fields);
+    }
+  };
+  walk(nodes);
+  return entries;
 }
 
 function plainText(value) {

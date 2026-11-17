@@ -1,7 +1,7 @@
 'use client';
 
 import { useInfiniteQuery, useMutation } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { DateRangePicker } from '@/components/ui/DateRangePicker';
 import { EmptyState, ErrorNotice, Loading, Notice } from '@/components/ui/Feedback';
@@ -16,6 +16,9 @@ import { fmtDateTime } from '@/lib/format';
 import { useFitToWindow } from '@/lib/useFitToWindow';
 import { useSession } from '@/providers/SessionProvider';
 import { usePublishDrawerList } from '@/features/bookings/drawerList';
+import { useInfiniteScroll } from '@/lib/useInfiniteScroll';
+import { downloadBlob } from '@/lib/export/download';
+import { bookingKey } from '@/features/bookings/useBookingDrawer';
 
 const PER_PAGE = 25;
 /** The table never gets shorter than this when the window is small. */
@@ -31,24 +34,14 @@ function exportMessage(error) {
   return error.message || 'ההורדה נכשלה. נסו שוב.';
 }
 
-/** Hands the browser the file to save. */
-function saveFile(blob, fileName) {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
-}
 
 /** Bookings report: filter, preview page by page, and export every matching row to Excel (the same filters). */
 export function BookingsReportScreen() {
   const { catalog } = useSession();
   const drawer = useBookingDrawer();
   // the row whose booking is open in the side panel pops out and joins the panel (as in the history and "קריאות")
-  const preview = useRowPreview(drawer.serial);
+  // the open booking's row, by its key (the uuid)
+  const preview = useRowPreview(drawer.key);
   const [filters, setFilters] = useState(EMPTY);
   const update = (patch) => setFilters((current) => ({ ...current, ...patch }));
 
@@ -64,27 +57,19 @@ export function BookingsReportScreen() {
   const rows = query.data?.pages.flatMap((page) => page.data) ?? [];
   const meta = query.data?.pages[0]?.meta;
   // the drawer steps through these rows (‹ › and ↑ ↓), in this order
-  usePublishDrawerList(rows.map((row) => row.serial_number), { total: meta?.total ?? null, hasMore: Boolean(query.hasNextPage), loadMore: () => void query.fetchNextPage() });
+  usePublishDrawerList(rows.map(bookingKey), { total: meta?.total ?? null, hasMore: Boolean(query.hasNextPage), loadMore: () => void query.fetchNextPage() });
 
   // the card ends at the window's bottom and only the table scrolls inside it
   const card = useRef(null);
   const scroller = useRef(null);
   const sentinel = useRef(null);
   useFitToWindow(card, MIN_TABLE_HEIGHT);
-  const { hasNextPage, isFetchingNextPage, fetchNextPage } = query;
-  useEffect(() => {
-    const el = sentinel.current;
-    if (!el || !hasNextPage) return;
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting && !isFetchingNextPage) void fetchNextPage();
-    }, { root: scroller.current, rootMargin: '0px 0px 400px 0px' });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage, rows.length]);
+  const { isFetchingNextPage } = query;
+  useInfiniteScroll({ sentinel, scroller, query, ahead: 400, remountKey: rows.length });
 
   const exporting = useMutation({
     mutationFn: () => bookingsReportApi.exportExcel(sent),
-    onSuccess: ({ blob, fileName }) => saveFile(blob, fileName),
+    onSuccess: ({ blob, fileName }) => downloadBlob(blob, fileName),
   });
 
   const filtered = Object.keys(sent).length > 0;
@@ -161,7 +146,7 @@ export function BookingsReportScreen() {
                 </thead>
                 <tbody>
                   {rows.map((row) => (
-                    <tr key={row.uuid ?? row.serial_number} {...preview.rowAttrs(Number(row.serial_number))} className={`clk${preview.rowClass(Number(row.serial_number))}`} tabIndex={0} onClick={() => drawer.open(row.serial_number)} onKeyDown={(event) => event.key === 'Enter' && drawer.open(row.serial_number)}>
+                    <tr key={row.uuid ?? row.serial_number} {...preview.rowAttrs(bookingKey(row))} className={`clk${preview.rowClass(bookingKey(row))}`} tabIndex={0} onClick={() => drawer.open(bookingKey(row))} onKeyDown={(event) => event.key === 'Enter' && drawer.open(bookingKey(row))}>
                       <td><b>{row.serial_number}</b></td>
                       <td>{row.booking_type_label}</td>
                       <td>{row.status_label}</td>

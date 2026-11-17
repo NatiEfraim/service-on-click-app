@@ -1,0 +1,124 @@
+/* ---------- CategoryGroup (components/booking): a main category - תחומי שירות, ביטחון מידע, תקשוב - that opens and
+   closes, with its interactive picture (ServiceIcon). Shared by the permissions window and "הקריאות שלי".
+   Motion (by the animate skill): transform and opacity only (the body's height is the accordion exception), the
+   project's --ease-out and duration tokens, transitions rather than keyframes (everything can be clicked again mid-way),
+   hover motion only for a real pointer, and a gentler version under reduced motion. ---------- */
+
+/* a main category - spatial: its header opens and closes it; it says how many domains hold a role, and if a change waits */
+.pp-group {
+  border: 1px solid var(--line-2); border-radius: 14px; background: var(--surface);
+  transition: border-color var(--dur-base) ease, box-shadow var(--dur-base) var(--ease-out);
+}
+.pp-group.open { border-color: var(--line); box-shadow: 0 6px 18px -12px rgba(43, 36, 51, .35); }
+.pp-group-head {
+  all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px;
+  cursor: pointer; border-radius: 14px; transition: background-color var(--dur-fast) ease;
+}
+.pp-group-head:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+/* the category's colour picture, on a tile tinted with its own colour */
+.pp-group-ic {
+  width: 40px; height: 40px; flex: none; display: grid; place-items: center; border-radius: 12px;
+  background: color-mix(in srgb, var(--tint) 20%, var(--surface)); border: 1px solid color-mix(in srgb, var(--tint) 55%, transparent);
+  transition: transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
+}
+.pp-group-ic img { width: 26px; height: 26px; }
+.pp-group.open .pp-group-ic { box-shadow: 0 4px 12px -6px color-mix(in srgb, var(--tint) 90%, #000); }
+.pp-group-txt { display: grid; gap: 1px; min-width: 0; }
+.pp-group-txt b { font-size: 15px; }
+.pp-group-txt span { font-size: 12px; color: var(--mute); }
+.pp-group-pending {
+  margin-inline-start: auto; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--accent-wash); color: var(--accent);
+  transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+@starting-style { .pp-group-pending { opacity: 0; transform: scale(.92); } }
+.pp-group-chev { margin-inline-start: auto; color: var(--mute); transition: transform 260ms var(--ease-out), color var(--dur-fast) ease; }
+.pp-group-pending + .pp-group-chev { margin-inline-start: 0; }
+.pp-group.open .pp-group-chev { transform: rotate(180deg); color: var(--ink-2); }
+@media (hover: hover) and (pointer: fine) {
+  .pp-group-head:hover { background: var(--hover); }
+  .pp-group-head:hover .pp-group-ic { transform: translateY(-1px) scale(1.04); }
+}
+.pp-group-head:active .pp-group-ic { transform: scale(.96); transition-duration: 100ms; }
+
+/* opening and closing: the body's row glides between 0 and its content's height (260ms = --dur-resize) */
+/* (the body folds with Reveal: components.css .reveal) */
+
+/* reduced motion: fewer and gentler - opacity and colour stay, movement and scaling go */
+@media (prefers-reduced-motion: reduce) {
+  .pp-group-chev, .pp-group-ic { transition-property: color, background-color, border-color; }
+  .pp-group-head:hover .pp-group-ic, .pp-group-head:active .pp-group-ic { transform: none; }
+  @starting-style { .pp-group-pending { transform: none; } }
+}
+
+/* "שינויים ממתינים" leaves the way it came: fading and shrinking a little (150ms = PENDING_EXIT_MS) */
+.pp-group-pending[data-closing] { opacity: 0; transform: scale(.92); }
+@media (prefers-reduced-motion: reduce) { .pp-group-pending[data-closing] { transform: none; } }
+
+/* ---------- the three category pictures (ServiceIcon: CATEGORY_ICONS) ----------
+   One style for all three: a container that opens and something that springs out of it. Press (feedback): the picture
+   pushes in while the header is pressed. Hover (a real pointer): a taste of the motion. Opening (a deliberate, occasional
+   action): the whole sequence. Closing: transitions back, so nothing snaps and a quick open / close picks up from where
+   it is. Transform, opacity and a line's stroke only; a slight overshoot (a light spring) only where something springs
+   out. Reduced motion: no movement, only fades. Each part moves around its own box (transform-box: fill-box). */
+.svc * { transform-box: fill-box; transform-origin: center; }
+.pp-group-ic .svc { transition: transform 120ms var(--ease-out); }
+.pp-group-head:active .pp-group-ic .svc { transform: scale(.88); }
+
+/* תחומי שירות - the toolbox: the lid hinges on its left corner; the gear waits inside (low, small) and rises turning */
+.svc-g5-lid { transform-origin: 0% 100%; transition: transform 320ms var(--ease-out); }
+.svc-g5-gear { transform: translateY(6px) scale(.7); transition: transform 560ms cubic-bezier(.34, 1.56, .64, 1); }
+@media (hover: hover) and (pointer: fine) {
+  .pp-group-head:hover .svc-g5-lid { transform: rotate(-14deg); }
+  .pp-group-head:hover .svc-g5-gear { transform: translateY(3px) scale(.8) rotate(40deg); }
+}
+.pp-group.open .svc-g5-lid { transform: rotate(-38deg); }
+.pp-group.open .svc-g5-gear { transform: translateY(-6px) scale(1) rotate(300deg); transition-delay: 90ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pp-group-head:active .pp-group-ic .svc { transform: none; }
+  .svc-g5-lid, .svc-g5-gear { transition-property: opacity; }
+  .pp-group-head:hover .svc *, .pp-group.open .svc * { transform: none !important; }
+}
+/* ---------- ביטחון מידע (the safe) and תקשוב (the monitor and its window) ----------
+   The toolbox's recipe: hover clearly opens the container part of the way and shows a glimpse of what is inside;
+   opening plays the whole sequence; closing reverses it with transitions. Big enough to see (3-5px moves, colour). */
+:root { --svc-spring: cubic-bezier(.34, 1.56, .64, 1); }
+
+/* ביטחון מידע - the safe: the door is hinged on its left edge (scaleX reads as a swing) */
+.svc-sf-door { transform-origin: 0% 50%; transition: transform 380ms var(--ease-out); }
+.svc-sf-dial { transition: transform 380ms var(--ease-out); }
+.svc-sf-glow { transition: opacity 260ms var(--ease-out); }
+.svc-sf-item { opacity: 0; transform: scale(.6); transition: transform 520ms var(--svc-spring), opacity 200ms var(--ease-out); }
+@media (hover: hover) and (pointer: fine) {
+  .pp-group-head:hover .svc-sf-door { transform: scaleX(.72); }
+  .pp-group-head:hover .svc-sf-dial { transform: rotate(-60deg); }
+  .pp-group-head:hover .svc-sf-glow { opacity: .55; }
+  .pp-group-head:hover .svc-sf-item { opacity: .9; transform: scale(.7); }
+}
+.pp-group.open .svc-sf-door { transform: scaleX(.16); }
+.pp-group.open .svc-sf-dial { transform: rotate(-180deg); }
+.pp-group.open .svc-sf-glow { opacity: .8; }
+.pp-group.open .svc-sf-item { opacity: 1; transform: translateY(-1px) scale(1.12); transition-delay: 120ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .svc-sf-door, .svc-sf-dial, .svc-sf-item { transition-property: opacity; }
+}
+
+/* ---------- תקשוב - the network: the nodes rest close to the hub; hover starts the links; opening jumps the nodes
+   out to the edges as the links draw ---------- */
+.svc-i5-node { transition: transform 360ms var(--ease-out); }
+.svc-i5-node.n1 { transform: translate(4px, 4px) scale(.85); }
+.svc-i5-node.n2 { transform: translate(4px, -4px) scale(.85); }
+.svc-i5-node.n3 { transform: translate(-5px, -4px) scale(.85); }
+.svc-i5-link { stroke-dasharray: 100; stroke-dashoffset: 50; transition: stroke-dashoffset 380ms var(--ease-out); }
+@media (hover: hover) and (pointer: fine) { .pp-group-head:hover .svc-i5-link { stroke-dashoffset: 25; } }
+.pp-group.open .svc-i5-node { transform: none; transition: transform 460ms var(--svc-spring); }
+.pp-group.open .svc-i5-link { stroke-dashoffset: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .svc-i5-node { transition-property: opacity; }
+}
+
+/* the picture can carry a small count on its corner (CategoryGroup count, CountBadge), and its parts may move past its
+   frame (the network's nodes, the gear rising out of the toolbox): never clipped */
+.pp-group-ic { position: relative; }
+.pp-group-ic .svc { overflow: visible; }

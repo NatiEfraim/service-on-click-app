@@ -12,6 +12,9 @@ const nextConfig = {
   output: 'standalone',
   reactStrictMode: true,
   poweredByHeader: false,
+  experimental: {
+    agentUpgrade: 'security',
+  },
 
   async rewrites() {
     return [{ source: '/api/:path*', destination: `${API_ORIGIN}/api/:path*` }];

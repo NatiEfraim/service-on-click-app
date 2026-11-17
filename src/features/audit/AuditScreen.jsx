@@ -20,6 +20,7 @@ import { usePublishDrawerList } from '@/features/bookings/drawerList';
 import { useBookingDrawer } from '@/features/bookings/useBookingDrawer';
 import { useShowValue, useAuditPages } from './useAuditData';
 import { AuditPeople } from './AuditPeople';
+import { useInfiniteScroll } from '@/lib/useInfiniteScroll';
 
 /** The table never gets shorter than this when the window is small. */
 const MIN_TABLE_HEIGHT = 320;
@@ -68,14 +69,15 @@ export function AuditScreen() {
   // booking can be on several rows, so it is the row that was clicked (else the first row of that booking, e.g. a link)
   const drawer = useBookingDrawer();
   const [peekId, setPeekId] = useState(null);
-  const peekRowId = drawer.serial
-    ? (rows.find((row) => row.id === peekId && Number(row.booking_serial) === drawer.serial) ?? rows.find((row) => Number(row.booking_serial) === drawer.serial))?.id ?? null
+  const isOpenRow = (row) => drawer.matches({ uuid: row.booking_uuid, serial_number: row.booking_serial });
+  const peekRowId = drawer.key
+    ? (rows.find((row) => row.id === peekId && isOpenRow(row)) ?? rows.find(isOpenRow))?.id ?? null
     : null;
   // that row pops out and joins the panel; it fades back as the panel leaves, and cross-fades on ‹ › (useRowPreview)
   const preview = useRowPreview(peekRowId);
   // the side panel steps through the bookings of this list ("‹ 3 מתוך 12 ›", ↑ / ↓): each booking once, in the table's order
   // at the last loaded one, "next" first loads the table's next page (as in "קריאות")
-  usePublishDrawerList([...new Set(rows.map((row) => Number(row.booking_serial)).filter(Boolean))], { hasMore: query.hasNextPage, loadMore: query.fetchNextPage });
+  usePublishDrawerList([...new Set(rows.map((row) => row.booking_uuid ?? (row.booking_serial ? String(row.booking_serial) : null)).filter(Boolean))], { hasMore: query.hasNextPage, loadMore: query.fetchNextPage });
   /** One history row's cells: when, who, action, what (a booking with its eye), source, result. */
   const rowCells = (row) => {
     const result = RESULT[row.result] ?? { label: row.result, tone: '' };
@@ -98,16 +100,8 @@ export function AuditScreen() {
 
   // the next page loads as the bottom of the table scrolls into view
   const sentinel = useRef(null);
-  const { hasNextPage, isFetchingNextPage, fetchNextPage } = query;
-  useEffect(() => {
-    const el = sentinel.current;
-    if (!el || !hasNextPage) return;
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting && !isFetchingNextPage) void fetchNextPage();
-    }, { root: scroller.current, rootMargin: '0px 0px 400px 0px' });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage, rows.length]);
+  const { isFetchingNextPage } = query;
+  useInfiniteScroll({ sentinel, scroller, query, ahead: 400, remountKey: rows.length });
 
   const filtered = Object.values(filters).some(Boolean);
 

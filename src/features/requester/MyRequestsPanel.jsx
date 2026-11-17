@@ -8,13 +8,15 @@ import { DateRangePicker } from '@/components/ui/DateRangePicker';
 import { Field } from '@/components/ui/Field';
 import { Select } from '@/components/ui/Select';
 import { EmptyState, ErrorNotice, Loading, Notice } from '@/components/ui/Feedback';
-import { hasTypeIcon, TypeIcon } from '@/components/booking/TypeIcon';
+import { CategoryGroup, groupBySection, sectionOf } from '@/components/booking/CategoryGroup';
+import { CountBadge } from '@/components/ui/CountBadge';
 import { Icon } from '@/components/ui/Icon';
 import { Seg } from '@/components/ui/Controls';
 import { SearchField } from '@/components/ui/SearchField';
 import { SmoothSize } from '@/components/ui/SmoothSize';
 import { usePresence } from '@/components/ui/usePresence';
 import { OPEN_STATUS_IDS } from '@/lib/api/endpoints';
+import { EASE_IN_OUT, prefersReducedMotion } from '@/lib/motion';
 import { useDebounced } from '@/lib/useDebounced';
 import { useFitToWindow } from '@/lib/useFitToWindow';
 import { RequestDrawer } from './RequestDrawer';
@@ -24,6 +26,9 @@ import { celebrationKey, isChanged, markCelebrated, markSeen, useSeen, wasCelebr
 import { counterOf, requestCategories, stageOf } from './requesterData';
 import { STAGE_SHORT } from '@/lib/labels';
 import { useCatalog, useMyRequests } from './useRequester';
+import { TypePicture } from '@/components/booking/TypePicture';
+import { Reveal } from '@/components/ui/Reveal';
+import { useToggleSet } from '@/lib/useToggleSet';
 
 /** The home counters, as a filter on the full page (?bucket=): a counter's click lands here with it chosen. */
 const BUCKETS = [
@@ -76,29 +81,139 @@ const statusNameOf = (row) => row.statusName;
  * "הקריאות שלי": an icon and name for every category the user has an open request in (of those the user may open
  * or manage); picking one lists their requests in it. `full` is the whole-page version, otherwise the home's side panel.
  */
-export function MyRequestsPanel({ full = false, extraCategories = null, category, onCategory, bucket: rawBucket = null, onBucket = () => {}, sent = null, onSentSeen = () => {}, onAll }) {
+/**
+ * The home's list height glide: an ease-in-out over 320ms. The card is capped at the window, so a longer list shows only
+ * the start of its glide; a strong ease-out would make the card's edge leap there, this starts gently.
+ */
+function HomeGlide({ paused = false, children }) {
+  return <SmoothSize easing={EASE_IN_OUT} duration={320} paused={paused}>{children}</SmoothSize>;
+}
+
+/** How long an opened row takes to grow apart from its neighbours (requester.css: .rq-ticket's margin, 260ms). */
+const SELECTED_GROW_MS = 270;
+
+/** The room an opened row needs below its current bottom: it grows 12px above and below (.rq-row.selected), plus 16px. */
+const SELECTED_ROOM = 40;
+
+/** How long the shown list takes to fade out before another category's list replaces it (requester.css: .rq-swap). */
+const SWAP_OUT_MS = 200;
+
+/** The home's list, fading out and in as the category changes (`out`: fading out). */
+function SwapBox({ out, children }) {
+  return <div className="rq-swap" data-out={out || undefined}>{children}</div>;
+}
+
+/**
+ * The home's body under the head: the categories and the list scroll together inside the window-fitted card (as a
+ * topic card's list does), so the page itself never scrolls; the head stays in place.
+ */
+function HomeScrollBody({ children }) {
+  return <div className="fit-fill scroll-y rq-mine-scroll">{children}</div>;
+}
+
+export function MyRequestsPanel({ full = false, extraCategories = null, category, onCategory, bucket: rawBucket = null, onBucket = () => {}, sent = null, onSentSeen = () => {}, onAll, openId = null, onOpened = () => {} }) {
   const bucket = BUCKETS.some((option) => option.id === rawBucket) ? rawBucket : null;
   // the categories (topics and domains) come from GET /requester/catalog, already limited to what the user may open
   const categories = useCatalog();
   const requests = useMyRequests({ openOnly: !full });
-  const ListBox = full ? Fragment : SmoothSize;
+  // the home: the categories and the list scroll together (HomeScrollBody); the list's height glides (SmoothSize)
+  const Body = full ? Fragment : HomeScrollBody;
+  const ListBox = full ? Fragment : HomeGlide;
+  const Swap = full ? Fragment : SwapBox;
+  // switching category on the home: the shown list fades out, then the new one fades in as the card glides to its new
+  // height (SmoothSize) - instead of the list and the card snapping
+  // Measured frame by frame: the new category arrives through the address (~100ms after it is asked for), and a list
+  // that gets shorter makes the body's scroll drop in one frame. So: the list fades out while the body glides back to
+  // its top; only then is the category asked for; and the list stays faded until that category has really arrived.
+  const [pending, setPending] = useState(undefined);
+  const swapping = pending !== undefined;
+  const swapTimer = useRef(0);
+  const glide = useRef(0);
+  useEffect(() => () => {
+    window.clearTimeout(swapTimer.current);
+    cancelAnimationFrame(glide.current);
+  }, []);
+  // the asked-for category has arrived: the new list fades in (as the card glides to its new height - SmoothSize)
+  if (swapping && (category ?? null) === pending) setPending(undefined);
+  const pick = (id) => {
+    if (id === (current?.id ?? null)) return;
+    if (full || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      onCategory(id);
+      return;
+    }
+    setPending(id);
+    window.clearTimeout(swapTimer.current);
+    cancelAnimationFrame(glide.current);
+    // the body glides back to its top while the list fades, so the shorter list never makes it snap
+    const scroller = card.current?.querySelector('.rq-mine-scroll');
+    const from = scroller?.scrollTop ?? 0;
+    if (scroller && from > 0) {
+      const started = performance.now();
+      const step = (now) => {
+        const p = Math.min(1, (now - started) / SWAP_OUT_MS);
+        scroller.scrollTop = from * (1 - (1 - (1 - p) ** 3));
+        if (p < 1) glide.current = requestAnimationFrame(step);
+      };
+      glide.current = requestAnimationFrame(step);
+    }
+    swapTimer.current = window.setTimeout(() => onCategory(id), SWAP_OUT_MS);
+    // never left faded if the address does not change (the same category asked again)
+    window.setTimeout(() => setPending((now) => (now === id ? undefined : now)), SWAP_OUT_MS + 1500);
+  };
   const ownedRows = requests.data ?? [];
   const openTypeIds = new Set(ownedRows.filter(isOpen).map((row) => row.bookingTypeId));
   const list = requestCategories(ownedRows, categories.data?.categories, extraCategories ?? []);
   // a ביטחון מידע / תקשוב type's own picture (by booking type id); other domains show their domain badge
   const typeImg = Object.fromEntries((categories.data?.topics ?? []).flatMap((topic) => topic.groups.flatMap((group) => group.types.map((type) => [type.id, type.img]))));
-  const chips = list.filter((item) => item.typeIds.some((id) => openTypeIds.has(id)));
-  const current = (full ? list : chips).find((candidate) => candidate.id === category) ?? null;
+  // every category the user may use (the requester catalog, the domains they manage, and any of their own requests'),
+  // split into the three main categories - as in the permissions window (CategoryGroup)
+  const current = list.find((candidate) => candidate.id === category) ?? null;
+  const sections = groupBySection(list, (item) => item.typeIds[0]);
+  // how many of the user's own requests are open in a category (the small red number on its icon)
+  const openIn = (item) => ownedRows.filter((row) => isOpen(row) && item.typeIds.includes(row.bookingTypeId)).length;
+  // the main categories that are open; the one holding the chosen category starts open
+  const [openSections, toggleSection] = useToggleSet(() => (current ? [sectionOf(current.typeIds[0])] : []));
   // the full page filters (open / all, search by number or category), as the earlier "הקריאות שלי" screen did
   const [view, setView] = useState('all');
   // the request open in the side panel
   const [opened, setOpened] = useState(null);
   // "changed since your last visit": opening a request marks it as seen in its current status
   const seen = useSeen();
-  const open = (row) => {
+  const open = (row, event) => {
     markSeen([row]);
+    // clicked in the list: the list starts gliding at once by the room the row will need when grown (its margin above
+    // and below plus its scroll margin), so the row grows straight into view instead of being corrected afterwards
+    const element = event?.currentTarget?.closest?.('.rq-row');
+    const scroller = element?.closest('.rq-mine-scroll, .rq-list');
+    if (element && scroller) {
+      const need = element.getBoundingClientRect().bottom + SELECTED_ROOM - scroller.getBoundingClientRect().bottom;
+      if (need > 0) scroller.scrollBy({ top: need, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+    }
     setOpened(row);
   };
+  // while a request is open its list stays put (its row sits above the dimming, joined to the side panel): the wheel and
+  // touch scrolling are held from script - not overflow: hidden, which would stop the glide that shows the opened row
+  useEffect(() => {
+    if (!opened) return undefined;
+    const scroller = card.current?.querySelector(full ? '.rq-list' : '.rq-mine-scroll');
+    if (!scroller) return undefined;
+    const hold = (event) => event.preventDefault();
+    scroller.addEventListener('wheel', hold, { passive: false });
+    scroller.addEventListener('touchmove', hold, { passive: false });
+    return () => {
+      scroller.removeEventListener('wheel', hold);
+      scroller.removeEventListener('touchmove', hold);
+    };
+  }, [Boolean(opened), full]); // eslint-disable-line react-hooks/exhaustive-deps
+  // an opened row grows (room above and below it, so it stands apart): one near the end of a scrolled list would then be
+  // cut by the card's edge, so once it has grown the list glides just enough to show it whole (scroll-margin: its room)
+  useEffect(() => {
+    if (!opened) return undefined;
+    const timer = window.setTimeout(() => {
+      card.current?.querySelector('.rq-row.selected')?.scrollIntoView({ block: 'nearest', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+    }, SELECTED_GROW_MS);
+    return () => window.clearTimeout(timer);
+  }, [opened?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   // the full page ends at the window's bottom: only the list scrolls, never the page
   const card = useRef(null);
   // the list is locked while a request is open (styles); a request reached with the stepper is brought into view
@@ -106,7 +221,8 @@ export function MyRequestsPanel({ full = false, extraCategories = null, category
     if (!opened) return;
     card.current?.querySelector('.rq-row.selected')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }, [opened]);
-  useFitToWindow(card, 320, full);
+  // both the home and the full page end at the window's bottom: only the list scrolls, never the page
+  useFitToWindow(card, 320);
   const [search, setSearch] = useState('');
   const query = useDebounced(search.trim(), 200);
   // the full page's "סינון" panel, as in the management requests screen: category, step, status, opening dates
@@ -115,6 +231,13 @@ export function MyRequestsPanel({ full = false, extraCategories = null, category
   const [stage, setStage] = useState('');
   const [status, setStatus] = useState('');
   const [range, setRange] = useState({ from: null, to: null });
+  // a booking to open as soon as the list has it (the one just sent: ?open=<uuid> - the requester API's key)
+  useEffect(() => {
+    if (!openId || !requests.isSuccess) return;
+    const row = ownedRows.find((candidate) => candidate.id === openId);
+    if (row) open(row);
+    onOpened();
+  }, [openId, requests.isSuccess]); // eslint-disable-line react-hooks/exhaustive-deps
   const allRows = ownedRows.filter((row) => (full || isOpen(row)) && (!current || current.typeIds.includes(row.bookingTypeId)));
   const changedRows = allRows.filter((row) => isChanged(seen, row));
   // Keep an update queued even when opening the drawer marks it as seen.
@@ -170,9 +293,21 @@ export function MyRequestsPanel({ full = false, extraCategories = null, category
   const rows = full ? [...filtered].sort(sortBy.compare) : allRows.slice(0, PANEL_ROWS);
 
   return (
-    <section ref={card} className={`card rq-mine${full ? ' full fit-card' : ''}`} aria-label="הקריאות שלי">
+    <section ref={card} className={`card rq-mine fit-card${full ? ' full' : ''}`} aria-label="הקריאות שלי">
       <div className="rq-mine-head">
+        {/* two fixed sides: the title with "הכל" beside it, and the actions at the end - so the mark-all button coming and
+            going never moves anything else */}
+        <div className="rq-mine-title">
         <h2>הקריאות שלי</h2>
+        {full ? null : (
+          // every category at once: beside the title, so the categories below take less room
+          <button type="button" className="rq-all-pill" aria-pressed={!current} onClick={() => pick(null)}>
+            <Icon name="list" />
+            הכל
+          </button>
+        )}
+        </div>
+        <div className="rq-mine-actions">
         {/* only while something changed since the last visit; clears every highlight in the list shown */}
         {!full && markAll.mounted ? (
           <Button size="sm" variant="ghost" icon="check" className="rq-mark-all" data-closing={markAll.closing || undefined} disabled={markAll.closing} onClick={() => markSeen(changedRows)}>
@@ -185,19 +320,36 @@ export function MyRequestsPanel({ full = false, extraCategories = null, category
             <Icon name="left" />
           </button>
         ) : null}
+        </div>
       </div>
+      <Body>
       {full ? null : (
-      <div className="rq-cats" role="group" aria-label="קטגוריות">
-        <button type="button" className="rq-cat" aria-pressed={!current} onClick={() => onCategory(null)}>
-          <span className="ic"><Icon name="list" /></span>
-          הכל
-        </button>
-        {chips.map((item) => (
-          <button key={item.id} type="button" className="rq-cat" aria-pressed={current?.id === item.id} onClick={() => onCategory(item.id)}>
-            <span className="ic pic">{hasTypeIcon(item.typeIds[0]) ? <TypeIcon bookingTypeId={item.typeIds[0]} size={32} /> : item.img ? <img src={item.img} alt="" /> : <Icon name="layers" />}</span>
-            {item.name}
-          </button>
-        ))}
+      <div className="rq-cat-groups" role="group" aria-label="קטגוריות">
+        {sections.map((section) => {
+          const withOpen = section.items.filter((item) => item.typeIds.some((id) => openTypeIds.has(id))).length;
+          const sectionOpen = section.items.reduce((sum, item) => sum + openIn(item), 0);
+          return (
+            <CategoryGroup
+              key={section.id}
+              section={section}
+              className={current && sectionOf(current.typeIds[0]) === section.id ? 'holds-current' : ''}
+              open={openSections.has(section.id)}
+              onToggle={() => toggleSection(section.id)}
+              count={sectionOpen}
+              countLabel={`${sectionOpen} קריאות פתוחות ב${section.label}`}
+              summary={`${section.items.length} קטגוריות${withOpen ? ` · ${withOpen} עם קריאות פתוחות` : ''}`}
+            >
+              <div className="rq-cats">
+                {section.items.map((item, index) => (
+                  <button key={item.id} type="button" className="rq-cat" style={{ '--i': index }} aria-pressed={current?.id === item.id} onClick={() => pick(item.id)}>
+                    <span className="ic pic"><CountBadge count={openIn(item)} label={`${openIn(item)} קריאות פתוחות ב${item.name}`} /><TypePicture typeId={item.typeIds[0]} src={item.img} size={32} /></span>
+                    {item.name}
+                  </button>
+                ))}
+              </div>
+            </CategoryGroup>
+          );
+        })}
       </div>
       )}
       {full && sent ? (
@@ -233,44 +385,44 @@ export function MyRequestsPanel({ full = false, extraCategories = null, category
           </div>
         </div>
         {/* stays mounted so it can fold both ways (as in the management screen); inert while closed */}
-        <div className={`adv-wrap${filtersOpen ? ' open' : ''}`} inert={!filtersOpen}>
-          <div className="adv requests-filters">
-            <Field label="תחום">
-              <Select autoWidth className="input" value={current?.id ?? ''} onChange={(event) => onCategory(event.target.value || null)}>
-                <option value="">כל התחומים</option>
-                {list.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-              </Select>
-            </Field>
-            <Field label="מצב">
-              <Select autoWidth className="input" value={bucket ?? ''} onChange={(event) => onBucket(event.target.value || null)}>
-                <option value="">כל המצבים</option>
-                {BUCKETS.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
-              </Select>
-            </Field>
-            <Field label="שלב">
-              <Select autoWidth className="input" value={stage} onChange={(event) => setStage(event.target.value)}>
-                <option value="">כל השלבים</option>
-                {stageOptions.map((id) => <option key={id} value={id}>{STAGE_SHORT[id]}</option>)}
-              </Select>
-            </Field>
-            <Field label="סטטוס">
-              <Select autoWidth className="input" value={status} onChange={(event) => setStatus(event.target.value)}>
-                <option value="">כל הסטטוסים</option>
-                {statusNames.map((name) => <option key={name} value={name}>{name}</option>)}
-              </Select>
-            </Field>
-            {/* a div, not Field's <label>: a click on the open calendar must not be forwarded to its button */}
-            <div className="field">
-              <span>תאריך פתיחה</span>
-              <DateRangePicker label="" value={range} onChange={(next) => setRange({ from: next.from, to: next.to })} />
-            </div>
+        <Reveal open={filtersOpen} className="adv-wrap" innerClassName="adv requests-filters">
+          <Field label="תחום">
+            <Select autoWidth className="input" value={current?.id ?? ''} onChange={(event) => onCategory(event.target.value || null)}>
+              <option value="">כל התחומים</option>
+              {list.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+            </Select>
+          </Field>
+          <Field label="מצב">
+            <Select autoWidth className="input" value={bucket ?? ''} onChange={(event) => onBucket(event.target.value || null)}>
+              <option value="">כל המצבים</option>
+              {BUCKETS.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
+            </Select>
+          </Field>
+          <Field label="שלב">
+            <Select autoWidth className="input" value={stage} onChange={(event) => setStage(event.target.value)}>
+              <option value="">כל השלבים</option>
+              {stageOptions.map((id) => <option key={id} value={id}>{STAGE_SHORT[id]}</option>)}
+            </Select>
+          </Field>
+          <Field label="סטטוס">
+            <Select autoWidth className="input" value={status} onChange={(event) => setStatus(event.target.value)}>
+              <option value="">כל הסטטוסים</option>
+              {statusNames.map((name) => <option key={name} value={name}>{name}</option>)}
+            </Select>
+          </Field>
+          {/* a div, not Field's <label>: a click on the open calendar must not be forwarded to its button */}
+          <div className="field">
+            <span>תאריך פתיחה</span>
+            <DateRangePicker label="" value={range} onChange={(next) => setRange({ from: next.from, to: next.to })} />
           </div>
-        </div>
+        </Reveal>
         </>
       ) : null}
       {/* the home: switching category glides the card to its new height (SmoothSize) instead of snapping; the full page
           keeps its window-fitted list */}
-      <ListBox>
+      {/* paused while a request is open: the opened row grows past its box on purpose, and a glide would clip it */}
+      <ListBox {...(full ? {} : { paused: Boolean(opened) })}>
+      <Swap {...(full ? {} : { out: swapping })}>
       {categories.isPending || requests.isPending ? (
         <div className="card-body"><Loading rows={3} /></div>
       ) : requests.isError ? (
@@ -286,7 +438,7 @@ export function MyRequestsPanel({ full = false, extraCategories = null, category
                 changed={isChanged(seen, row)}
                 selected={opened?.id === row.id}
                 celebrating={celebrating(row) ? celebrationKey(row) : null}
-                onOpen={() => open(row)}
+                onOpen={(event) => open(row, event)}
                 onCelebrated={() => finishCelebration(row)}
               />
             </li>
@@ -306,7 +458,9 @@ export function MyRequestsPanel({ full = false, extraCategories = null, category
         <EmptyState title={current ? `אין לך קריאות ב${current.name}` : 'עוד לא פתחת קריאות'}>בחר סוג קריאה כדי לפתוח קריאה ראשונה</EmptyState>
       )
       )}
+      </Swap>
       </ListBox>
+      </Body>
       {opened ? <RowBridge key={opened.id} /> : null}
       {opened ? <RequestDrawer row={opened} rows={rows} onGo={open} onClose={() => setOpened(null)} celebrate={celebrating(opened) ? celebrationKey(opened) : null} onCelebrated={() => finishCelebration(opened)} /> : null}
     </section>

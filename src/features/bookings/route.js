@@ -5,6 +5,7 @@
 
 
 import { isHoldStatus } from '@/lib/booking-workflow';
+import { topicHandlerName } from '@/lib/topicTypes';
 
 /** Statuses of the control-officer step (14 handling, 17 approved, 18 rejected) and of the barber (11 approved). */
 const CONTROL_OFFICER_STATUSES = [14, 17, 18];
@@ -14,6 +15,16 @@ const FINISHED_STATUSES = [5, 11];
 
 /** Stations a booking travels through; barber and control-officer steps are derived from catalog and history. */
 export function routeFor(booking, catalog, history) {
+  // ביטחון מידע / תקשוב: no approval route - one handler decides, then the request is carried out and closed
+  const handler = topicHandlerName(booking.booking_type_id);
+  if (handler) {
+    return [
+      { id: 'received', label: 'התקבלה' },
+      { id: 'handler', label: handler },
+      { id: 'realization', label: 'מימוש' },
+      { id: 'closed', label: 'סגירה' },
+    ];
+  }
   const reachable = catalog?.booking_type_statuses?.[String(booking.booking_type_id)] ?? [];
   // a barber booking has one step: received, the barber answers, closed
   if (booking.stage === 'barber' || reachable.includes(BARBER_STATUS)) {
@@ -45,6 +56,9 @@ export function routePosition(booking, stations) {
     here = stations.findIndex((station) => station.id === 'approver');
     mode = 'hold';
   }
+  // the topics' one handler holds every open stage but the realization (the API still names them by the approval route)
+  const handlerAt = stations.findIndex((station) => station.id === 'handler');
+  if (handlerAt >= 0 && booking.stage !== 'closed' && booking.stage !== 'realization') here = handlerAt;
   if (isHoldStatus(booking.status_id)) mode = 'hold';
   if (booking.stage === ('closed')) {
     here = stations.length - 1;

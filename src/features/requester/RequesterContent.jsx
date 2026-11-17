@@ -4,7 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { FadeIn } from '@/components/ui/FadeIn';
 import { EmptyState, ErrorNotice, Loading } from '@/components/ui/Feedback';
-import { hasTypeIcon, TypeIcon } from '@/components/booking/TypeIcon';
+import { CategoryGroup } from '@/components/booking/CategoryGroup';
 import { Icon } from '@/components/ui/Icon';
 import { useFitToWindow } from '@/lib/useFitToWindow';
 import { useSetSearchParams } from '@/lib/useSetSearchParams';
@@ -14,6 +14,9 @@ import { counterOf, findType } from './requesterData';
 import { isChanged, rememberFirstVisit, useSeen } from './seen';
 import { useCatalog, useCounters, useMyRequests } from './useRequester';
 import './requester.css';
+import { TypePicture } from '@/components/booking/TypePicture';
+import { Reveal } from '@/components/ui/Reveal';
+import { useToggleSet } from '@/lib/useToggleSet';
 
 const COUNTERS = [
   { id: 'open', label: 'קריאות פתוחות', icon: 'inbox' },
@@ -22,11 +25,6 @@ const COUNTERS = [
   { id: 'done', label: 'הושלמו', icon: 'check' },
 ];
 
-/** A topic's or a type's picture; a plain icon when the server's name has none. */
-function Picture({ src }) {
-  // eslint-disable-next-line @next/next/no-img-element
-  return src ? <img src={src} alt="" /> : <Icon name="layers" />;
-}
 
 /**
  * Where the requester screen is (home / "הקריאות שלי" / a form), from the URL (`?rq=`, `?type=<booking type id>`),
@@ -39,44 +37,58 @@ function Picture({ src }) {
  */
 function TopicCard({ topic, open, onToggle, onOpenType }) {
   const card = useRef(null);
-  useFitToWindow(card, 240, open);
-  useEffect(() => {
-    if (!open && card.current) card.current.style.maxHeight = '';
-  }, [open]);
+  // capped at the window's bottom open or closed: lifting the cap at once on closing let the still-open body stretch
+  // the card (and the page, and the footer) for a moment before it folded
+  useFitToWindow(card, 240);
+  // the sub-groups of more than one type fold like the categories of "הקריאות שלי" (CategoryGroup); all closed at first
+  const [openGroups, toggleGroup] = useToggleSet();
+  const typeButton = (type) => (
+    <button key={type.id} type="button" className="rq-type" onClick={() => onOpenType(type.id)}>
+      <TypePicture typeId={type.id} src={type.img} />
+      <span className="txt">
+        <b>{type.name}</b>
+        {type.description ? <span>{type.description}</span> : null}
+      </span>
+      <Icon name="left" className="go" />
+    </button>
+  );
   const count = topic.groups.reduce((sum, group) => sum + group.types.length, 0);
   return (
     <section ref={card} className={`card rq-topic fit-card${open ? '' : ' closed'}`} aria-label={topic.name}>
       <button type="button" className="rq-topic-head" aria-expanded={open} onClick={onToggle}>
-        <span className="pic"><Picture src={topic.img} /></span>
+        <span className="pic"><TypePicture src={topic.img} /></span>
         <span className="txt">
           <b>{topic.name}</b>
           <span>{count} סוגי קריאות</span>
         </span>
         <Icon name="down" className="chev" />
       </button>
-      {open ? (
-        <div className="fit-fill scroll-y rq-topic-scroll">
-          <div className="rq-topic-body">
-            {topic.groups.map((group) => (
+      {/* stays mounted so it folds open and closed smoothly, fading as it goes (grid rows 0fr ↔ 1fr); inert while closed */}
+      <Reveal open={open} className="rq-topic-reveal" innerClassName="fit-fill scroll-y rq-topic-scroll">
+        <div className="rq-topic-body">
+          {topic.groups.map((group) =>
+            group.types.length > 1 ? (
+              // a group of more than one request type folds open and closed in its own box
+              <CategoryGroup
+                key={group.id}
+                section={{ id: `g${group.id}`, label: group.name }}
+                className="rq-subgroup"
+                summary={`${group.types.length} סוגי קריאות`}
+                open={openGroups.has(group.id)}
+                onToggle={() => toggleGroup(group.id)}
+              >
+                <div className="rq-types">{group.types.map(typeButton)}</div>
+              </CategoryGroup>
+            ) : (
+              // a single type stays plain, under its group's name
               <div key={group.id} className="rq-group">
                 <h3>{group.name}</h3>
-                <div className="rq-types">
-                  {group.types.map((type) => (
-                    <button key={type.id} type="button" className="rq-type" onClick={() => onOpenType(type.id)}>
-                      {hasTypeIcon(type.id) ? <TypeIcon bookingTypeId={type.id} /> : <Picture src={type.img} />}
-                      <span className="txt">
-                        <b>{type.name}</b>
-                        {type.description ? <span>{type.description}</span> : null}
-                      </span>
-                      <Icon name="left" className="go" />
-                    </button>
-                  ))}
-                </div>
+                <div className="rq-types">{group.types.map(typeButton)}</div>
               </div>
-            ))}
-          </div>
+            ),
+          )}
         </div>
-      ) : null}
+      </Reveal>
     </section>
   );
 }
@@ -124,7 +136,7 @@ export function RequesterContent({ name, extraCategories = null }) {
         ) : catalog.isError ? (
           <ErrorNotice error={catalog.error} title="לא ניתן לפתוח את הטופס." onRetry={() => void catalog.refetch()} />
         ) : found ? (
-          <RequestForm found={found} onHome={() => go({})} onDone={(serial) => go({ rq: 'mine', sent: serial || null })} />
+          <RequestForm found={found} onHome={() => go({})} onDone={({ serial, uuid }) => go({ rq: 'mine', sent: serial || null, open: uuid || null })} />
         ) : (
           <EmptyState title="סוג הקריאה אינו זמין לך">
             ייתכן שאין לך הרשאה לפתוח אותו, או שהוא אינו פעיל ביחידה שלך.{' '}
@@ -134,10 +146,10 @@ export function RequesterContent({ name, extraCategories = null }) {
       </FadeIn>
     ) : view === 'mine' ? (
       <FadeIn key="mine">
-        <MyRequestsPanel full extraCategories={extraCategories} category={search.get('cat')} onCategory={(cat) => setParams({ cat })} bucket={search.get('bucket')} onBucket={(bucket) => setParams({ bucket })} sent={search.get('sent')} onSentSeen={() => setParams({ sent: null })} />
+        <MyRequestsPanel full extraCategories={extraCategories} category={search.get('cat')} onCategory={(cat) => setParams({ cat })} bucket={search.get('bucket')} onBucket={(bucket) => setParams({ bucket })} sent={search.get('sent')} onSentSeen={() => setParams({ sent: null })} openId={search.get('open')} onOpened={() => setParams({ open: null })} />
       </FadeIn>
     ) : (
-      <FadeIn key="home">
+      <div key="home">
         <div className="rq-hello">
           <h1>שלום, {name}</h1>
           <p>באיזה נושא תרצה לפתוח קריאה?</p>
@@ -156,7 +168,10 @@ export function RequesterContent({ name, extraCategories = null }) {
               <span className="rq-counter-txt">
                 <b>{counts ? counts[counter.id] ?? 0 : '–'}</b>
                 <span className="lbl">{counter.label}</span>
-                {changedIn(counter.id) ? <span className="rq-changed-count">{changedIn(counter.id)} עודכנו מאז הביקור האחרון</span> : null}
+                {/* its line is always there (empty until the requests load), so the card never grows when it appears */}
+                <span className={`rq-changed-count${changedIn(counter.id) ? '' : ' is-empty'}`} aria-hidden={changedIn(counter.id) ? undefined : true}>
+                  {changedIn(counter.id) ? `${changedIn(counter.id)} עודכנו מאז הביקור האחרון` : ' '}
+                </span>
               </span>
             </button>
           ))}
@@ -189,7 +204,7 @@ export function RequesterContent({ name, extraCategories = null }) {
           </div>
           <MyRequestsPanel extraCategories={extraCategories} category={search.get('cat')} onCategory={(cat) => setParams({ cat })} onAll={() => go({ rq: 'mine', cat: search.get('cat') })} />
         </div>
-      </FadeIn>
+      </div>
     )}
     </>
   );

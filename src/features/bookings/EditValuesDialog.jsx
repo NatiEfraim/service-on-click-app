@@ -13,6 +13,7 @@ import { invalidateWork } from '@/lib/api/keys';
 
 import { FIELD_TYPE_TIME } from '@/lib/labels';
 import { useToast } from '@/providers/UiProvider';
+import { handleWriteError } from '@/lib/useSaveMutation';
 
 /** Edits a booking's date / time: only `editable_fields`, only changed values, with the seen `version`. */
 export function EditValuesDialog({ booking, onClose }) {
@@ -29,7 +30,7 @@ export function EditValuesDialog({ booking, onClose }) {
   const [error, setError] = useState('');
 
   const mutation = useMutation({
-    mutationFn: (changed) => bookingsApi.updateValues(booking.serial_number, { values: changed, version: booking.version, reason: reason.trim() || null }),
+    mutationFn: (changed) => bookingsApi.updateValues(booking.uuid ?? booking.serial_number, { values: changed, version: booking.version, reason: reason.trim() || null }),
     onSuccess: async (result) => {
       const changed = result.data?.changed ?? [];
       toast(changed.length ? `עודכן: ${changed.join(', ')}` : 'הפרטים עודכנו.', 'ok');
@@ -38,13 +39,12 @@ export function EditValuesDialog({ booking, onClose }) {
     },
     onError: async (e) => {
       const apiError = e instanceof ApiError ? e : new ApiError(0, 'העדכון נכשל.');
-      if (apiError.stale || apiError.denied) {
-        toast(apiError.message, 'bad');
+      // booking changed or no longer ours: the message once, reload and close (the console's one write-error handling)
+      const shown = await handleWriteError(apiError, toast, async () => {
         await invalidateWork(client);
         onClose();
-        return;
-      }
-      setError(apiError.message);
+      });
+      if (shown) setError(shown.message);
     },
   });
 

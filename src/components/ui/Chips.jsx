@@ -1,4 +1,5 @@
 
+import { topicStatusLabel } from '@/lib/topicTypes';
 import { sourceTag, statusTone } from '@/lib/labels';
 
 export function Chip({ tone = '', children, title }) {
@@ -10,8 +11,9 @@ export function Chip({ tone = '', children, title }) {
 }
 
 /** Booking status; the colour comes from the status number (shared with the mobile app). */
-export function StatusChip({ statusId, label }) {
-  return <Chip tone={statusTone(statusId)}>{label}</Chip>;
+export function StatusChip({ statusId, label, bookingTypeId }) {
+  // ביטחון מידע / תקשוב name their statuses by their one handler (lib/topicTypes)
+  return <Chip tone={statusTone(statusId)}>{topicStatusLabel(statusId, bookingTypeId) ?? label}</Chip>;
 }
 
 /** Sync conflict: the mobile app changed the booking while a decision here was pending. */

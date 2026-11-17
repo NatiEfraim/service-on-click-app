@@ -48,10 +48,15 @@ export function TopBar() {
     };
     place();
     // the first placement is instant; moves after that glide
-    requestAnimationFrame(() => pill.classList.add('ready'));
-    window.addEventListener('resize', place);
-    return () => window.removeEventListener('resize', place);
-  }, [pathname, waiting, nav.length]);
+    const frame = requestAnimationFrame(() => pill.classList.add('ready'));
+    const sizes = new ResizeObserver(place);
+    sizes.observe(navEl);
+    navEl.querySelectorAll(':scope > a, :scope > .dd').forEach((item) => sizes.observe(item));
+    return () => {
+      cancelAnimationFrame(frame);
+      sizes.disconnect();
+    };
+  }, [pathname, nav.length]);
 
   return (
     <header className="topbar">
@@ -74,9 +79,11 @@ export function TopBar() {
             ) : (
               <Link key={entry.id} href={entry.href} aria-current={isActivePath(pathname, entry.href, entry.also) ? 'page' : undefined} onClick={() => setMenuOpen(false)}>
                 {entry.label}
-                {entry.counter === 'queue' && waiting > 0 ? (
-                  <span className="count" aria-label={`${waiting} קריאות ממתינות`}>
-                    {waiting}
+                {entry.counter === 'queue' ? (
+                  <span className="nav-count-slot" data-visible={waiting > 0} aria-hidden={waiting <= 0 || undefined}>
+                    <span className="nav-count-clip">
+                      <span className="count" aria-label={`${waiting} קריאות ממתינות`}>{waiting}</span>
+                    </span>
                   </span>
                 ) : null}
               </Link>

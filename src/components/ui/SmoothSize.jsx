@@ -7,10 +7,27 @@ import { EASE_OUT, prefersReducedMotion, RESIZE_MS } from '@/lib/motion';
  * Wrap anything whose height changes (loading → data, an error appearing, a tab switch, a section opening):
  * whenever the content resizes, the box glides from its old height to the new one instead of jumping.
  * The first render is not animated; with reduced motion the size changes at once.
+ * Checked right after every render too (before the browser paints), not only by the ResizeObserver, whose callback can
+ * come a frame late: a new, taller content would then be painted once at full height before the glide starts.
+ * `easing` / `duration`: the glide's curve and length (by default a strong ease-out over RESIZE_MS). A box whose growth a
+ * cap cuts short (a card fitted to the window) shows only the start of the glide, so it reads better with an ease-in-out,
+ * which starts gently instead of leaping.
+ * `paused`: no glide (and no clipping) while true - the size just follows its content. For content that is meant to
+ * stand out past its box for a while (an opened row growing apart from its neighbours), which a glide would cut.
  */
-export function SmoothSize({ children, as: Tag = 'div', ...rest }) {
+export function SmoothSize({ children, as: Tag = 'div', easing = EASE_OUT, duration = RESIZE_MS, paused = false, ...rest }) {
   const outer = useRef(null);
   const inner = useRef(null);
+  // the size check, kept so a render can run it at once (set up by the effect below)
+  const check = useRef(null);
+  // the latest curve and length, read when a glide starts
+  const glide = useRef({ easing, duration, paused });
+  glide.current = { easing, duration, paused };
+
+  // after every render, before paint: a content that changed with this render starts its glide in the same frame
+  useLayoutEffect(() => {
+    check.current?.();
+  });
 
   useLayoutEffect(() => {
     const box = outer.current;
@@ -20,7 +37,7 @@ export function SmoothSize({ children, as: Tag = 'div', ...rest }) {
     let last = content.offsetHeight;
     let running = null;
 
-    const observer = new ResizeObserver(() => {
+    const onResize = () => {
       const next = content.offsetHeight;
       if (next === last) return;
       // start from wherever a running glide has got to, so quick successive changes stay continuous
@@ -28,13 +45,16 @@ export function SmoothSize({ children, as: Tag = 'div', ...rest }) {
       last = next;
       running?.cancel();
       running = null;
-      if (reduce.matches || Math.abs(from - next) < 1) return;
+      if (reduce.matches || glide.current.paused || Math.abs(from - next) < 1) return;
       // clipped only while gliding, so focus rings and popovers are never cut otherwise
-      running = box.animate([{ height: `${from}px`, overflow: 'clip' }, { height: `${next}px`, overflow: 'clip' }], { duration: RESIZE_MS, easing: EASE_OUT });
+      running = box.animate([{ height: `${from}px`, overflow: 'clip' }, { height: `${next}px`, overflow: 'clip' }], { duration: glide.current.duration, easing: glide.current.easing });
       running.onfinish = () => (running = null);
-    });
+    };
+    check.current = onResize;
+    const observer = new ResizeObserver(onResize);
     observer.observe(content);
     return () => {
+      check.current = null;
       observer.disconnect();
       running?.cancel();
     };

@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from '@/components/ui/Icon';
 import { DomainBadge } from '@/components/booking/DomainBadge';
 import { usePresence } from '@/components/ui/usePresence';
 import { useSession } from '@/providers/SessionProvider';
 import { grantsFromPermissionNames, roleLabel } from '@/features/people/permissions';
+import { useOutsideClose } from '@/components/ui/useOutsideClose';
+import { useWindowMeasure } from '@/components/ui/useWindowMeasure';
 
 /** An icon per role in the permissions peek. */
 const ROLE_ICON = { admin: 'shield', approver: 'check', vice_approver: 'users', transportation_control_officer: 'car' };
@@ -22,41 +24,21 @@ export function PermissionsPeek({ person }) {
   // when the window has no room below, and kept inside the window sideways
   const [place, setPlace] = useState(null);
 
-  useLayoutEffect(() => {
-    // measured again (before paint) every time it opens
-    if (!presence.mounted) return;
-    const measure = () => {
-      const button = ref.current?.getBoundingClientRect();
-      const pop = popRef.current;
-      if (!button || !pop) return;
-      const { offsetHeight: height, offsetWidth: width } = pop;
-      const gap = 8;
-      const below = window.innerHeight - button.bottom - gap;
-      const top = below >= height || below >= button.top - gap ? Math.min(button.bottom + gap, window.innerHeight - height - gap) : Math.max(gap, button.top - gap - height);
-      // rtl: the card's right edge on the eye's right edge, inside the window
-      const right = Math.min(Math.max(gap, window.innerWidth - button.right), window.innerWidth - width - gap);
-      setPlace({ top: Math.max(gap, top), right: Math.max(gap, right) });
-    };
-    measure();
-    window.addEventListener('resize', measure);
-    window.addEventListener('scroll', measure, true);
-    return () => {
-      window.removeEventListener('resize', measure);
-      window.removeEventListener('scroll', measure, true);
-    };
-  }, [presence.mounted, person.loading]);
+  // measured again (before paint) every time it opens
+  useWindowMeasure(presence.mounted, () => {
+    const button = ref.current?.getBoundingClientRect();
+    const pop = popRef.current;
+    if (!button || !pop) return;
+    const { offsetHeight: height, offsetWidth: width } = pop;
+    const gap = 8;
+    const below = window.innerHeight - button.bottom - gap;
+    const top = below >= height || below >= button.top - gap ? Math.min(button.bottom + gap, window.innerHeight - height - gap) : Math.max(gap, button.top - gap - height);
+    // rtl: the card's right edge on the eye's right edge, inside the window
+    const right = Math.min(Math.max(gap, window.innerWidth - button.right), window.innerWidth - width - gap);
+    setPlace({ top: Math.max(gap, top), right: Math.max(gap, right) });
+  }, [person.loading]);
 
-  useEffect(() => {
-    if (!open) return;
-    const onPointer = (event) => !ref.current?.contains(event.target) && !popRef.current?.contains(event.target) && setOpen(false);
-    const onKey = (event) => event.key === 'Escape' && setOpen(false);
-    document.addEventListener('mousedown', onPointer);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onPointer);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [open]);
+  useOutsideClose(open, () => setOpen(false), [ref, popRef]);
 
   const grants = person.permissions ? grantsFromPermissionNames(person.permissions.map((permission) => permission.name)) : [];
 

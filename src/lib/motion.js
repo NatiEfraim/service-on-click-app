@@ -12,6 +12,9 @@ export const CONTENT_FADE_MS = 260;
 /** A height glide (`SmoothSize`). */
 export const RESIZE_MS = 260;
 
+/** Strong ease-in-out: something already on screen changing size or moving (`--ease-in-out` in tokens.css). */
+export const EASE_IN_OUT = 'cubic-bezier(0.77, 0, 0.175, 1)';
+
 /** A dialog fading out after it closed (`Modal`). */
 export const DIALOG_EXIT_MS = 150;
 

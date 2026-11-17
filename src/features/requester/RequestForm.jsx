@@ -2,7 +2,6 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
-import { hasTypeIcon, TypeIcon } from '@/components/booking/TypeIcon';
 import { Button } from '@/components/ui/Button';
 import { DatePicker } from '@/components/ui/DateRangePicker';
 import { EmptyState, ErrorNotice, FormError, Loading } from '@/components/ui/Feedback';
@@ -12,6 +11,7 @@ import { ChoiceField } from './ChoiceField';
 import { ATTACH_ACCEPT, choicePath, fetchForm, MAX_FILE_BYTES, MAX_FILES, submitRequest } from './requesterData';
 import { markSeen } from './seen';
 import { REQUESTER_KEY } from './useRequester';
+import { TypePicture } from '@/components/booking/TypePicture';
 
 /** The file types POST /bookings/{id} accepts (jpg, jpeg, png, gif, webp, pdf). */
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
@@ -63,7 +63,8 @@ export function RequestForm({ found, onHome, onDone }) {
       // the user's own new request is already "seen": it must not stand out as changed
       if (booking?.uuid) markSeen([{ id: booking.uuid, statusId: booking.status_id ?? booking.status?.id }]);
       void client.invalidateQueries({ queryKey: REQUESTER_KEY });
-      onDone(booking?.serial_number ?? '');
+      // the requester API's key is the uuid (the number is for display and search only)
+      onDone({ serial: booking?.serial_number ?? '', uuid: booking?.uuid ?? '' });
     },
     onError: (error) => {
       const byField = {};
@@ -138,7 +139,7 @@ export function RequestForm({ found, onHome, onDone }) {
       <section className="card">
         <div className="rq-form-head">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <span className="ic">{hasTypeIcon(type.id) ? <TypeIcon bookingTypeId={type.id} /> : type.img ? <img src={type.img} alt="" /> : <Icon name="layers" />}</span>
+          <span className="ic"><TypePicture typeId={type.id} src={type.img} /></span>
           <div>
             <h1>{type.name}</h1>
             {type.description ? <p className="muted">{type.description}</p> : null}

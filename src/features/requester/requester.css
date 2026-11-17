@@ -4,6 +4,8 @@
 
 .rq-counters { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 18px; }
 .rq-counter { display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
+/* Reserve room for the update count before its request finishes. */
+.rq-counter { min-block-size: 104px; }
 .rq-counter b { display: block; font-size: 24px; line-height: 1.1; }
 .rq-counter b + span { color: var(--mute); font-size: 14px; }
 .rq-counter .ic, .rq-form-head .ic, .rq-cat .ic {
@@ -128,10 +130,6 @@
 .rq-drawer-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .rq-drawer-pic { width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--line); display: grid; place-items: center; background: var(--surface); }
 .rq-drawer-pic img { width: 26px; height: 26px; }
-.rq-comments { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
-.rq-comments li { padding-bottom: 10px; border-bottom: 1px solid var(--line-2); }
-.rq-comments li:last-child { border-bottom: 0; padding-bottom: 0; }
-.rq-comment-by { color: var(--ink); }
 .rq-files a { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--accent); }
 /* the scroll bar on the right, as in every other list (tokens.css): the scroller ltr, its rows back to rtl */
 .rq-mine.full .rq-list { direction: ltr; }
@@ -169,23 +167,20 @@
    is a button, which otherwise centres and runs them together) */
 .rq-counter-txt { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; text-align: start; }
 .rq-counter-txt b { font-size: 24px; line-height: 1.1; }
-.rq-counter-txt .lbl { color: var(--mute); font-size: 14px; }
-.rq-counter-txt .rq-changed-count { margin-top: 0; }
+.rq-counter-txt .lbl { color: var(--mute); font-size: 14px; line-height: 1.5; }
+.rq-counter-txt .rq-changed-count { max-width: 100%; line-height: 1.5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* the home counters are buttons: each opens "הקריאות שלי" filtered to its requests. On hover a card glows softly and
-   grows a little (and settles back when the mouse leaves); a press gives a small push in */
+/* the home counters are buttons: each opens "הקריאות שלי" filtered to its requests. */
 button.rq-counter {
   font: inherit; color: inherit; text-align: start; width: 100%; cursor: pointer;
-  transition: transform 220ms var(--ease-out), box-shadow 220ms var(--ease-out), border-color 220ms var(--ease-out);
+  transition: box-shadow 220ms var(--ease-out), border-color 220ms var(--ease-out);
 }
 @media (hover: hover) and (pointer: fine) {
   button.rq-counter:hover {
-    transform: translateY(-2px) scale(1.025);
     border-color: color-mix(in srgb, var(--accent) 30%, var(--line));
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 8%, transparent), 0 10px 26px color-mix(in srgb, var(--accent) 16%, transparent);
   }
 }
-button.rq-counter:active { transform: scale(0.99); transition-duration: 90ms; }
 button.rq-counter:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* the request types in the top-bar search show their picture */
@@ -207,7 +202,7 @@ button.rq-counter:focus-visible { outline: 2px solid var(--accent); outline-offs
 .rq-toolbar > span.small.muted { justify-self: end; }
 
 @media (prefers-reduced-motion: reduce) {
-  button.rq-counter, button.rq-counter:hover { transition: none; transform: none; }
+  button.rq-counter, button.rq-counter:hover { transition: none; }
   .rq-mark-all, .rq-mark-all[data-closing] { animation: none; }
 }
 
@@ -228,7 +223,8 @@ button.rq-counter:focus-visible { outline: 2px solid var(--accent); outline-offs
 }
 .rq-row.selected:hover { background: var(--bg); }
 /* while a request is open its list stays put (the row sits above the dimming, so the wheel would reach the list) */
-.rq-list:has(.rq-row.selected) { overflow: hidden; }
+/* (while a request is open the list is held still from script - MyRequestsPanel - not with overflow: hidden, which
+   would cut short the glide that brings the opened row into view) */
 /* detached: the divider above it and the one below it fade away, so it does not touch its neighbours */
 .rq-list li { transition: border-color 260ms var(--ease-out); }
 .rq-list li:has(> .rq-row.selected), .rq-list li:has(> .rq-row.selected) + li { border-top-color: transparent; }
@@ -320,23 +316,10 @@ button.rq-counter:focus-visible { outline: 2px solid var(--accent); outline-offs
 }
 @media (prefers-reduced-motion: reduce) { .rq-celebrate-row { display: none; } }
 
-.rq-celebrate-row.rejected { --rq-glow: var(--bad); display: grid; place-items: center; }
-.rq-sad-face {
-  display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%;
-  background: radial-gradient(circle at 35% 25%, #fff5f2, #ffc4bd);
-  color: #8d2424; font-size: 21px; line-height: 1; font-weight: 700;
-  box-shadow: 0 0 0 4px rgb(224 72 62 / 16%); opacity: 0;
-}
-.rq-celebrate .rq-sad-face { width: 22px; height: 22px; font-size: 17px; }
-.play > .rq-sad-face { animation: rq-sad-pop 1.6s var(--ease-out) both; }
-@keyframes rq-sad-pop {
-  0% { opacity: 0; transform: scale(.45) rotate(-12deg); }
-  20% { opacity: 1; transform: scale(1.16) rotate(6deg); }
-  34%, 72% { opacity: 1; transform: scale(1) rotate(0); }
-  100% { opacity: 0; transform: scale(.85); }
-}
+/* a rejected request: the row glows in soft red, with nothing on it */
+.rq-celebrate-row.rejected { --rq-glow: var(--bad); }
 @media (prefers-reduced-motion: reduce) {
-  .rq-celebrate-row.rejected, .play > .rq-sad-face { animation: none; }
+  .rq-celebrate-row.rejected { animation: none; }
 }
 /* "הקריאות שלי" keeps its scroll bar's room when it locks for an open request, so nothing shifts when one is picked */
 .rq-mine.full .rq-list { scrollbar-gutter: stable; }
@@ -370,3 +353,78 @@ button.rq-counter:focus-visible { outline: 2px solid var(--accent); outline-offs
 .rq-choice-step { transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out); }
 @starting-style { .rq-choice-step { opacity: 0; transform: translateY(-4px); } }
 @media (prefers-reduced-motion: reduce) { .rq-choice-step { transition-property: opacity; transform: none; } }
+
+/* "הקריאות שלי": "הכל", then the three main categories (CategoryGroup), each opening into its categories. A category
+   button comes in one after another as its group opens (30ms apart), as the permissions window's domain cards do */
+.rq-cat-groups { display: grid; gap: 8px; margin-bottom: 12px; }
+.rq-cat-groups .rq-cats { margin: 0; padding: 4px 12px 12px; }
+.rq-cat-groups .pp-group .rq-cat { opacity: 0; transform: translateY(4px); transition: opacity 120ms ease, transform 120ms ease, background-color .15s ease, border-color .15s ease; }
+.rq-cat-groups .pp-group.open .rq-cat { opacity: 1; transform: none; transition: opacity 200ms var(--ease-out) calc(var(--i, 0) * 30ms), transform 240ms var(--ease-out) calc(var(--i, 0) * 30ms), background-color .15s ease, border-color .15s ease; }
+/* the group holding the chosen category is marked, so a closed group still shows where the filter is */
+.rq-cat-groups .pp-group.holds-current { border-color: var(--accent-soft); }
+@media (prefers-reduced-motion: reduce) {
+  .rq-cat-groups .pp-group .rq-cat, .rq-cat-groups .pp-group.open .rq-cat { transform: none; transition: opacity 120ms ease; }
+}
+
+/* the category icons carry their open-requests count (CountBadge) on their corner */
+.rq-cat .ic { position: relative; }
+
+/* "הקריאות שלי" on the home fits the window (useFitToWindow): the head and the categories stay, only the list scrolls */
+.rq-mine-scroll { overflow-y: auto; overscroll-behavior: contain; margin-inline: -6px; padding-inline: 6px; }
+/* "הכל" beside the title: a small pill; filled while no category is chosen */
+.rq-all-pill {
+  all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px; cursor: pointer;
+  font-size: 13px; font-weight: 600; color: var(--ink-2); border: 1px solid var(--line);
+  transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease, border-color var(--dur-fast) ease, transform 120ms var(--ease-out);
+}
+.rq-all-pill .ico { width: 15px; height: 15px; }
+.rq-all-pill[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.rq-all-pill:active { transform: scale(.96); }
+.rq-all-pill:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) { .rq-all-pill:not([aria-pressed="true"]):hover { background: var(--hover); } }
+/* tighter blocks here than in the permissions window, so the list keeps its room */
+.rq-cat-groups { gap: 6px; margin-bottom: 8px; }
+.rq-cat-groups .pp-group-head { padding: 7px 12px; gap: 10px; }
+.rq-cat-groups .pp-group-ic { width: 34px; height: 34px; border-radius: 10px; }
+.rq-cat-groups .pp-group-ic .svc { width: 22px; height: 22px; }
+.rq-cat-groups .pp-group-txt b { font-size: 14px; }
+.rq-cat-groups .rq-cats { padding: 2px 10px 10px; }
+/* while a request is open its list stays put (its row sits above the dimming); the gutter keeps the width steady */
+.rq-mine-scroll { scrollbar-gutter: stable; }
+
+
+/* a topic card (ביטחון מידע / תקשוב) folds open and closed smoothly: its body glides between 0 and its height and fades
+   (closing: fades first, then folds; opening: folds, then fades in). It fills the window-fitted card and scrolls inside */
+/* (the fold itself is Reveal's: components.css .reveal) - here only its own: it fills the card, opens folding then fading
+   in, closes fading out then folding */
+.rq-topic-reveal { flex: 1 1 auto; min-height: 0; }
+.rq-topic-reveal.open { transition: grid-template-rows var(--dur-resize) var(--ease-out), opacity var(--dur-base) var(--ease-out) 60ms; }
+.rq-topic-reveal:not(.open) { transition: grid-template-rows var(--dur-resize) var(--ease-out) 60ms, opacity 150ms var(--ease-out); }
+.rq-topic-reveal:not(.open) > .rq-topic-scroll { overflow: hidden; }
+/* open, its list scrolls inside the card (the shared fold clips its content box) */
+.rq-topic-reveal.open > .rq-topic-scroll { overflow-y: auto; }
+@media (prefers-reduced-motion: reduce) { .rq-topic-reveal.open, .rq-topic-reveal:not(.open) { transition: opacity var(--dur-base) ease; } }
+
+/* the head: the title with "הכל" right beside it on one side, the actions (mark all read, all requests) on the other */
+.rq-mine-title, .rq-mine-actions { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.rq-mine-actions { margin-inline-start: auto; gap: 12px; }
+
+/* a topic's sub-group of several request types (CategoryGroup, no picture): a light box that folds open and closed */
+.rq-subgroup.pp-group { margin-top: 10px; background: var(--surface-2); border-radius: 12px; }
+.rq-subgroup .pp-group-head { padding: 8px 12px; border-radius: 12px; }
+.rq-subgroup .pp-group-txt b { font-size: 13px; color: var(--ink-2); }
+.rq-subgroup .pp-group-inner > .rq-types { padding: 0 6px 6px; }
+.rq-subgroup .rq-type:hover { background: var(--surface); }
+
+/* the home's list changing category: the shown list fades out (within SWAP_OUT_MS), the new one fades in */
+.rq-swap { transition: opacity 180ms var(--ease-out); }
+.rq-swap[data-out] { opacity: 0; transition-duration: 160ms; }
+@starting-style { .rq-swap { opacity: 0; } }
+
+/* an opened row is shown whole with its room around it when the list glides to it (MyRequestsPanel) */
+.rq-row.selected { scroll-margin-block: 16px; }
+
+/* room after the last request, so an opened last row grows in place (12px above and below) without the list having to
+   move - a list already scrolled to its end could not glide further until the row had grown */
+.rq-mine-scroll { padding-bottom: 28px; }
+.rq-mine.full .rq-list { padding-bottom: 28px; }
