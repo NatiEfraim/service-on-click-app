@@ -180,7 +180,7 @@ export function RequesterContent({ name, extraCategories = null }) {
                 <b>{counts ? counts[counter.id] ?? 0 : '–'}</b>
                 <span className="lbl">{counter.label}</span>
                 {/* its line is always there (empty until the requests load), so the card never grows when it appears */}
-                <span className={`rq-changed-count${changedIn(counter.id) ? '' : ' empty'}`} aria-hidden={changedIn(counter.id) ? undefined : true}>
+                <span className={`rq-changed-count${changedIn(counter.id) ? '' : ' is-empty'}`} aria-hidden={changedIn(counter.id) ? undefined : true}>
                   {changedIn(counter.id) ? `${changedIn(counter.id)} עודכנו מאז הביקור האחרון` : ' '}
                 </span>
               </span>
