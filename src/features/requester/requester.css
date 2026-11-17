@@ -350,6 +350,9 @@ button.rq-counter:focus-visible { outline: 2px solid var(--accent); outline-offs
 
 /* a choice field: its sub-choice dropdown and its "type in a value" box fade and rise in as they appear (ChoiceField) */
 .rq-choice { display: grid; gap: 8px; }
+/* a choice dropdown fills its field: a native select sizes to its label (inline), and only the customizable select
+   (appearance: base-select, selects.css) is a full-width flex box - so a browser without it would show a narrow box */
+.rq-choice-step > select.input { width: 100%; box-sizing: border-box; }
 .rq-choice-step { transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out); }
 @starting-style { .rq-choice-step { opacity: 0; transform: translateY(-4px); } }
 @media (prefers-reduced-motion: reduce) { .rq-choice-step { transition-property: opacity; transform: none; } }
@@ -428,3 +431,65 @@ button.rq-counter:focus-visible { outline: 2px solid var(--accent); outline-offs
    move - a list already scrolled to its end could not glide further until the row had grown */
 .rq-mine-scroll { padding-bottom: 28px; }
 .rq-mine.full .rq-list { padding-bottom: 28px; }
+
+/* ---------- the request just sent (?sent=<serial>), once:
+   1. its slot opens (grid rows 0fr -> 1fr), so the rows below glide down instead of jumping;
+   2. the row rises and fades in a beat later;
+   3. it glows in the system colour for 2.5s - on its own layer (::after), animating opacity only, so nothing repaints
+      and the row's own background (e.g. "selected" while its side panel opens) is untouched.
+   Keyframes on purpose: it plays once per request, never retriggered. */
+.rq-list li.arriving {
+  display: grid;
+  /* one full-width column: an unset (auto) column can size to the row's content, so its end block would sit beside
+     the title instead of at the far end while the slot opens */
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 1fr;
+  animation: rq-arrive-slot 380ms var(--ease-out) both;
+}
+.rq-list li.arriving > .rq-row { min-height: 0; }
+@keyframes rq-arrive-slot {
+  from { grid-template-rows: 0fr; }
+  to { grid-template-rows: 1fr; }
+}
+.rq-row.arriving {
+  animation:
+    rq-arrive-in 460ms var(--ease-out) 120ms both,
+    /* the dark domain-colour edge steps aside while the row glows (dark on dark), and fades back as the glow ends -
+       the same timing as rq-arrive-glow, so they move together */
+    rq-arrive-edge 2500ms var(--ease-out) 580ms both;
+}
+@keyframes rq-arrive-edge {
+  0% { border-inline-start-color: var(--dc, var(--line)); }
+  12% { border-inline-start-color: transparent; }
+  55% { border-inline-start-color: transparent; }
+  100% { border-inline-start-color: var(--dc, var(--line)); }
+}
+@keyframes rq-arrive-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+.rq-row.arriving::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+  /* all inside the row: the list box clips what spills past its edges (it scrolls), so an outer halo was cut off */
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent), inset 0 0 16px color-mix(in srgb, var(--accent) 22%, transparent);
+  opacity: 0;
+  animation: rq-arrive-glow 2500ms var(--ease-out) 580ms both;
+}
+/* up quickly, held, then a long soft fade */
+@keyframes rq-arrive-glow {
+  0% { opacity: 0; }
+  12% { opacity: 1; }
+  55% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* no movement: the slot opens at once and the row only fades in; the glow is kept */
+  .rq-list li.arriving { animation: none; }
+  .rq-row.arriving { animation-name: rq-arrive-fade, rq-arrive-edge; }
+  @keyframes rq-arrive-fade { from { opacity: 0; } to { opacity: 1; } }
+}

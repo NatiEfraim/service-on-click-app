@@ -70,15 +70,18 @@ function AgeDays({ updatedAt, createdAt }) {
  * One of the user's requests in a list, laid out like the management list's row (minus the decisions): the domain's
  * picture and colour, the domain and number (a hold notice beside them), then the opening day, the progress dots and the
  * status; at the end the days at this step and in total, or the status once closed. Also: the "עדכון חדש" mark, the
- * one-time celebration of a completion, and the "open in the side panel" look.
+ * one-time celebration of a completion, and the "open in the side panel" look. `arriving`: the request just sent - it
+ * slides and fades in, then glows in the system colour for 2.5s (requester.css .rq-row.arriving); `onArrived` after.
  */
-export function RequestRow({ row, img, changed, selected, celebrating, onOpen, onCelebrated }) {
+export function RequestRow({ row, img, changed, selected, celebrating, arriving = false, onArrived, onOpen, onCelebrated }) {
   const route = requestRoute(row.statusId, row.bookingTypeId);
   const closed = route.stage === 'closed';
   return (
     <button
       type="button"
-      className={`rq-row rq-ticket${changed ? ' changed' : ''}${selected ? ' selected' : ''}`}
+      className={`rq-row rq-ticket${changed ? ' changed' : ''}${selected ? ' selected' : ''}${arriving ? ' arriving' : ''}`}
+      // the glow is the arrival's last part; children's animations (the celebration) bubble here too, so only the row's own
+      onAnimationEnd={arriving ? (event) => event.target === event.currentTarget && event.animationName === 'rq-arrive-glow' && onArrived?.() : undefined}
       style={{ '--dc': domainColor(row.bookingTypeId) }}
       aria-current={selected ? 'true' : undefined}
       onClick={onOpen}
