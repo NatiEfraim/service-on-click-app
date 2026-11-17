@@ -2,7 +2,8 @@
 
 import { useChartTooltip } from '@/components/ui/ChartTooltip';
 import { EmptyState } from '@/components/ui/Feedback';
-import { STAGE_COLOR, STAGE_ORDER, STAGE_SHORT } from '@/lib/labels';
+import { STAGE_COLOR } from '@/lib/labels';
+import { CHART_STAGE_ORDER, chartStageLabel } from './constants';
 import { useSession } from '@/providers/SessionProvider';
 
 const SIZE = 200;
@@ -23,7 +24,7 @@ function slicePath(a0, a1) {
 export function StageDonut({ stages, bookingTypeId, onPick }) {
   const { typeName } = useSession();
   const tip = useChartTooltip();
-  const rows = STAGE_ORDER.filter((id) => stages[id] > 0).map((id) => ({ id, count: stages[id] }));
+  const rows = CHART_STAGE_ORDER.filter((id) => stages[id] > 0).map((id) => ({ id, count: stages[id] }));
   const total = rows.reduce((sum, row) => sum + row.count, 0);
 
   if (!total) return <EmptyState title="אין קריאות פתוחות בתחום זה" />;
@@ -38,7 +39,7 @@ export function StageDonut({ stages, bookingTypeId, onPick }) {
     className: 'donut-slice',
     tabIndex: 0,
     role: 'button',
-    'aria-label': `${STAGE_SHORT[slice.id]}: ${slice.count} קריאות`,
+    'aria-label': `${chartStageLabel(slice.id, bookingTypeId)}: ${slice.count} קריאות`,
     onClick: () => onPick(slice.id),
     onKeyDown: (event) => {
       if (event.key === 'Enter' || event.key === ' ') {
@@ -48,7 +49,7 @@ export function StageDonut({ stages, bookingTypeId, onPick }) {
     },
     ...tip.bind({
       color: STAGE_COLOR[slice.id],
-      title: STAGE_SHORT[slice.id],
+      title: chartStageLabel(slice.id, bookingTypeId),
       value: slice.count,
       unit: 'קריאות',
       sub: `${typeName(bookingTypeId)} · ${Math.round((slice.count / total) * 100)}% מהפתוחות · לחיצה פותחת אותן`,

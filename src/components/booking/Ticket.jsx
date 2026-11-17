@@ -47,7 +47,7 @@ function useCoveredBox(ref, selected) {
 }
 
 /** One booking in a list, with the decisions available right now; `entering` marks a row that just arrived in the list. */
-export function Ticket({ booking: given, showActions = true, onAction, outcome, entering = false }) {
+export function Ticket({ booking: given, showActions = true, onAction, outcome, entering = false, showSelectedIdentity = true }) {
   // ביטחון מידע / תקשוב named by their one handler, wherever the booking came from (the dashboard's oldest too)
   const booking = topicBooking(given);
   const { catalog, me, unitName } = useSession();
@@ -69,7 +69,7 @@ export function Ticket({ booking: given, showActions = true, onAction, outcome, 
     if (selected) ref.current?.scrollIntoView({ block: 'nearest', behavior: prefersReducedMotion() ? 'instant' : 'smooth' });
   }, [selected]);
   // under the panel (a list on the right of the page): a compact copy beside the panel stands in for the row
-  const covered = useCoveredBox(ref, selected);
+  const covered = useCoveredBox(ref, selected && showSelectedIdentity);
   const previewRef = useRef(null);
   const drawerElement = covered?.drawer;
   useLayoutEffect(() => {
@@ -147,7 +147,7 @@ export function Ticket({ booking: given, showActions = true, onAction, outcome, 
     <>
       <div
         ref={ref}
-        className={`ticket${outcome ? ` leaving ${outcome}` : ''}${lifted ? ' selected' : ''}${covered ? ' covered' : ''}`}
+        className={`ticket${outcome ? ` leaving ${outcome}` : ''}${lifted ? ' selected' : ''}${lifted && !showSelectedIdentity ? ' hide-selected-identity' : ''}${covered ? ' covered' : ''}`}
         aria-current={selected ? 'true' : undefined}
         aria-hidden={outcome || covered ? true : undefined}
         inert={covered ? true : undefined}

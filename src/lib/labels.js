@@ -13,6 +13,7 @@ export const STAGE_ORDER = [
 ];
 
 export const STAGE_SHORT = {
+  topic_handler: 'בטיפול',
   control_officer: 'רמ"ד תו"ב',
   vice_approver: 'גורם מטפל',
   approver: 'מפקד תחום',
@@ -26,6 +27,7 @@ export const STAGE_SHORT = {
 
 /** One colour per stage for the dashboard charts. */
 export const STAGE_COLOR = {
+  topic_handler: '#1F8E8B',
   control_officer: '#8C3F68',
   vice_approver: '#C46A9B',
   approver: '#1F8E8B',

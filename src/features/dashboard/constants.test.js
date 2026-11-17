@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { STAGE_ORDER } from '@/lib/labels';
-import { workflowColumns } from './constants';
+import { CHART_STAGE_ORDER, chartStageCounts, chartStageLabel, workflowColumns } from './constants';
 
 const catalog = {
   booking_type_statuses: {
@@ -12,6 +12,14 @@ const catalog = {
 };
 
 describe('workflowColumns', () => {
+  it.each([[14, 'קצין ביטחון מידע'], [22, 'מנהל תקשוב']])('merges both approval buckets for type %i', (type, handler) => {
+    const stages = chartStageCounts(type, { vice_approver: 9, approver: 14, realization: 4 });
+    expect(stages).toEqual({ topic_handler: 23, realization: 4 });
+    expect(workflowColumns(type, catalog, stages, CHART_STAGE_ORDER)).toEqual(['topic_handler', 'realization']);
+    expect(chartStageLabel('topic_handler', type)).toBe(handler);
+  });
+
+
   it('gives the barber only its own stage', () => {
     expect(workflowColumns(5, catalog, { barber: 23 }, STAGE_ORDER)).toEqual(['barber']);
   });
