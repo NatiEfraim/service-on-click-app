@@ -32,7 +32,14 @@ function ThumbImage({ attachment }) {
 
 /** Saves a non-viewable attachment from its cookie-less copy (a plain link would carry the app's cookies to the store). */
 async function downloadAttachment(attachment) {
-  const src = await fetchCookieless(attachment.url);
+  let src;
+  try {
+    src = await fetchCookieless(attachment.url);
+  } catch {
+    // the store does not allow reading it from code (CORS): open the direct address instead
+    window.open(attachment.url, '_blank', 'noopener');
+    return;
+  }
   const blob = await (await fetch(src)).blob();
   downloadBlob(blob, attachment.label ?? attachment.name ?? 'קובץ');
 }

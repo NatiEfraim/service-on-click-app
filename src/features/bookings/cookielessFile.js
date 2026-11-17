@@ -26,16 +26,24 @@ export function fetchCookieless(url) {
   return cache.get(url);
 }
 
-/** `{ src, failed }` for the file at `url`: `src` once it is in memory, `failed` when it could not be fetched. */
+/**
+ * `{ src, failed }` for the file at `url`: `src` once it is in memory. When the cookie-less fetch fails - typically the
+ * store does not allow this site to read it from code (CORS), as on a deployment where the store has its own address
+ * and the cookie problem does not arise - `src` falls back to the direct address, which an <img> / <iframe> may load.
+ * `failed` only when there is no address at all.
+ */
 export function useCookielessFile(url) {
   const [state, setState] = useState({ src: null, failed: false });
   useEffect(() => {
-    if (!url) return undefined;
+    if (!url) {
+      setState({ src: null, failed: true });
+      return undefined;
+    }
     let current = true;
     setState({ src: null, failed: false });
     fetchCookieless(url).then(
       (src) => current && setState({ src, failed: false }),
-      () => current && setState({ src: null, failed: true }),
+      () => current && setState({ src: url, failed: false }),
     );
     return () => {
       current = false;
