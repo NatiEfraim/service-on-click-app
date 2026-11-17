@@ -1,7 +1,6 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { DomainIcon } from '@/components/booking/DomainBadge';
@@ -17,6 +16,8 @@ import { useSession } from '@/providers/SessionProvider';
 import { StageDonut } from './StageDonut';
 import { StageColumns } from './StageBars';
 import { GroupTile } from './GroupTile';
+import { InlineCategoryGroup } from './CategoryTileControls';
+import Link from 'next/link';
 import { TileBody } from './TileBody';
 import { ICT_TYPES, INFOSEC_TYPES } from '@/lib/topicTypes';
 
@@ -158,17 +159,7 @@ export function HomeScreen() {
                 // several sub-groups (תקשוב): a panel under the tile, wide enough to read (GroupTile)
                 <GroupTile key={tile.key} tile={tile} subs={subGroups(tile.members)} index={index} />
               ) : (
-              // Hover (or focus) opens the group into its domains; each one links to its own dashboard.
-              <div key={tile.key} className="dtile dgroup" tabIndex={0} aria-label={`${tile.name}: ${tile.members.map((m) => m.name).join(', ')}`} style={{ '--dc': domainColor(tile.members[0].booking_type_id), '--i': index }}>
-                <TileBody iconType={tile.iconType} iconSrc={tile.iconSrc} name={tile.name} open={tile.open} overdue={tile.overdue} />
-                <div className="dgroup-menu" data-members={tile.members.length}>
-                  {tile.members.map((domain) => (
-                    <Link key={domain.booking_type_id} href={`/dashboard?types=${domain.booking_type_id}`} className="dgroup-item" style={{ '--dc': domainColor(domain.booking_type_id) }}>
-                      <TileBody iconType={domain.booking_type_id} name={domain.name} open={domain.open} overdue={domain.overdue} />
-                    </Link>
-                  ))}
-                </div>
-              </div>
+                <InlineCategoryGroup key={tile.key} tile={tile} index={index} />
               )
             ),
           )}

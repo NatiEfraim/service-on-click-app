@@ -15,7 +15,7 @@ const POP_MAX_WIDTH = 720;
 
 /**
  * A group tile whose domains fall into sub-groups (תקשוב: הרשאות, התקנות, תקלות, ניהול משתמשים): too many to show inside
- * the tile, so hovering it (or focusing it) opens a panel under it - wide enough to read - with a column per sub-group
+ * the tile, so hovering or activating it opens a panel under it - wide enough to read - with a column per sub-group
  * and each domain as a clear line (its picture, full name and open count), each linking to its own dashboard. The panel
  * stays inside the window, stays open while the pointer moves from the tile into it, fades in and out, and closes with
  * Escape.
@@ -62,23 +62,23 @@ export function GroupTile({ tile, subs, index }) {
 
   return (
     <>
-      <div
+      <button
+        type="button"
         ref={anchor}
         className={`dtile dgroup-pop${open ? ' open' : ''}`}
-        tabIndex={0}
+        onClick={show}
         aria-haspopup="true"
         aria-expanded={open}
         aria-label={`${tile.name}: ${tile.members.map((member) => member.name).join(', ')}`}
         style={{ '--dc': domainColor(tile.members[0].booking_type_id), '--i': index }}
         onMouseEnter={show}
-        onMouseLeave={hide}
-        onFocus={show}
+        onMouseLeave={open ? hide : undefined}
         onBlur={(event) => {
           if (!event.currentTarget.contains(event.relatedTarget) && !document.querySelector('.dpop')?.contains(event.relatedTarget)) hide();
         }}
       >
         <TileBody iconType={tile.iconType} iconSrc={tile.iconSrc} name={tile.name} open={tile.open} overdue={tile.overdue} />
-      </div>
+      </button>
       {presence.mounted && place
         ? createPortal(
             <div

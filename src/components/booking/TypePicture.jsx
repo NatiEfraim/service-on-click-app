@@ -9,12 +9,14 @@ import { hasTypeIcon, TypeIcon } from './TypeIcon';
  * ICT types 20-25 that have no image, their interactive picture (TypeIcon), else a generic icon. `size` in px for both
  * (left to the CSS when not given). The one place that rule lives; frames around it (.dom, .ic) stay with the callers.
  */
-export function TypePicture({ typeId, src, size, className }) {
+export function TypePicture({ typeId, src, size, className = '' }) {
   const url = src ?? (typeId != null ? domainIconSrc(typeId) : null);
+  const isEquipmentIcon = url === '/icons/domains/3.svg' || url === '/icons/domains/4.svg';
+  const pictureClass = isEquipmentIcon ? className : `type-picture ${className}`.trim();
   if (url) {
     // eslint-disable-next-line @next/next/no-img-element -- static svg
-    return <img className={className} src={url} alt="" width={size} height={size} />;
+    return <img className={pictureClass} src={url} alt="" width={size} height={size} />;
   }
-  if (typeId != null && hasTypeIcon(typeId)) return <TypeIcon bookingTypeId={typeId} size={size} className={className} />;
-  return <Icon name="layers" />;
+  if (typeId != null && hasTypeIcon(typeId)) return <TypeIcon bookingTypeId={typeId} size={size} className={pictureClass} />;
+  return <Icon name="layers" className={pictureClass} />;
 }

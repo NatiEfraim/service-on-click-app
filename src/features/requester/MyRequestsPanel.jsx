@@ -27,6 +27,8 @@ import { counterOf, requestCategories, stageOf } from './requesterData';
 import { STAGE_SHORT } from '@/lib/labels';
 import { useCatalog, useMyRequests } from './useRequester';
 import { TypePicture } from '@/components/booking/TypePicture';
+import { domainIconSrc } from '@/lib/labels';
+import { CategoryArtwork, playCategoryArtwork } from './CategoryArtwork';
 import { Reveal } from '@/components/ui/Reveal';
 import { useToggleSet } from '@/lib/useToggleSet';
 
@@ -401,8 +403,8 @@ export function MyRequestsPanel({ full = false, extraCategories = null, category
             >
               <div className="rq-cats">
                 {section.items.map((item, index) => (
-                  <button key={item.id} type="button" className="rq-cat" style={{ '--i': index }} aria-pressed={current?.id === item.id} onClick={() => pick(item.id)}>
-                    <span className="ic pic"><CountBadge count={openIn(item)} label={`${openIn(item)} קריאות פתוחות ב${item.name}`} /><TypePicture typeId={item.typeIds[0]} src={item.img} size={32} /></span>
+                  <button key={item.id} type="button" className="rq-cat" style={{ '--i': index }} aria-pressed={current?.id === item.id} onClick={(event) => { playCategoryArtwork(event.currentTarget); pick(item.id); }}>
+                    <span className="ic pic"><CountBadge count={openIn(item)} label={`${openIn(item)} קריאות פתוחות ב${item.name}`} /><CategoryArtwork src={item.img ?? domainIconSrc(item.typeIds[0])} size={32} fallback={<TypePicture typeId={item.typeIds[0]} src={item.img} size={32} />} /></span>
                     {item.name}
                   </button>
                 ))}

@@ -87,8 +87,7 @@ export function RequestRow({ row, img, changed, selected, celebrating, arriving 
       onClick={onOpen}
       aria-label={`פרטי קריאה ${row.serial}, ${row.typeName}, ${row.statusName}${changed ? ', עודכנה מאז הביקור האחרון' : ''}`}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      {img ? <span className="dom"><img src={img} alt="" /></span> : <DomainBadge bookingTypeId={row.bookingTypeId} />}
+      <DomainBadge bookingTypeId={row.bookingTypeId} src={img || undefined} />
       <span className="rq-ticket-main">
         <span className="t1">
           {row.typeName} <span className="serial">{row.serial}</span>

@@ -2,10 +2,10 @@ import { domainColor } from '@/lib/labels';
 import { TypePicture } from './TypePicture';
 
 /** The domain's picture (TypePicture) in a rounded square tinted with the domain's colour. */
-export function DomainBadge({ bookingTypeId, size }) {
+export function DomainBadge({ bookingTypeId, size, src }) {
   return (
     <span className={`dom${size === 'sm' ? ' sm' : ''}`} style={{ '--dc': domainColor(bookingTypeId) }}>
-      <TypePicture typeId={bookingTypeId} />
+      <TypePicture typeId={bookingTypeId} src={src} />
     </span>
   );
 }

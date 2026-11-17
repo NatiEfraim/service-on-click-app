@@ -370,6 +370,38 @@ body:has(.ticket.selected, .ticket-copy, .rq-row.selected, .sync-decision-previe
 .clear-filters[data-closing] { animation: clear-disappear 220ms var(--ease-out) both; pointer-events: none; }
 @media (prefers-reduced-motion: reduce) { .clear-filters { animation: none; } }
 
+/* Category artwork responds inside its existing control. */
+.type-picture { transition: opacity var(--dur-fast) ease; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .type-picture { transition: transform var(--dur-fast) var(--ease-out), opacity var(--dur-fast) ease; }
+
+  :where(a[href], button:enabled):focus-visible .type-picture,
+  .dgroup:focus-visible > .dtile-ic .type-picture,
+  :where(.ticket:has(.ticket-open:focus-visible)) .type-picture {
+    transform: translateY(-2px) scale(1.06);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    :where(a[href], button:enabled, .ticket:not(.ticket-copy)):hover .type-picture,
+    .dgroup:hover > .dtile-ic .type-picture {
+      transform: translateY(-2px) scale(1.06);
+    }
+  }
+}
+
+:where(a[href], button:enabled, .ticket:not(.ticket-copy)):active .type-picture,
+.dgroup:active > .dtile-ic .type-picture {
+  opacity: .8;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :where(a[href], button:enabled, .ticket:not(.ticket-copy)):active .type-picture,
+  .dgroup:active > .dtile-ic .type-picture {
+    transform: scale(.92);
+  }
+}
+
 /* ---------- the ICT request types' pictures (components/booking/TypeIcon): still at rest; hovering the button that
    holds them plays a short sequence, leaving reverses it (transitions, so a quick in-and-out never jumps) ---------- */
 :root { --ti-spring: cubic-bezier(.34, 1.56, .64, 1); }
@@ -386,18 +418,18 @@ body:has(.ticket.selected, .ticket-copy, .rq-row.selected, .sync-decision-previe
 .ti-uo-plus { transform-box: fill-box; transform-origin: 50% 50%; transition: transform 460ms var(--ti-spring); }
 .ti-mv-arrow { transition: transform 320ms var(--ease-out); }
 .ti-mv-person { transition: transform 420ms var(--ti-spring) 80ms; }
-@media (hover: hover) and (pointer: fine) {
-  :is(.rq-type, .rq-cat, .ticket, .rq-row, .dtile, .dgroup-item):hover .ti-sw-arrow { transform: translateY(2px); }
-  :is(.rq-type, .rq-cat, .ticket, .rq-row, .dtile, .dgroup-item):hover .ti-sw-bar { transform: scaleX(1); }
-  :is(.rq-type, .rq-cat, .ticket, .rq-row, .dtile, .dgroup-item):hover .ti-pr-paper { transform: none; }
-  :is(.rq-type, .rq-cat, .ticket, .rq-row, .dtile, .dgroup-item):hover .ti-pr-led { fill: #2FA85A; }
-  :is(.rq-type, .rq-cat, .ticket, .rq-row, .dtile, .dgroup-item):hover .ti-em-mail { transform: rotate(-8deg); }
-  :is(.rq-type, .rq-cat, .ticket, .rq-row, .dtile, .dgroup-item):hover .ti-em-badge { transform: scale(1.18); }
-  :is(.rq-type, .rq-cat, .ticket, .rq-row, .dtile, .dgroup-item):hover .ti-rn-line { stroke-dashoffset: 0; }
-  :is(.rq-type, .rq-cat, .ticket, .rq-row, .dtile, .dgroup-item):hover .ti-rn-pen { transform: translate(-3px, -3px); }
-  :is(.rq-type, .rq-cat, .ticket, .rq-row, .dtile, .dgroup-item):hover .ti-uo-plus { transform: rotate(90deg) scale(1.15); }
-  :is(.rq-type, .rq-cat, .ticket, .rq-row, .dtile, .dgroup-item):hover .ti-mv-arrow { transform: translateX(2px); }
-  :is(.rq-type, .rq-cat, .ticket, .rq-row, .dtile, .dgroup-item):hover .ti-mv-person { transform: translateX(-2px); }
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  :is(a[href], button:enabled, .ticket:not(.ticket-copy)):is(:hover, :focus-visible) .ti-sw-arrow { transform: translateY(2px); }
+  :is(a[href], button:enabled, .ticket:not(.ticket-copy)):is(:hover, :focus-visible) .ti-sw-bar { transform: scaleX(1); }
+  :is(a[href], button:enabled, .ticket:not(.ticket-copy)):is(:hover, :focus-visible) .ti-pr-paper { transform: none; }
+  :is(a[href], button:enabled, .ticket:not(.ticket-copy)):is(:hover, :focus-visible) .ti-pr-led { fill: #2FA85A; }
+  :is(a[href], button:enabled, .ticket:not(.ticket-copy)):is(:hover, :focus-visible) .ti-em-mail { transform: rotate(-8deg); }
+  :is(a[href], button:enabled, .ticket:not(.ticket-copy)):is(:hover, :focus-visible) .ti-em-badge { transform: scale(1.18); }
+  :is(a[href], button:enabled, .ticket:not(.ticket-copy)):is(:hover, :focus-visible) .ti-rn-line { stroke-dashoffset: 0; }
+  :is(a[href], button:enabled, .ticket:not(.ticket-copy)):is(:hover, :focus-visible) .ti-rn-pen { transform: translate(-3px, -3px); }
+  :is(a[href], button:enabled, .ticket:not(.ticket-copy)):is(:hover, :focus-visible) .ti-uo-plus { transform: rotate(90deg) scale(1.15); }
+  :is(a[href], button:enabled, .ticket:not(.ticket-copy)):is(:hover, :focus-visible) .ti-mv-arrow { transform: translateX(2px); }
+  :is(a[href], button:enabled, .ticket:not(.ticket-copy)):is(:hover, :focus-visible) .ti-mv-person { transform: translateX(-2px); }
 }
 /* reduced motion: only the colour changes stay; nothing moves */
 @media (prefers-reduced-motion: reduce) {

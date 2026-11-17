@@ -112,6 +112,12 @@
 /* a category with a colour picture: white tile, the picture keeps its own colours (also when picked) */
 .rq-cat .ic.pic, .rq-cat[aria-pressed="true"] .ic.pic { background: var(--surface); border: 1px solid var(--line); }
 .rq-cat .ic.pic img { width: 32px; height: 32px; }
+.rq-cat .category-artwork { display: block; overflow: visible; }
+.rq-cat .category-art-part { transform-box: fill-box; transform-origin: center; }
+.rq-cat .category-art-pivot { transform-box: view-box; }
+.rq-cat .category-art-food-top { transform-box: fill-box; transform-origin: left center; }
+.rq-cat :is(.category-art-light, .category-art-ingredient, .category-art-scene-effect) { opacity: 0; }
+.rq-cat .category-art-scene-effect { transform-box: fill-box; transform-origin: center; }
 /* a new category's list on its way: the previous one stays, dimmed, so nothing jumps */
 .rq-list { transition: opacity var(--dur-base) ease; }
 .rq-list[data-loading] { opacity: .55; }
