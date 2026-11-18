@@ -7,8 +7,8 @@ import { EmptyState } from '@/components/ui/Feedback';
 import { Modal } from '@/components/ui/Modal';
 import { useChartTooltip } from '@/components/ui/ChartTooltip';
 
-import { STAGE_COLOR, STAGE_ORDER, STAGE_SHORT } from '@/lib/labels';
-import { workflowColumns } from './constants';
+import { STAGE_COLOR, STAGE_SHORT } from '@/lib/labels';
+import { CHART_STAGE_ORDER, chartStageCounts, chartStageLabel, workflowColumns } from './constants';
 import { useSession } from '@/providers/SessionProvider';
 
 /** A stacked column per domain (tallest first), split by the stage its open bookings are in, the stage legend beside it; a segment opens those bookings. */
@@ -19,11 +19,11 @@ export function StageBars({ byTypeStage, onlyTypes, onPickType, pickedType }) {
   const tip = useChartTooltip();
 
   const rows = Object.entries(byTypeStage)
-    .map(([type, stages]) => ({ type: Number(type), stages, total: Object.values(stages).reduce((sum, n) => sum + (n ?? 0), 0) }))
+    .map(([type, stages]) => ({ type: Number(type), stages: chartStageCounts(type, stages), total: Object.values(stages).reduce((sum, n) => sum + (n ?? 0), 0) }))
     .filter((row) => row.total > 0 && (!onlyTypes || onlyTypes.includes(row.type)))
     .sort((a, b) => b.total - a.total);
   const widest = Math.max(1, ...rows.map((row) => row.total));
-  const usedStages = STAGE_ORDER.filter((id) => rows.some((row) => row.stages[id]));
+  const usedStages = CHART_STAGE_ORDER.filter((id) => rows.some((row) => row.stages[id]));
 
   const chartRow = rows.find((row) => row.type === chartType);
 
@@ -37,19 +37,19 @@ export function StageBars({ byTypeStage, onlyTypes, onPickType, pickedType }) {
             <div className="sbar" key={row.type}>
               <b className="num">{row.total}</b>
               <span className="stack" style={{ height: `${Math.max(4, (row.total / widest) * 100)}%` }}>
-                {STAGE_ORDER.filter((id) => row.stages[id]).map((id) => (
+                {CHART_STAGE_ORDER.filter((id) => row.stages[id]).map((id) => (
                   <button
                     key={id}
                     type="button"
                     style={{ flex: row.stages[id], background: STAGE_COLOR[id] }}
                     {...tip.bind({
                       color: STAGE_COLOR[id],
-                      title: STAGE_SHORT[id],
+                      title: chartStageLabel(id, row.type),
                       value: row.stages[id],
                       unit: 'קריאות',
                       sub: `${typeName(row.type)} · ${Math.round((row.stages[id] / row.total) * 100)}% מהפתוחות · לחיצה פותחת אותן`,
                     })}
-                    aria-label={`${typeName(row.type)} - ${STAGE_SHORT[id]}: ${row.stages[id]}`}
+                    aria-label={`${typeName(row.type)} - ${chartStageLabel(id, row.type)}: ${row.stages[id]}`}
                     onClick={() => router.push(`/requests?view=open&types=${row.type}&stage=${id}`)}
                   />
                 ))}
@@ -95,7 +95,7 @@ export function StageColumns({ stages, onPick, bookingTypeId }) {
   const { catalog } = useSession();
   // only the stages of this domain's workflow (the barber has one, a shipment has the control officer and the suppliers);
   // a stage that still holds bookings always shows, so nothing open is hidden
-  const shown = workflowColumns(bookingTypeId, catalog, stages, STAGE_ORDER);
+  const shown = workflowColumns(bookingTypeId, catalog, stages, CHART_STAGE_ORDER);
   const tallest = Math.max(1, ...shown.map((id) => stages[id] ?? 0));
 
   return (
@@ -108,12 +108,12 @@ export function StageColumns({ stages, onPick, bookingTypeId }) {
             type="button"
             className="vbar"
             disabled={count === 0}
-            aria-label={`${STAGE_SHORT[id]}: ${count}`}
+            aria-label={`${chartStageLabel(id, bookingTypeId)}: ${count}`}
             onClick={() => onPick(id)}
           >
             <b className="num">{count}</b>
             <span className="col" style={{ height: `${(count / tallest) * 100}%`, background: STAGE_COLOR[id] }} />
-            <span className="lab">{STAGE_SHORT[id]}</span>
+            <span className="lab">{chartStageLabel(id, bookingTypeId)}</span>
           </button>
         );
       })}

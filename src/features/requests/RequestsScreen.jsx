@@ -272,7 +272,7 @@ export function RequestsScreen() {
             <div ref={scroller} className="queue-scroll">
               <div className="tickets" aria-busy={query.isFetching || undefined}>
                 {rows.map((row) => (
-                  <Ticket key={row.serial_number} booking={row} onAction={action.start} outcome={action.outcomes[row.serial_number]} />
+                  <Ticket key={row.serial_number} booking={row} onAction={action.start} outcome={action.outcomes[row.serial_number]} showSelectedIdentity={false} />
                 ))}
               </div>
               <div ref={sentinel} />

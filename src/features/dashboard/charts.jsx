@@ -68,17 +68,27 @@ export function TrendChart({ points, height = 260 }) {
   const x = (i) => pad.left + (i * (width - pad.left - pad.right)) / (points.length - 1);
   const y = (v) => height - pad.bottom - (v * (height - pad.top - pad.bottom)) / max;
   const line = (key) => points.map((p, i) => `${x(i)},${y(p[key])}`).join(' ');
-  const yTicks = [0, 0.25, 0.5, 0.75, 1].map((f) => Math.round(max * f));
+  const yTicks = [...new Set([0, 0.25, 0.5, 0.75, 1].map((f) => Math.round(max * f)))];
   const xCount = Math.min(points.length, Math.max(2, Math.floor(width / 110)));
   const xTicks = Array.from({ length: xCount }, (_, k) => Math.round((k * (points.length - 1)) / (xCount - 1)));
 
   const onMove = (event) => {
     const rect = event.currentTarget.getBoundingClientRect();
-    const px = event.clientX - rect.left;
-    const i = Math.round(((px - pad.left) / (width - pad.left - pad.right)) * (points.length - 1));
-    setHover(Math.min(points.length - 1, Math.max(0, i)));
+    if (!rect.width) return;
+    const px = ((event.clientX - rect.left) / rect.width) * width;
+    const fraction = (px - pad.left) / (width - pad.left - pad.right);
+    setHover(Math.min(1, Math.max(0, fraction)));
   };
-  const shown = hover === null ? null : points[hover];
+  // The guide follows the pointer continuously. The tooltip shows the nearest day's counts.
+  const hoverIndex = hover === null ? null : hover * (points.length - 1);
+  const dayIndex = hoverIndex === null ? null : Math.round(hoverIndex);
+  const shown = dayIndex === null ? null : points[dayIndex];
+  const markerY = (key, index) => {
+    const first = Math.floor(index);
+    const second = Math.ceil(index);
+    const start = points[first][key];
+    return y(start + (points[second][key] - start) * (index - first));
+  };
 
   return (
     <>
@@ -99,16 +109,16 @@ export function TrendChart({ points, height = 260 }) {
           ))}
           <polyline points={line('opened')} fill="none" style={{ stroke: 'var(--chart-a)' }} strokeWidth={2} strokeLinejoin="round" />
           <polyline points={line('closed')} fill="none" style={{ stroke: 'var(--chart-b)' }} strokeWidth={2} strokeLinejoin="round" />
-          {shown && hover !== null ? (
+          {shown && hoverIndex !== null ? (
             <g>
-              <line x1={x(hover)} x2={x(hover)} y1={pad.top} y2={height - pad.bottom} stroke="var(--mute)" strokeDasharray="3 3" />
-              <circle cx={x(hover)} cy={y(shown.opened)} r={4.5} style={{ fill: 'var(--chart-a)' }} stroke="var(--surface)" strokeWidth={2} />
-              <circle cx={x(hover)} cy={y(shown.closed)} r={4.5} style={{ fill: 'var(--chart-b)' }} stroke="var(--surface)" strokeWidth={2} />
+              <line x1={x(hoverIndex)} x2={x(hoverIndex)} y1={pad.top} y2={height - pad.bottom} stroke="var(--mute)" strokeDasharray="3 3" />
+              <circle cx={x(hoverIndex)} cy={markerY('opened', hoverIndex)} r={4.5} style={{ fill: 'var(--chart-a)' }} stroke="var(--surface)" strokeWidth={2} />
+              <circle cx={x(hoverIndex)} cy={markerY('closed', hoverIndex)} r={4.5} style={{ fill: 'var(--chart-b)' }} stroke="var(--surface)" strokeWidth={2} />
             </g>
           ) : null}
         </svg>
-        {shown && hover !== null ? (
-          <div className="trend-tip" style={{ left: Math.min(width - 150, Math.max(0, x(hover) + 12)) }}>
+        {shown && hoverIndex !== null ? (
+          <div className="trend-tip" style={{ left: Math.min(width - 150, Math.max(0, x(hoverIndex) + 12)) }}>
             <b>{fmtDate(shown.day)}</b>
             <span>
               <i style={{ background: 'var(--chart-a)' }} />

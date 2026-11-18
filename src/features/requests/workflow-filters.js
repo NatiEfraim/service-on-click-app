@@ -1,4 +1,5 @@
 import { STAGE_FILTER_ORDER } from '@/lib/labels';
+import { topicHandlerRole } from '@/lib/topicTypes';
 
 const COMMON_STATUSES = [1, 15, 16, 3, 4, 5, 6, 7];
 const TERMINAL = new Set([4, 5, 6, 7, 12, 13]);
@@ -12,6 +13,7 @@ export function workflowFilterOptions(me, catalog, selectedTypes = '') {
   for (const type of types) {
     const barber = type.name === 'barber_booking' || Number(type.id) === 5;
     const ids = (catalog.booking_type_statuses?.[String(type.id)] ?? (barber ? [1, 6, 11, 12, 13] : COMMON_STATUSES)).map(Number);
+    if (topicHandlerRole(type.id)) stages.add('topic_handler');
     const officer = ids.some((id) => [14, 17, 18].includes(id));
     for (const id of ids) {
       statuses.add(id);
@@ -27,7 +29,7 @@ export function workflowFilterOptions(me, catalog, selectedTypes = '') {
     }
   }
   return {
-    stages: [...STAGE_FILTER_ORDER, 'closed'].filter((stage) => stages.has(stage)),
+    stages: [...STAGE_FILTER_ORDER, 'topic_handler', 'closed'].filter((stage) => stages.has(stage)),
     statuses: (catalog.statuses ?? []).filter((status) => statuses.has(Number(status.id))),
   };
 }

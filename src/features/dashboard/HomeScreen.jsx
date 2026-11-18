@@ -11,7 +11,8 @@ import { EmptyState, ErrorNotice, Loading } from '@/components/ui/Feedback';
 import { PageHead } from '@/components/ui/PageHead';
 import { insightsApi } from '@/lib/api/endpoints';
 import { keys } from '@/lib/api/keys';
-import { domainColor, STAGE_COLOR, STAGE_ORDER, STAGE_SHORT } from '@/lib/labels';
+import { domainColor, STAGE_COLOR } from '@/lib/labels';
+import { CHART_STAGE_ORDER, chartStageCounts, chartStageLabel } from './constants';
 import { useSession } from '@/providers/SessionProvider';
 import { StageDonut } from './StageDonut';
 import { StageColumns } from './StageBars';
@@ -108,7 +109,7 @@ export function HomeScreen() {
     if (chartType === null) setChartType(shownType);
     else setFading(true);
   }
-  const shownStages = chartType === null ? {} : byTypeStage[chartType] ?? {};
+  const shownStages = chartType === null ? {} : chartStageCounts(chartType, byTypeStage[chartType] ?? {});
   pendingType.current = shownType;
   const shownTotal = Object.values(shownStages).reduce((sum, n) => sum + (n ?? 0), 0);
 
@@ -214,10 +215,10 @@ export function HomeScreen() {
           <div className="hcols-main">
             {/* first in the DOM, so in right-to-left it sits on the right */}
             <div className="legend hcols-legend">
-              {STAGE_ORDER.filter((id) => shownStages[id] > 0).map((id) => (
+              {CHART_STAGE_ORDER.filter((id) => shownStages[id] > 0).map((id) => (
                 <span key={id}>
                   <i style={{ background: STAGE_COLOR[id] }} />
-                  {STAGE_SHORT[id]}
+                  {chartStageLabel(id, chartType)}
                 </span>
               ))}
             </div>

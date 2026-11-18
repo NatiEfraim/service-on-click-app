@@ -187,6 +187,7 @@ button.rq-counter:focus-visible { outline: 2px solid var(--accent); outline-offs
 .rq-hit-pic { width: 22px; height: 22px; display: grid; place-items: center; flex: none; }
 .rq-hit-pic img { width: 22px; height: 22px; }
 /* "הקריאה נשלחה בהצלחה" above the list */
+.rq-sent-slot { overflow: hidden; }
 .rq-sent { margin-bottom: 10px; }
 
 /* the panel's head: the title, then "סימון הכל כנקרא" and "לכל הקריאות"; it keeps the button's height, so nothing
@@ -469,14 +470,16 @@ button.rq-counter:focus-visible { outline: 2px solid var(--accent); outline-offs
   to { opacity: 1; transform: none; }
 }
 .rq-row.arriving::after {
+  /* THE GLOW'S COLOUR - change this one value and the whole glow follows (a token such as var(--accent-teal), or #hex) */
+  --arrive-glow: var(--accent-teal);
   content: '';
   position: absolute;
   inset: 0;
   border-radius: inherit;
   pointer-events: none;
-  background: color-mix(in srgb, var(--accent) 9%, transparent);
+  background: color-mix(in srgb, var(--arrive-glow) 9%, transparent);
   /* all inside the row: the list box clips what spills past its edges (it scrolls), so an outer halo was cut off */
-  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent), inset 0 0 16px color-mix(in srgb, var(--accent) 22%, transparent);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--arrive-glow) 55%, transparent), inset 0 0 16px color-mix(in srgb, var(--arrive-glow) 22%, transparent);
   opacity: 0;
   animation: rq-arrive-glow 2500ms var(--ease-out) 580ms both;
 }

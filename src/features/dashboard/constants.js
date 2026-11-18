@@ -1,3 +1,18 @@
+import { STAGE_ORDER, STAGE_SHORT } from '@/lib/labels';
+import { topicHandlerName } from '@/lib/topicTypes';
+
+export const CHART_STAGE_ORDER = ['topic_handler', ...STAGE_ORDER];
+
+export function chartStageLabel(stage, bookingTypeId) {
+  return stage === 'topic_handler' ? topicHandlerName(bookingTypeId) ?? STAGE_SHORT.topic_handler : STAGE_SHORT[stage];
+}
+
+export function chartStageCounts(bookingTypeId, stages) {
+  if (!topicHandlerName(bookingTypeId)) return stages;
+  const { vice_approver = 0, approver = 0, ...remaining } = stages;
+  return { ...remaining, topic_handler: vice_approver + approver };
+}
+
 /** How a stage's severity is shown in the bottleneck table. */
 export const SEVERITY = {
   critical: { label: 'חריגה', tone: 'bad' },
@@ -59,5 +74,8 @@ export const STAT_COLOR = { open: '#3D314A', awaiting: '#2E7470', overdue: '#B44
  */
 export function workflowColumns(bookingTypeId, catalog, stages, order) {
   const workflow = bookingTypeId == null ? order : pipelineStagesFor([bookingTypeId], catalog);
+  if (topicHandlerName(bookingTypeId)) {
+    return order.filter((id) => id === 'topic_handler' || id === 'realization' || (stages[id] ?? 0) > 0);
+  }
   return order.filter((id) => workflow.includes(id) || (id === 'supplier_files' && workflow.includes('supplier_approval')) || (stages[id] ?? 0) > 0);
 }

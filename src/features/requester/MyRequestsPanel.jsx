@@ -16,7 +16,7 @@ import { SearchField } from '@/components/ui/SearchField';
 import { SmoothSize } from '@/components/ui/SmoothSize';
 import { usePresence } from '@/components/ui/usePresence';
 import { OPEN_STATUS_IDS } from '@/lib/api/endpoints';
-import { EASE_IN_OUT, prefersReducedMotion } from '@/lib/motion';
+import { EASE_IN_OUT, EASE_OUT, prefersReducedMotion } from '@/lib/motion';
 import { useDebounced } from '@/lib/useDebounced';
 import { useFitToWindow } from '@/lib/useFitToWindow';
 import { RequestDrawer } from './RequestDrawer';
@@ -111,8 +111,57 @@ function HomeScrollBody({ children }) {
   return <div className="fit-fill scroll-y rq-mine-scroll">{children}</div>;
 }
 
+function SentNotice({ sent, closing, onDismiss, onClosed }) {
+  const slot = useRef(null);
+  const animation = useRef(null);
+
+  useEffect(() => () => {
+    animation.current?.cancel();
+    animation.current = null;
+  }, []);
+
+  const dismiss = async () => {
+    const element = slot.current;
+    if (!element || animation.current) return;
+
+    const reduced = prefersReducedMotion();
+    const fadeDuration = reduced ? 180 : 220;
+    const fade = element.animate([{ opacity: 1 }, { opacity: 0 }], {
+      duration: fadeDuration,
+      easing: EASE_OUT,
+      fill: 'forwards',
+    });
+    animation.current = fade;
+    onDismiss();
+
+    try {
+      await fade.finished;
+      const collapse = element.animate(
+        [{ height: `${element.getBoundingClientRect().height}px` }, { height: '0px' }],
+        { duration: reduced ? 180 : 280, easing: EASE_IN_OUT, fill: 'forwards' },
+      );
+      animation.current = collapse;
+      await collapse.finished;
+      onClosed();
+    } catch (error) {
+      if (error.name !== 'AbortError') throw error;
+    }
+  };
+
+  return (
+    <div ref={slot} className="rq-sent-slot" inert={closing}>
+      <Notice tone="ok" className="rq-sent" action={<Button size="sm" variant="ghost" icon="x" aria-label="סגירה" onClick={dismiss} />}>
+        הקריאה נשלחה בהצלחה. מספר הקריאה: <b className="serial">{sent}</b>
+      </Notice>
+    </div>
+  );
+}
+
 export function MyRequestsPanel({ full = false, extraCategories = null, category, onCategory, bucket: rawBucket = null, onBucket = () => {}, sent = null, onSentSeen = () => {}, onAll, openId = null, onOpened = () => {} }) {
   const bucket = BUCKETS.some((option) => option.id === rawBucket) ? rawBucket : null;
+  // Keep the notice on screen during its exit even though the URL is cleared immediately.
+  const [closingSent, setClosingSent] = useState(null);
+  const noticeSerial = sent ?? closingSent;
   // the categories (topics and domains) come from GET /requester/catalog, already limited to what the user may open
   const categories = useCatalog();
   const requests = useMyRequests({ openOnly: !full });
@@ -300,7 +349,7 @@ export function MyRequestsPanel({ full = false, extraCategories = null, category
   const sorted = full ? [...filtered].sort(sortBy.compare) : allRows.slice(0, PANEL_ROWS);
   // the request just sent leads the list: request numbers are not in opening order, so within today's requests the sort
   // alone could place it anywhere
-  const sentIndex = full && sent != null ? sorted.findIndex((row) => String(row.serial) === String(sent)) : -1;
+  const sentIndex = full && noticeSerial != null ? sorted.findIndex((row) => String(row.serial) === String(noticeSerial)) : -1;
   const rows = sentIndex > 0 ? [sorted[sentIndex], ...sorted.slice(0, sentIndex), ...sorted.slice(sentIndex + 1)] : sorted;
 
   return (
@@ -363,11 +412,17 @@ export function MyRequestsPanel({ full = false, extraCategories = null, category
         })}
       </div>
       )}
-      {full && sent ? (
-        // just sent from a form (?sent=<serial>): its number, as the API guide asks
-        <Notice tone="ok" className="rq-sent" action={<Button size="sm" variant="ghost" icon="x" aria-label="סגירה" onClick={onSentSeen} />}>
-          הקריאה נשלחה בהצלחה. מספר הקריאה: <b className="serial">{sent}</b>
-        </Notice>
+      {full && noticeSerial ? (
+        <SentNotice
+          key={noticeSerial}
+          sent={noticeSerial}
+          closing={noticeSerial === closingSent}
+          onDismiss={() => {
+            setClosingSent(noticeSerial);
+            onSentSeen(noticeSerial);
+          }}
+          onClosed={() => setClosingSent(null)}
+        />
       ) : null}
       {full ? (
         <>

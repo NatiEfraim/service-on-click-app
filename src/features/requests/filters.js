@@ -73,7 +73,7 @@ export function toApiParams(filters, perPage = 25) {
   return {
     q: filters.q,
     types: filters.types,
-    stage: filters.stage,
+    stage: filters.stage === 'topic_handler' ? 'vice_approver,approver' : filters.stage,
     statuses: filters.statuses,
     units: filters.units,
     handler: filters.handler,
