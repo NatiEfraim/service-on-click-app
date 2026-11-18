@@ -11,7 +11,7 @@ import { useOutsideClose } from '@/components/ui/useOutsideClose';
 import { useWindowMeasure } from '@/components/ui/useWindowMeasure';
 
 /** An icon per role in the permissions peek. */
-const ROLE_ICON = { admin: 'shield', approver: 'check', vice_approver: 'users', transportation_control_officer: 'car' };
+const ROLE_ICON = { admin: 'shield', approver: 'check', vice_approver: 'users', transportation_control_officer: 'car', infosec_officer: 'shield', ict_handler: 'layers', interview_coordinator: 'calendar', department_security_officer: 'user' };
 
 /** An eye beside the changed person: a quick look at the permissions they hold now, grouped by role. */
 export function PermissionsPeek({ person }) {

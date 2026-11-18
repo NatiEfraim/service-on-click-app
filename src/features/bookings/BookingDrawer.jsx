@@ -21,7 +21,16 @@ const SWAP_OUT_MS = 90;
 export function BookingDrawer({ bookingKey, onClose, onGo }) {
   const [decidedKey, setDecidedKey] = useState(null);
   const closing = decidedKey === bookingKey;
-  const query = useQuery({ queryKey: keys.bookingDetail(bookingKey), queryFn: ({ signal }) => bookingsApi.get(bookingKey, signal), staleTime: 5_000, retry: false, enabled: !closing });
+  const query = useQuery({
+    queryKey: keys.bookingDetail(bookingKey),
+    queryFn: ({ signal }) => bookingsApi.get(bookingKey, signal),
+    staleTime: 5_000,
+    retry: false,
+    enabled: !closing,
+    // a request whose interview moment the scheduler waits for (stage_due_at) moves on by itself, with no push: while it
+    // is open the panel re-reads it every minute, so the screen does not go stale when the moment passes
+    refetchInterval: (current) => (current.state.data?.stage_due_at ? 60_000 : false),
+  });
 
   // Stepping to another booking crossfades: the one on screen always gets its whole fade-out (however fast the next
   // one loads, even from the cache), then the next one takes its place and fades in.

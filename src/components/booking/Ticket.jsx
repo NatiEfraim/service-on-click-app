@@ -7,12 +7,14 @@ import { Chip, NeedsDecision, StatusChip } from '@/components/ui/Chips';
 import { Icon } from '@/components/ui/Icon';
 import { useBookingDrawer } from '@/features/bookings/useBookingDrawer';
 
-import { actionTone, domainColor, STAGE_SHORT } from '@/lib/labels';
+import { actionVariant, domainColor, STAGE_SHORT } from '@/lib/labels';
+import { fmtDateTime } from '@/lib/format';
 import { DRAWER_EXIT_MS, EASE_DRAWER, prefersReducedMotion, ROW_STAMP_MS } from '@/lib/motion';
 import { usePresence } from '@/components/ui/usePresence';
 import { useSession } from '@/providers/SessionProvider';
-import { bookingActions } from '@/lib/booking-actions';
+import { orderedActions } from '@/lib/booking-actions';
 import { isHoldStatus } from '@/lib/booking-workflow';
+import { hasOwnRoute } from '@/lib/routeTypes';
 import { DomainBadge } from './DomainBadge';
 import { AgeBar, MiniRoute } from './RouteViz';
 import { useLeave, useArrive } from './ticketMotion';
@@ -55,7 +57,9 @@ export function Ticket({ booking: given, showActions = true, onAction, outcome, 
   const ref = useRef(null);
   useLeave(ref, outcome);
   useArrive(ref, entering);
-  const actions = bookingActions(booking.actions);
+  const actions = orderedActions(booking);
+  // a type with a route of its own (lib/routeTypes): the row also says who handles it and when the interview is
+  const routeType = hasOwnRoute(booking.booking_type_id);
   const owner = booking.owner_name || booking.owner_personal_id || '—';
   const open = () => drawer.open(booking.uuid ?? booking.serial_number);
   // the booking open in the side panel: its row stands out above the panel's dimming (the same look as the requester's list)
@@ -120,6 +124,18 @@ export function Ticket({ booking: given, showActions = true, onAction, outcome, 
           <span>·</span>
           <MiniRoute booking={booking} catalog={catalog} />
           <span>{booking.stage === 'closed' ? booking.status_label : (booking.stage !== 'realization' && topicHandlerName(booking.booking_type_id)) || STAGE_SHORT[booking.stage]}</span>
+          {routeType && booking.stage !== 'closed' ? (
+            <>
+              <span>·</span>
+              <span>{booking.handler_name ? `מטפל: ${booking.handler_name}` : 'ללא מטפל'}</span>
+            </>
+          ) : null}
+          {booking.stage_due_at && booking.stage !== 'closed' ? (
+            <>
+              <span>·</span>
+              <span>תחקיר {fmtDateTime(booking.stage_due_at)}</span>
+            </>
+          ) : null}
         </div>
       </div>
     </>
@@ -129,14 +145,19 @@ export function Ticket({ booking: given, showActions = true, onAction, outcome, 
       {booking.stage === 'closed' ? <StatusChip statusId={booking.status_id} label={booking.status_label} bookingTypeId={booking.booking_type_id} /> : <AgeBar booking={booking} />}
       {showActions && booking.actions.length > 0 && onAction ? (
         <div className="acts">
-          {actions.slice(0, 2).map((action) => {
-            const tone = actionTone(action);
-            return (
-              <Button key={action.status_id} size="sm" variant={tone === 'danger' ? 'danger' : tone === 'hold' ? 'hold' : 'primary'} onClick={() => onAction(booking, action)}>
-                {action.label}
-              </Button>
-            );
-          })}
+          {actions.slice(0, 2).map((action) => (
+            // a move the request is not ready for yet (no handler) is shown disabled, its reason as the hint
+            <Button
+              key={action.status_id}
+              size="sm"
+              variant={actionVariant(action)}
+              disabled={action.enabled === false}
+              data-tip={action.enabled === false ? action.disabled_reason ?? undefined : undefined}
+              onClick={() => onAction(booking, action)}
+            >
+              {action.label}
+            </Button>
+          ))}
         </div>
       ) : null}
     </div>

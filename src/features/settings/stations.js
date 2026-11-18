@@ -1,5 +1,6 @@
 import { routeFor } from '@/features/bookings/route';
 import { ROLE_NAME } from '@/lib/labels';
+import { hasOwnRoute, routeRoles } from '@/lib/routeTypes';
 import { topicHandlerRole } from '@/lib/topicTypes';
 
 
@@ -30,6 +31,10 @@ export function campCommanders(managers) {
 
 /** Stations of a booking type with their holders, inferred from its reachable statuses. */
 export function stationsForType(bookingTypeId, catalog, managers) {
+  // a type with a route of its own (lib/routeTypes): whoever submits it, owns it and schedules its interview
+  if (hasOwnRoute(bookingTypeId)) {
+    return routeRoles(bookingTypeId, catalog).map((role) => ({ id: role.name, label: role.label ?? ROLE_NAME[role.name] ?? role.name, people: peopleWithRoles(managers, [role.name]) }));
+  }
   // ביטחון מידע / תקשוב: no approval route, one role handles the request (קצין ביטחון מידע / מנהל תקשוב)
   const handler = topicHandlerRole(bookingTypeId);
   if (handler) return [{ id: handler, label: ROLE_NAME[handler], people: peopleWithRoles(managers, [handler]) }];

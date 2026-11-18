@@ -1,18 +1,22 @@
-import { routeFor, routePosition } from '@/features/bookings/route';
+import { bookingRoute } from '@/features/bookings/route';
 
-import { fmtHours } from '@/lib/format';
+import { fmtDateTime, fmtHours } from '@/lib/format';
 import { DEFAULT_WARN_RATIO, targetHoursOr } from '@/lib/targets';
+
+/** The stations a booking passed, each with the time it reached it (a route type's `progress[]`): a small line under its name. */
+export function withTimes(stations, here) {
+  return stations.map((station, index) => (index !== here && station.at ? { ...station, sub: fmtDateTime(station.at) } : station));
+}
 
 /** The full approval route with the booking's position. */
 export function Rail({ booking, catalog, history }) {
-  const stations = routeFor(booking, catalog, history);
-  const { here, mode } = routePosition(booking, stations);
+  const { stations, here, mode } = bookingRoute(booking, catalog, history);
 
   const status = mode === 'hold' || mode === 'stopped' ? booking.status_label
     : mode === 'finished' ? 'הושלמה' : fmtHours(booking.stage_age_hours);
 
   return (
-    <ApprovalTrack stations={stations} here={here} mode={mode} label={booking.stage_label}>
+    <ApprovalTrack stations={withTimes(stations, here)} here={here} mode={mode} label={booking.stage_label}>
       <span className="sub">{status}</span>
     </ApprovalTrack>
   );
@@ -36,6 +40,8 @@ export function ApprovalTrack({ stations, here, mode, label, children }) {
             <div key={station.id} className={`station ${state}`.trim()}>
               <span className="dot" />
               <span className="name">{station.label}</span>
+              {/* a passed station may say when it was reached (route types); the current one carries the caller's line */}
+              {index !== here && station.sub ? <span className="sub">{station.sub}</span> : null}
               {index === here ? children : null}
             </div>
           );
@@ -47,8 +53,7 @@ export function ApprovalTrack({ stations, here, mode, label, children }) {
 
 /** The route as a row of dots, for lists. */
 export function MiniRoute({ booking, catalog }) {
-  const stations = routeFor(booking, catalog);
-  const { here, mode } = routePosition(booking, stations);
+  const { stations, here, mode } = bookingRoute(booking, catalog);
   const modeClass = { here: 'h', hold: 'hold', stopped: 'stop', finished: 'fin' }[mode];
 
   return (

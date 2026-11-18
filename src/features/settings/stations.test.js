@@ -58,3 +58,14 @@ describe('stationsForType', () => {
     expect(stationsForType(99, catalog, managers).map((s) => s.id)).toEqual(['vice_approver', 'approver', 'realization']);
   });
 });
+
+describe('the clearance grant (14): whoever works its route', () => {
+  it('lists the requester, the owner and the coordinator with their holders', () => {
+    const people = [manager('דנה', 'department_security_officer'), manager('יוסי', 'infosec_officer'), manager('מיכל', 'interview_coordinator')];
+    const stations = stationsForType(14, catalog, people);
+    expect(stations.map((s) => s.id)).toEqual(['department_security_officer', 'infosec_officer', 'interview_coordinator']);
+    expect(stations.map((s) => s.label)).toEqual(['קב"ט מחלקתי', 'קצין ביטחון מידע', 'מתאם תחקיר']);
+    expect(stations.map((s) => s.people)).toEqual([['דנה'], ['יוסי'], ['מיכל']]);
+    expect(hasEmptyStation(stationsForType(14, catalog, [manager('יוסי', 'infosec_officer')]))).toBe(true);
+  });
+});

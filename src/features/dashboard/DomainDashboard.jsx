@@ -21,7 +21,8 @@ import { keys } from '@/lib/api/keys';
 
 import { fmtAgo, fmtDateTime, fmtLongHours } from '@/lib/format';
 import { DEFAULT_TARGET_HOURS } from '@/lib/targets';
-import { topicHandlerRole } from '@/lib/topicTypes';
+import { isTopicType } from '@/lib/topicTypes';
+import { hasOwnRoute, ROUTE_STAGE_ORDER } from '@/lib/routeTypes';
 import { STAGE_COLOR, STAGE_ORDER, STAGE_SHORT } from '@/lib/labels';
 import { homeKind } from '@/lib/nav';
 import { useArrivals } from '@/lib/useArrivals';
@@ -130,9 +131,11 @@ export function DomainDashboard() {
   const isManager = Boolean(me.is_super_admin || me.is_admin);
   // the vice approver: their work only, the count in the list's title
   const handlerView = !isManager && Boolean(me.is_handler_only);
-  const myCount = data.by_stage.vice_approver ?? 0;
-  // ביטחון מידע / תקשוב requests have no handling target (one role handles them): no target line, no target button
-  const noTarget = data.booking_type_ids.length > 0 && data.booking_type_ids.every((id) => topicHandlerRole(id) !== null);
+  // only types with a route of their own (the clearance grant, lib/routeTypes): their steps stand in for the approval stages
+  const routeOnly = data.booking_type_ids.length > 0 && data.booking_type_ids.every((id) => hasOwnRoute(id));
+  const myCount = routeOnly ? (data.by_stage.interview_assignment ?? 0) + (data.by_stage.interviewed ?? 0) : data.by_stage.vice_approver ?? 0;
+  // ביטחון מידע / תקשוב requests have no handling target (their own roles handle them): no target line, no target button
+  const noTarget = data.booking_type_ids.length > 0 && data.booking_type_ids.every((id) => isTopicType(id));
   const canSetTarget = !noTarget && single !== null && me.capabilities['targets.manage'] && (me.is_super_admin || me.permissions.includes(`admin_${single}`));
   const targetText = data.target ? `יעד טיפול: ${fmtLongHours(data.target.target_hours)} מפתיחה ועד סגירה` : `יעד טיפול: ${fmtLongHours(DEFAULT_TARGET_HOURS)} מפתיחה ועד סגירה (ברירת מחדל)`;
 
@@ -258,8 +261,17 @@ export function DomainDashboard() {
       </>
       ) : null}
 
+      {/* the owner of a route type (the קצין ביטחון מידע on the clearance grant): its steps, right to left; a click lists them */}
+      {!isManager && !me.is_handler_only && routeOnly ? (
+        <div className="card stats stagger">
+          {ROUTE_STAGE_ORDER.map((stage, index) => (
+            <Stat key={stage} index={index} icon={index === 0 ? 'users' : index === 1 ? 'calendar' : index === 2 ? 'check' : 'shield'} color={STAGE_COLOR[stage]} label={STAGE_SHORT[stage]} value={data.by_stage[stage] ?? 0} foot={catalog?.stages?.find((candidate) => candidate.id === stage)?.label ?? ''} onClick={() => goStage(stage)} />
+          ))}
+        </div>
+      ) : null}
+
       {/* the domain commander: where the bookings of their domains stand, by stage; a click lists them */}
-      {!isManager && !me.is_handler_only ? (
+      {!isManager && !me.is_handler_only && !routeOnly ? (
         <div className="card stats stagger">
           {/* in route order, right to left: yours, the vice approver's, a third party's, realization */}
           <Stat index={0} icon="shield" color={STAGE_COLOR.approver} label="בטיפולך" value={data.by_stage.approver ?? 0} foot="ממתינות להחלטתך" onClick={() => goStage('approver')} />

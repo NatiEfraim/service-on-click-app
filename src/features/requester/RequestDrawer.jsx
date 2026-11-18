@@ -5,14 +5,16 @@ import { RequesterRows } from '@/components/booking/RequesterRows';
 import { SerialTitle } from '@/components/booking/SerialTitle';
 import { Fragment, useState } from 'react';
 import { DomainBadge } from '@/components/booking/DomainBadge';
-import { ApprovalTrack } from '@/components/booking/RouteViz';
+import { ApprovalTrack, withTimes } from '@/components/booking/RouteViz';
 import { Chip, StatusChip } from '@/components/ui/Chips';
 import { Drawer } from '@/components/ui/Drawer';
 import { EmptyState, ErrorNotice, Loading, Notice } from '@/components/ui/Feedback';
 import { AttachmentsPanel } from '@/features/bookings/Attachments';
+import { progressRoute } from '@/features/bookings/route';
 import { usePresence } from '@/components/ui/usePresence';
 import { holdDescription, isHoldStatus } from '@/lib/booking-workflow';
 import { fmtDate, fmtDateTime } from '@/lib/format';
+import { SECTION_LABELS } from '@/lib/routeTypes';
 import { daysSince, fetchRequestDetails, isRejectedRequest, parseDay, requestRoute, waitedLabel } from './requesterData';
 import { Celebration } from './Celebration';
 import { REQUESTER_KEY, useCatalog } from './useRequester';
@@ -67,14 +69,15 @@ function RequestStepper({ row, rows, onGo }) {
 }
 
 /**
- * The request's route, the same stations the management screens show for its domain (requestRoute): passed ones filled,
- * the current one marked (on hold, stopped or finished in its colour), with the status and how long it has been there.
+ * The request's route, the same stations the management screens show for its domain (requestRoute) - or, for a type
+ * with a route of its own, the server's progress bar (`progress`, with the time each step was reached): passed ones
+ * filled, the current one marked (on hold, stopped or finished in its colour), with the status and how long it has been there.
  */
 /** How long the station's celebration takes to fade out once it ends (requester.css: .rq-celebrate.leaving). */
 const CELEBRATION_EXIT_MS = 450;
 
-function ProgressRail({ statusId, bookingTypeId, label, since, celebrate = false, onCelebrated }) {
-  const { stations, here, mode } = requestRoute(statusId, bookingTypeId);
+function ProgressRail({ statusId, bookingTypeId, progress, label, since, celebrate = false, onCelebrated }) {
+  const { stations, here, mode } = progress ? progressRoute(progress) : requestRoute(statusId, bookingTypeId);
   // how long it has been at this step (from its last update), while it is still moving: not once completed or stopped
   const waited = mode === 'here' || mode === 'hold' ? waitedLabel(daysSince(since)) : '';
   // the celebration fades out however it ends (its own timer, or the same request's celebration in the list finishing
@@ -83,7 +86,7 @@ function ProgressRail({ statusId, bookingTypeId, label, since, celebrate = false
   const [lastCelebration, setLastCelebration] = useState(celebrate);
   if (celebrate && celebrate !== lastCelebration) setLastCelebration(celebrate);
   return (
-    <ApprovalTrack stations={stations} here={here} mode={mode} label={`${stations[here]?.label ?? ''}, ${label}`}>
+    <ApprovalTrack stations={withTimes(stations, here)} here={here} mode={mode} label={`${stations[here]?.label ?? ''}, ${label}`}>
       <span className="sub">{mode === 'finished' ? 'הושלמה' : label}</span>
       {waited ? <span className="rq-waited">{waited}</span> : null}
       {presence.mounted && lastCelebration ? <Celebration key={lastCelebration} className={`on-station${presence.closing ? ' leaving' : ''}`} rejected={isRejectedRequest(statusId)} onDone={() => onCelebrated?.()} /> : null}
@@ -91,10 +94,23 @@ function ProgressRail({ statusId, bookingTypeId, label, since, celebrate = false
   );
 }
 
+/** The rows of a details list (`dl.kv`): a label and its value, sub-fields indented. */
+function ValueRows({ items }) {
+  return items.map((item, index) => (
+    <Fragment key={`${item.label}-${index}`}>
+      <dt className={item.depth ? 'sub' : undefined} style={item.depth > 1 ? { paddingInlineStart: item.depth * 14 } : undefined}>
+        {item.label}
+      </dt>
+      <dd className={item.depth ? 'sub' : undefined}>{item.group ? '' : valueText(item.value)}</dd>
+    </Fragment>
+  ));
+}
+
 /**
  * One of the user's requests in full, sliding in from the side, laid out like the management view of a request:
- * domain and status on top, the status message, the details (requester, dates, every value filled in), comments and
- * attachments. View only. The approval route and status history are not shown: the requester endpoint does not send them.
+ * domain and status on top, the status message, the details (requester, dates, every value filled in - and, on a type
+ * with a route of its own, the handler's name and what the handlers filled, under their own heading), comments and
+ * attachments. View only. The status history is not shown: the requester endpoint does not send it.
  */
 export function RequestDrawer({ row, rows = [], onGo, onClose, celebrate = false, onCelebrated }) {
   const query = useQuery({
@@ -108,6 +124,8 @@ export function RequestDrawer({ row, rows = [], onGo, onClose, celebrate = false
   const details = query.data;
   const catalog = useCatalog();
   const typeImg = (catalog.data?.topics ?? []).flatMap((topic) => topic.groups.flatMap((group) => group.types)).find((type) => type.id === row.bookingTypeId)?.img ?? null;
+  const requesterValues = details?.values.filter((item) => item.section !== 'handler') ?? [];
+  const handlerValues = details?.values.filter((item) => item.section === 'handler') ?? [];
 
   return (
     <Drawer
@@ -144,7 +162,7 @@ export function RequestDrawer({ row, rows = [], onGo, onClose, celebrate = false
               <span className="hint">{details.statusName}</span>
             </header>
             <div className="body">
-              <ProgressRail statusId={details.statusId} bookingTypeId={row.bookingTypeId} label={details.statusName} since={details.updatedAt || details.createdAt} celebrate={celebrate} onCelebrated={onCelebrated} />
+              <ProgressRail statusId={details.statusId} bookingTypeId={row.bookingTypeId} progress={details.progress} label={details.statusName} since={details.updatedAt || details.createdAt} celebrate={celebrate} onCelebrated={onCelebrated} />
             </div>
           </section>
 
@@ -174,15 +192,23 @@ export function RequestDrawer({ row, rows = [], onGo, onClose, celebrate = false
                       <dd>{details.viceApprover}</dd>
                     </>
                   ) : null}
-                  {details.values.map((item, index) => (
-                    <Fragment key={`${item.label}-${index}`}>
-                      <dt className={item.depth ? 'sub' : undefined} style={item.depth > 1 ? { paddingInlineStart: item.depth * 14 } : undefined}>
-                        {item.label}
-                      </dt>
-                      <dd className={item.depth ? 'sub' : undefined}>{item.group ? '' : valueText(item.value)}</dd>
-                    </Fragment>
-                  ))}
+                  {details.handler ? (
+                    <>
+                      <dt>מטפל</dt>
+                      <dd>{details.handler}</dd>
+                    </>
+                  ) : null}
+                  <ValueRows items={requesterValues} />
                 </dl>
+                {/* what the handlers filled during the route (the interview's place, date and time), once they have */}
+                {handlerValues.length ? (
+                  <>
+                    <h3 className="rq-drawer-sub">{SECTION_LABELS.handler}</h3>
+                    <dl className="kv">
+                      <ValueRows items={handlerValues} />
+                    </dl>
+                  </>
+                ) : null}
               </div>
             </section>
 

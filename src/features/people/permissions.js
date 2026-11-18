@@ -1,10 +1,14 @@
 
 
 import { ROLE_NAME } from '@/lib/labels';
+import { hasOwnRoute, routeRoles } from '@/lib/routeTypes';
 import { topicHandlerRole } from '@/lib/topicTypes';
 
-/** The columns' order (roles & permissions guide): the camp commander, the stages of the approval route, then the ICT and infosec officers. */
-const ROLE_ORDER = ['admin', 'approver', 'vice_approver', 'transportation_control_officer', 'ict_handler', 'infosec_officer'];
+/**
+ * The columns' order (roles & permissions guide): the camp commander, the stages of the approval route, the ICT and
+ * infosec officers, then the clearance grant's other roles (the coordinator who schedules, the קב"ט who submits).
+ */
+const ROLE_ORDER = ['admin', 'approver', 'vice_approver', 'transportation_control_officer', 'ict_handler', 'infosec_officer', 'interview_coordinator', 'department_security_officer'];
 
 /** Roles every person has or that are not a "grant on a domain" - never drawn as a role chip. */
 const NOT_A_GRANT = new Set(['user', 'super_admin']);
@@ -108,14 +112,21 @@ export function controlOfficerTypesOf(catalog) {
     .map(([id]) => Number(id));
 }
 
+/** The roles of the clearance grant and of any other type with a route of its own (lib/routeTypes); never a grant on another type. */
+const ROUTE_ROLES = new Set(['department_security_officer', 'interview_coordinator']);
+
 /**
  * The roles a booking type has (roles & permissions guide, per-type table) - used only where the server sends no row of
- * flags to read it from (the super admin's fallback): ביטחון מידע and תקשוב (lib/topicTypes) have only their one
- * handler (the infosec officer / the ICT handler); every other type the approver, the vice approver (not the barber, 5) and the control officer (only
- * where that step exists). When the server sends a row, its flag keys are the answer and this is not used.
+ * flags to read it from (the super admin's fallback): a type with a route of its own has exactly the route's roles
+ * (lib/routeTypes: the קב"ט who submits, the infosec officer who owns it, the coordinator); ביטחון מידע and תקשוב
+ * (lib/topicTypes) have only their one handler (the infosec officer / the ICT handler); every other type the approver,
+ * the vice approver (not the barber, 5) and the control officer (only where that step exists). When the server sends a
+ * row, its flag keys are the answer and this is not used.
  */
 export function roleApplies(role, bookingTypeId) {
   const id = Number(bookingTypeId);
+  if (hasOwnRoute(id)) return routeRoles(id).some((candidate) => candidate.name === role);
+  if (ROUTE_ROLES.has(role)) return false;
   const handler = topicHandlerRole(id);
   if (handler) return role === handler;
   if (role === 'infosec_officer' || role === 'ict_handler') return false;

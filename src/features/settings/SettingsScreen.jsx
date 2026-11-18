@@ -12,7 +12,7 @@ import { useFitToWindow } from '@/lib/useFitToWindow';
 import { useSetSearchParams } from '@/lib/useSetSearchParams';
 import { useSession } from '@/providers/SessionProvider';
 import { TABS } from './constants';
-import { topicHandlerRole } from '@/lib/topicTypes';
+import { isTopicType } from '@/lib/topicTypes';
 import { BarberDaysTab } from './BarberDaysTab';
 import { DatesTab } from './DatesTab';
 import { FormTab } from './FormTab';
@@ -53,7 +53,7 @@ export function SettingsScreen() {
   // ביטחון מידע / תקשוב forms live on the website only (not in the mobile app), so the system admin edits them here:
   // the whole form (fields, their order, types and choice lists) and its choice options. Every other domain's form is
   // the mobile app's, and stays read-only until mobile synchronization is available.
-  const webForm = topicHandlerRole(bookingTypeId) !== null;
+  const webForm = isTopicType(bookingTypeId);
   if (!webForm || !me.is_super_admin) hidden.add('form');
   if (!webForm) hidden.add('options');
   // these requests have no handling target (one role handles them; there is no approval route to time)

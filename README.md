@@ -142,6 +142,21 @@ The menu is computed from `GET /me` (`capabilities`, `is_*`, `permissions`); the
 | היסטוריית שינויים | `audit.view` (super admin) | append-only log; a red banner when the hash chain does not verify |
 | סנכרון עם האפליקציה | `sync.view` (super admin) | files sent to the mobile app, blocked/failed, conflicts and their resolution |
 
+### Types with a route of their own (מתן סיווג ביטחוני, type 14)
+
+The clearance grant does not follow the approver chain: the API serves its route in `catalog.routes` (steps, roles, assignment
+rules), and `src/lib/routeTypes.js` holds the same knowledge as a fallback for screens without the catalog (the requester portal).
+Its guide is `../service-on-click-api/docs/frontend-clearance-grant-refactoring-guide.md`.
+
+- **קב"ט מחלקתי** (`department_security_officer_14`) submits it on the requester portal: the form is laid out on a 4-column grid
+  (`col_span`), the ID-number field looks the person up (`GET /requester/person-lookup`) and fills the fields with an `autofill_key`.
+- **קצין ביטחון מידע** (`infosec_officer_14`) owns it: assigns the handler, moves it back, refuses, closes; reads its settings
+  (ניהול > תחומי שירות is open to a route owner, read-only).
+- **מתאם תחקיר** (`interview_coordinator_14`) takes it, fills the handler section (place, date, time of the interview) and moves it on.
+- The drawer shows the server's `progress[]` as the route, the handler block, the handler section (`handler_fields`) and the
+  `actions[]` exactly as served (`enabled` / `disabled_reason`, `required_fields` asked for in the dialog, `clears_fields` warned about).
+  A request waiting for its interview moment (`stage_due_at`) is re-read every minute: the scheduler moves it on by itself.
+
 ## Security notes
 
 - Session = the API's HttpOnly cookie; no token is ever available to JavaScript. Logout calls `POST /api/logout` and drops all cached data.

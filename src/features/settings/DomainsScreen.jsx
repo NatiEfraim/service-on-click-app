@@ -19,7 +19,8 @@ export function DomainsScreen() {
 
   const requested = Number(search.get('unit'));
   const unitId = me.is_super_admin && catalog.units.some((unit) => unit.id === requested) ? requested : (me.user.unit_id ?? catalog.units[0]?.id ?? 0);
-  const typeIds = me.is_super_admin ? catalog.booking_types.map((type) => type.id) : me.managed_booking_types;
+  // the super admin edits every domain; the owner of a route type (lib/routeTypes) reads the ones they own
+  const typeIds = me.is_super_admin ? catalog.booking_types.map((type) => type.id) : (me.route_owner_booking_types ?? []);
 
   const setUnit = (id) => setParams({ unit: String(id) });
 

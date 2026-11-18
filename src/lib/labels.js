@@ -23,6 +23,11 @@ export const STAGE_SHORT = {
   realization: 'מימוש וסגירה',
   barber: 'ממתין לספר',
   closed: 'סגורה',
+  // the clearance grant's own route (lib/routeTypes): assignment, the interview set, held, the clearance awaited
+  interview_assignment: 'הקצאה לתחקיר',
+  interview_scheduled: 'נקבע מול המועמד',
+  interviewed: 'תוחקר',
+  awaiting_clearance: 'ממתין לקבלת הכשר',
 };
 
 /** One colour per stage for the dashboard charts. */
@@ -37,6 +42,10 @@ export const STAGE_COLOR = {
   realization: '#14915F',
   barber: '#39828C',
   closed: '#8A8296',
+  interview_assignment: '#8C3F68',
+  interview_scheduled: '#39828C',
+  interviewed: '#AD903F',
+  awaiting_clearance: '#1F8E8B',
 };
 
 export const WAIT_LABEL = {
@@ -56,12 +65,17 @@ export const ROLE_NAME = {
   // the ביטחון מידע and תקשוב handlers (RoleEnum on the API)
   infosec_officer: 'קצין ביטחון מידע',
   ict_handler: 'מנהל תקשוב',
+  // the clearance grant's route (lib/routeTypes): the one who submits and the one who schedules the interview
+  department_security_officer: 'קב"ט מחלקתי',
+  interview_coordinator: 'מתאם תחקיר',
   user: 'משתמש',
 };
 
 export const SOURCE_LABEL = {
   external: { label: 'אפליקציה', tone: 'ext' },
   internal: { label: 'פנימית', tone: 'int' },
+  // a request submitted on this website's requester portal
+  web: { label: 'אתר', tone: 'int' },
   system: { label: 'אוטומטי', tone: 'sys' },
   automation: { label: 'אוטומטי', tone: 'sys' },
 };
@@ -116,18 +130,30 @@ export function domainIconSrc(bookingTypeId, name = REQUEST_TYPE_NAMES[bookingTy
 
 
 export function statusTone(statusId) {
-  if (statusId === 5) return 'ok';
+  // 105: the clearance grant's successful end (lib/routeTypes)
+  if ([5, 105].includes(statusId)) return 'ok';
   if ([4, 6, 7, 12, 13, 16, 18].includes(statusId)) return 'bad';
   if ([8, 9, 10].includes(statusId)) return 'hold';
-  if ([3, 11, 15, 17].includes(statusId)) return 'acc';
+  // 102-104: the interview is set, held, the clearance awaited
+  if ([3, 11, 15, 17, 102, 103, 104].includes(statusId)) return 'acc';
   return 'warn';
 }
 
-/** Reject / cancel are destructive, supplier waits are "hold", the rest are primary. */
+/**
+ * Reject / cancel are destructive, supplier waits are "hold", a move back along a route is "secondary" (a plain button),
+ * the rest are primary. A route's action says its `direction` (forward | back | close | reject); a generic one is
+ * known by the status it leads to.
+ */
 export function actionTone(action) {
-  if ([4, 7, 12, 16, 18].includes(action.status_id)) return 'danger';
+  if ([4, 7, 12, 16, 18].includes(action.status_id) || action.direction === 'reject') return 'danger';
   if ([8, 9, 10].includes(action.status_id)) return 'hold';
+  if (action.direction === 'back') return 'secondary';
   return 'primary';
+}
+
+/** The Button variant of an action's tone. */
+export function actionVariant(action) {
+  return { danger: 'danger', hold: 'hold', secondary: 'default' }[actionTone(action)] ?? 'primary';
 }
 
 /** Field types with options: select, radio, checkbox, multi-select. */

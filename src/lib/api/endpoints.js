@@ -26,9 +26,12 @@ export const authApi = {
   },
 };
 
-/** Statuses of a closed booking (mirror the API's StatusBookingEnum::isTerminal); every other status is open. */
-export const CLOSED_STATUS_IDS = [4, 5, 6, 7, 11, 12, 13];
-export const OPEN_STATUS_IDS = [1, 2, 3, 8, 9, 10, 14, 15, 16, 17, 18];
+/**
+ * Statuses of a closed booking (mirror the API's StatusBookingEnum::isTerminal); every other status is open.
+ * 101-105 are the clearance grant's own route (lib/routeTypes): 105 closes it well, 101-104 are its open steps.
+ */
+export const CLOSED_STATUS_IDS = [4, 5, 6, 7, 11, 12, 13, 105];
+export const OPEN_STATUS_IDS = [1, 2, 3, 8, 9, 10, 14, 15, 16, 17, 18, 101, 102, 103, 104];
 
 /** A plain user (no management role): the requester endpoints the mobile app uses. */
 export const requesterApi = {
@@ -40,6 +43,12 @@ export const requesterApi = {
   catalog: (signal) => getData('/requester/catalog', undefined, signal),
   /** One booking type's form fields (GET /requester/form/{id}), with select `options` and `children`; filtered to the user's unit. */
   form: (bookingTypeId, signal) => getData(`/requester/form/${bookingTypeId}`, undefined, signal),
+  /**
+   * A person's details from an ID number (GET /requester/person-lookup), for a form whose field carries
+   * `lookup_source: "person"`: `{ found, person: { personal_number, first_name, last_name, rank } | null, message }`.
+   * 422 a bad number, 503 the source is down, 429 past 20 a minute - never call it on every keystroke.
+   */
+  personLookup: (bookingTypeId, personalId, signal) => getData('/requester/person-lookup', { booking_type_id: bookingTypeId, personal_id: personalId }, signal),
   /** The four home counters of the user's own bookings (GET /requester/counters): open, action, handling, done. */
   counters: (signal) => getData('/requester/counters', undefined, signal),
   /** Opens a booking (POST /bookings/{id}, multipart): `values[<field id>]`, optional `files[]`. Not idempotent. */
@@ -66,12 +75,20 @@ export const bookingsApi = {
   list: (params, signal) => getPage(`${APPROVER}/bookings`, params, signal).then((page) => ({ ...page, data: Array.isArray(page?.data) ? page.data.map(topicBooking) : page?.data })),
   // one booking, by its uuid (the management API's key; the serial number is for display and search only)
   get: (uuid, signal) => getData(`${APPROVER}/bookings/${uuid}`, undefined, signal).then(topicBooking),
-  /** One `idempotencyKey` per user action; a repeat returns the first result. */
+  /**
+   * One `idempotencyKey` per user action; a repeat returns the first result. On a route type (lib/routeTypes) the body
+   * may carry `values` (form_field_id -> value) for the handler fields the move needs (the interview place, date, time).
+   */
   changeStatus: (uuid, body, idempotencyKey) =>
     send('post', `${APPROVER}/bookings/${uuid}/status`, body, { headers: { 'Idempotency-Key': idempotencyKey } }),
-  /** `values`: form_field_id -> new value (`Y-m-d` for a date, `HH:MM` for a time). */
+  /** `values`: form_field_id -> new value (`Y-m-d` for a date, `HH:MM` for a time); on a route type, the handler section. */
   updateValues: (uuid, body) =>
     send('put', `${APPROVER}/bookings/${uuid}/values`, body),
+  /** Route types: `{ handler_uuid: <uuid> | null, version }` assigns the handler (מטפל), takes the request, or clears it. */
+  setHandler: (uuid, body) =>
+    send('put', `${APPROVER}/bookings/${uuid}/handler`, body),
+  /** Route types: who may be assigned - `[{ uuid, full_name, personal_number, roles }]`, the unit's holders of the route roles. */
+  handlerCandidates: (uuid, signal) => getData(`${APPROVER}/bookings/${uuid}/handler-candidates`, undefined, signal),
 };
 
 

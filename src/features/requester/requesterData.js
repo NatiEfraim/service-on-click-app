@@ -1,12 +1,14 @@
 /**
  * Everything the regular-user home reads or sends, from the website API's requester endpoints:
- * GET /requester/catalog, GET /requester/form/{id}, GET /requester/counters, POST /bookings/{id},
- * GET /bookings/my-bookings and GET /bookings/{uuid}.
+ * GET /requester/catalog, GET /requester/form/{id}, GET /requester/person-lookup, GET /requester/counters,
+ * POST /bookings/{id}, GET /bookings/my-bookings and GET /bookings/{uuid}.
  */
 
 import { OPEN_STATUS_IDS, requesterApi } from '@/lib/api/endpoints';
 import { routeFor, routePosition } from '@/features/bookings/route';
+import { fieldKind, fieldRules } from '@/lib/form-fields';
 import { domainIconSrc, requesterIconSrc } from '@/lib/labels';
+import { routeStageOf } from '@/lib/routeTypes';
 import { topicStatusLabel } from '@/lib/topicTypes';
 import { optionText, uploadAttachment, uploadAttachments } from '@/lib/booking-values';
 
@@ -17,7 +19,7 @@ export const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
 /**
  * GET /requester/catalog, shaped for the screens. The server already keeps only what the user may open
- * ("user_<id>" permission and the user's unit). Request types are identified by their booking type id.
+ * (the type's requester role and the user's unit). Request types are identified by their booking type id.
  * - topics: [{ id (server name), name, img, groups: [{ id, name, types: [{ id, key, name, description, img }] }] }]
  * - categories: each request type of the topics, then the plain domains, for "הקריאות שלי": [{ id, name, img, typeIds }]
  */
@@ -84,36 +86,20 @@ export function findType(catalog, typeId) {
   return null;
 }
 
-/** How a server field type is drawn: the input's kind, and the HTML input type for plain inputs. */
-const FIELD_KIND = {
-  text: ['text', 'text'],
-  text_box: ['text', 'text'],
-  text_area: ['textarea'],
-  tel: ['text', 'tel'],
-  email: ['text', 'email'],
-  url: ['text', 'url'],
-  number: ['text', 'number'],
-  number_with_asterisk: ['text', 'number'],
-  date: ['text', 'date'],
-  time: ['text', 'time'],
-  month: ['text', 'month'],
-  week: ['text', 'week'],
-  select: ['select'],
-  radio: ['select'],
-};
-
 /**
  * A choice as the form uses it: a "type in a value" choice (isInput) asks for a value of its own type (inputType, as
- * FIELD_KIND maps the server's type name); a list carries its sub-choices (children).
+ * lib/form-fields maps the server's type name); a list carries its sub-choices (children). `code` is the option's
+ * stable code (`secret`, `career`…) for UI logic only - the option id is what is sent.
  */
 function toChoice(raw) {
-  const [, inputType] = FIELD_KIND[raw.field_type?.name] ?? ['text', 'text'];
+  const { inputType, ltr } = fieldKind(raw.field_type?.name);
   return {
     id: raw.id,
     name: raw.name ?? '',
+    code: raw.code ?? null,
     isInput: Boolean(raw.is_input),
     inputType,
-    ltr: ['tel', 'email', 'url', 'number'].includes(inputType),
+    ltr,
     children: (raw.children ?? []).map(toChoice),
   };
 }
@@ -129,33 +115,41 @@ export function choicePath(options, id) {
   return [];
 }
 
-/** A field as the form draws it; `regex` comes from the field's `validations`. */
+/**
+ * A field as the form draws it: its input (lib/form-fields), its rules (`rules`, from `validations`, with the server's
+ * own messages), where it sits (`section`, `colSpan` on the form's 4-column grid), and the person lookup it starts
+ * (`lookupSource: "person"`) or is filled from (`autofillKey`).
+ */
 function toField(raw) {
-  const [kind, inputType] = FIELD_KIND[raw.field_type?.name] ?? ['text', 'text'];
-  let regex = null;
-  try {
-    regex = raw.validations?.regex ? new RegExp(raw.validations.regex) : null;
-  } catch {
-    regex = null;
-  }
+  const { kind, inputType, ltr } = fieldKind(raw.field_type?.name);
+  const rules = fieldRules(raw.validations);
   return {
     id: raw.id,
+    fieldName: raw.field_name ?? '',
     label: raw.field_display_name ?? raw.field_name ?? '',
     kind,
     inputType,
-    ltr: ['tel', 'email', 'url', 'number'].includes(inputType),
+    ltr,
     required: Boolean(raw.is_required),
-    regex,
+    rules,
+    regex: rules.regex,
+    section: raw.section ?? 'requester',
+    colSpan: Math.min(Math.max(Number(raw.col_span) || 1, 1), 4),
+    lookupSource: raw.lookup_source ?? null,
+    autofillKey: raw.autofill_key ?? null,
     options: (raw.options ?? []).map(toChoice),
     children: [...(raw.children ?? [])].sort((a, b) => a.position - b.position).map(toField),
   };
 }
 
-/** GET /requester/form/{id}: the fields in order (the server filters them to the user's unit). Upload fields are left to the form's own attachments. */
+/**
+ * GET /requester/form/{id}: the fields in order (the server filters them to the user's unit). Upload fields are left
+ * to the form's own attachments; the handler section (filled during the handling) is never part of the submission.
+ */
 export async function fetchForm(typeId, signal) {
   const data = await requesterApi.form(typeId, signal);
   return [...(data ?? [])]
-    .filter((raw) => !['file', 'image', 'hidden'].includes(raw.field_type?.name))
+    .filter((raw) => !['file', 'image', 'hidden'].includes(raw.field_type?.name) && raw.section !== 'handler')
     .sort((a, b) => a.position - b.position)
     .map(toField);
 }
@@ -211,46 +205,53 @@ export async function fetchMyRequests(signal, { openOnly = false } = {}) {
 
 /**
  * One request in full, for the side panel, from GET /bookings/{uuid}.
- * Shape: statusId, statusName, statusMessage, createdAt, updatedAt, viceApprover, requester {name, personalId, phone},
- * values [{label, value, depth}], files [{name, url}], comments [{id, author, createdAt, text}].
+ * Shape: statusId, statusName, statusMessage, stage ("שלב 2"), createdAt, updatedAt, viceApprover, handler (a route
+ * type's assigned handler, by name), progress (a route type's progress bar, else null), requester {name, personalId,
+ * phone}, values [{label, value, depth, section}], files [{name, url}], comments [{id, author, createdAt, text}].
  */
 export async function fetchRequestDetails(row, signal) {
   const booking = await requesterApi.booking(row.id, signal);
   // booking_values is a tree (ShowBookingResource / BookingValueFormatterService): a field may hold sub-fields
   // (form_fields), chosen options (option_fields, each an ancestor chain down to the chosen one, which may carry a typed
-  // value) or a plain value; upload fields hold their files. Flatten it into label/value rows, sub-fields indented.
+  // value) or a plain value; upload fields hold their files. Flatten it into label/value rows, sub-fields indented;
+  // each row keeps its section (the requester's details, or what the handlers filled during the route).
   const values = [];
   const attachments = Array.isArray(booking.attachments) ? booking.attachments : [];
   const legacyFiles = uploadAttachments(booking.booking_values);
-  const walk = (item, depth) => {
+  const walk = (item, depth, section) => {
     if (!item) return;
+    const own = item.section ?? section;
     const label = item.field_display_name ?? item.field_name ?? '';
     if (Array.isArray(item.value) && item.value.some((entry) => entry?.type === 'file' || entry?.type === 'image')) {
       return;
     }
     if (item.form_fields?.length) {
-      values.push({ label, value: null, depth, group: true });
-      for (const child of item.form_fields) walk(child, depth + 1);
+      values.push({ label, value: null, depth, group: true, section: own });
+      for (const child of item.form_fields) walk(child, depth + 1, own);
       return;
     }
     // the chosen option(s) by their display_name: one choice comes as an object, a multi-select as a list
     // (lib/booking-values optionText reads both, as the management side does)
     const chosen = optionText(item.option_fields);
     if (chosen) {
-      values.push({ label, value: chosen, depth });
+      values.push({ label, value: chosen, depth, section: own });
       return;
     }
-    values.push({ label, value: item.value, depth });
+    values.push({ label, value: item.value, depth, section: own });
   };
-  for (const item of booking.booking_values ?? []) walk(item, 0);
+  for (const item of booking.booking_values ?? []) walk(item, 0, 'requester');
 
   return {
     statusId: booking.status?.id ?? row.statusId,
     statusName: topicStatusLabel(booking.status?.id ?? row.statusId, row.bookingTypeId) ?? booking.status?.display_name ?? row.statusName,
     statusMessage: booking.status?.additional_message ?? null,
+    stage: booking.status?.stage ?? null,
     createdAt: booking.created_at ?? row.createdAt,
     updatedAt: booking.updated_at ?? null,
     viceApprover: booking.vice_approver?.user?.full_name ?? null,
+    handler: booking.handler?.full_name ?? null,
+    progress: Array.isArray(booking.progress) && booking.progress.length ? booking.progress : null,
+    isCancelable: Boolean(booking.is_cancelable),
     requester: booking.user ? { name: booking.user.full_name ?? '', personalId: booking.user.personal_id ?? '', phone: booking.user.phone ?? '' } : null,
     values,
     // booking_values is the established source and still carries working URLs. The newer attachments URLs are a fallback.
@@ -266,14 +267,15 @@ export async function fetchRequestDetails(row, signal) {
 
 /** The only status that waits for the requester (StatusBookingEnum::PENDING_FILE: "נדרשת השלמת קבצים מהלקוח"). */
 const WAITING_FOR_USER = 8;
-const COMPLETED = 5;
+/** Completed (5), and the clearance granted (105: the successful end of the clearance grant's route). */
+const COMPLETED_STATUS_IDS = [5, 105];
 
 /**
  * Which home counter a request falls under: done, action (waits for the user), handling (open, with someone else),
  * or null (closed without completing: rejected or cancelled). "open" is action + handling.
  */
 export function counterOf(row) {
-  if (row.statusId === COMPLETED) return 'done';
+  if (COMPLETED_STATUS_IDS.includes(row.statusId)) return 'done';
   if (row.statusId === WAITING_FOR_USER) return 'action';
   return OPEN_STATUS_IDS.includes(row.statusId) ? 'handling' : null;
 }
@@ -313,18 +315,20 @@ export function waitedLabel(days) {
 /** The barber (BookingTypeEnum::BARBER_BOOKING) and the one domain whose route starts at the control officer (הובלות). */
 const BARBER_TYPE_ID = 5;
 const CONTROL_OFFICER_TYPE_IDS = [8];
-/** The statuses that end a request (StatusBookingEnum::isTerminal). */
+/** The statuses that end a request badly (StatusBookingEnum::isTerminal, without the successful ends). */
 export const isRejectedRequest = (statusId) => [4, 12, 16, 18].includes(Number(statusId));
 
-const TERMINAL_STATUS_IDS = [4, 5, 6, 7, 12, 13];
+const TERMINAL_STATUS_IDS = [4, 5, 6, 7, 12, 13, 105];
 
 /**
  * Who or what a request is waiting for: the same answer as the API's Workflow::stageOf, which the management screens get
- * from the server (the requester endpoints do not send it). The barber waits for the barber until it answers, and its
- * approval (11) ends the route; every other domain goes received → (רמ"ד תו"ב for הובלות) → גורם מטפל → מפקד תחום
- * (or a supplier hold) → מימוש → closed.
+ * from the server (the requester endpoints do not send it). A type with a route of its own has its steps as its stages
+ * (lib/routeTypes); the barber waits for the barber until it answers, and its approval (11) ends the route; every other
+ * domain goes received → (רמ"ד תו"ב for הובלות) → גורם מטפל → מפקד תחום (or a supplier hold) → מימוש → closed.
  */
 export function stageOf(statusId, bookingTypeId) {
+  const routeStage = routeStageOf(statusId, bookingTypeId);
+  if (routeStage) return routeStage;
   if (bookingTypeId === BARBER_TYPE_ID) return TERMINAL_STATUS_IDS.includes(statusId) || statusId === 11 ? 'closed' : 'barber';
   if (TERMINAL_STATUS_IDS.includes(statusId)) return 'closed';
   switch (statusId) {
@@ -357,7 +361,7 @@ const ROUTE_CATALOG = {
 
 /**
  * A request's route, drawn exactly as the management screens draw it (features/bookings/route.js): the stations of its
- * domain, the station it is at, and how (here, hold, stopped, finished).
+ * domain, the station it is at, and how (here, hold, stopped, finished). A route type's own steps come from lib/routeTypes.
  */
 export function requestRoute(statusId, bookingTypeId) {
   const booking = { booking_type_id: bookingTypeId, status_id: statusId, stage: stageOf(statusId, bookingTypeId) };

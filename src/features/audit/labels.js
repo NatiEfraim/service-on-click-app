@@ -3,7 +3,9 @@
 export const ACTION_LABEL = {
   'booking.status_change': 'שינוי סטטוס קריאה',
   'booking.values.update': 'תיקון ערכי קריאה',
-  'booking.create': 'ניסיון פתיחת קריאה',
+  'booking.create': 'פתיחת קריאה',
+  'booking.handler_change': 'הקצאת מטפל',
+  'person.lookup': 'איתור פרטים לפי ת"ז',
   'booking.canceled_by_restriction': 'ביטול קריאה עקב הגבלה',
   'user.create': 'יצירת משתמש',
   'user.permissions.change': 'שינוי הרשאות',
@@ -41,6 +43,7 @@ export const ACTION_GROUPS = [
   { value: 'org.', label: 'יחידות ומחלקות' },
   { value: 'sync.', label: 'סנכרון' },
   { value: 'report.', label: 'דו"חות' },
+  { value: 'person.', label: 'איתור פרטים' },
 ];
 
 export const RESULT = {

@@ -2,6 +2,7 @@ import { Icon } from '@/components/ui/Icon';
 import { Select } from '@/components/ui/Select';
 
 import { OPTION_FIELD_TYPES } from '@/lib/labels';
+import { SECTION_LABELS } from '@/lib/routeTypes';
 import { PREVIEW_MAX_CHIPS } from './constants';
 
 
@@ -44,9 +45,9 @@ function Control({ node, options }) {
   return <input className="input" type={inputType} disabled />;
 }
 
-function PreviewField({ node, options }) {
+function PreviewField({ node, options, span }) {
   return (
-    <>
+    <div className="st-pv-field" style={span ? { gridColumn: `span ${span}` } : undefined}>
       <label className="field">
         <span>
           {node.field.field_display_name}
@@ -70,20 +71,40 @@ function PreviewField({ node, options }) {
           ))}
         </div>
       ) : null}
-    </>
+    </div>
   );
 }
 
-/** Preview of the form as the requester sees it; nested fields are indented under their parent. */
-export function FormPreview({ roots, options }) {
+/**
+ * Preview of the form as the requester sees it; nested fields are indented under their parent. A form designed on a
+ * 4-column grid (a route form, lib/routeTypes: a field wider than a quarter of the row, or a section the handlers
+ * fill) is drawn on that grid, its two sections under their names.
+ */
+export function FormPreview({ roots, options, sections = [] }) {
+  const routeForm = roots.some((node) => node.field.section === 'handler' || Number(node.field.col_span) > 1);
+  const label = (id) => sections.find((section) => section.id === id)?.label ?? SECTION_LABELS[id] ?? id;
+  const groups = routeForm
+    ? ['requester', 'handler'].map((id) => ({ id, label: label(id), nodes: roots.filter((node) => (node.field.section ?? 'requester') === id) })).filter((group) => group.nodes.length)
+    : [{ id: 'all', label: null, nodes: roots }];
+
   return (
     <div className="st-form-preview">
       <h3 id="st-preview-title">כך הטופס ייראה למבקש</h3>
-      <div className="preview-form" role="group" aria-labelledby="st-preview-title">
-        {roots.map((node) => (
-          <PreviewField key={node.field.id} node={node} options={options} />
-        ))}
-      </div>
+      {groups.map((group) => (
+        <div key={group.id} className="st-pv-section">
+          {group.label ? (
+            <h4 className="st-pv-section-title">
+              {group.label}
+              {group.id === 'handler' ? <span className="small muted"> · ממולא במהלך הטיפול, לא בהגשה</span> : null}
+            </h4>
+          ) : null}
+          <div className="preview-form" role="group" aria-labelledby="st-preview-title" style={routeForm ? { '--pv-cols': 4 } : undefined}>
+            {group.nodes.map((node) => (
+              <PreviewField key={node.field.id} node={node} options={options} span={routeForm ? Math.min(Math.max(Number(node.field.col_span) || 1, 1), 4) : 0} />
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

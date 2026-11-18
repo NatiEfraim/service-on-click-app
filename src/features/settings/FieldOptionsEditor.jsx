@@ -46,10 +46,16 @@ export function FieldOptionsEditor({ unitId, bookingTypeId, settings, field, can
     if (ok) removal.mutate(node.option);
   }
 
-  // names already used at the level the dialog writes to
-  const siblingsFor = ({ option, parent }) => {
+  // the options already at the level the dialog writes to
+  const siblingOptions = ({ option, parent }) => {
     const parentId = parent?.id ?? option?.parent_id ?? null;
-    return (settings.options ?? []).filter((other) => other.form_field_id === field.id && other.parent_id === parentId && other.id !== option?.id).map((other) => other.name);
+    return (settings.options ?? []).filter((other) => other.form_field_id === field.id && other.parent_id === parentId && other.id !== option?.id);
+  };
+  // their names (one name once at a level); a level whose options all carry a code wants one on a new option too
+  const siblingsFor = (target) => siblingOptions(target).map((other) => other.name);
+  const requireCodeFor = (target) => {
+    const others = siblingOptions(target);
+    return others.length > 0 && others.every((other) => other.code);
   };
 
   return (
@@ -88,6 +94,7 @@ export function FieldOptionsEditor({ unitId, bookingTypeId, settings, field, can
           field={field}
           target={target}
           siblings={siblingsFor(target)}
+          requireCode={requireCodeFor(target)}
           onClose={() => setTarget(null)}
         />
       ) : null}

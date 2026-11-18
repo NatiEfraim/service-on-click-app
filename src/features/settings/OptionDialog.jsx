@@ -13,11 +13,15 @@ import { useSaveMutation } from '@/lib/useSaveMutation';
 
 import { OPTION_FIELD_TYPES } from '@/lib/labels';
 import { FIELD_TYPE_NUMBER, FIELD_TYPE_TEXT, INPUT_TYPES } from './constants';
-import { optionNameError } from './fieldRules';
+import { optionCodeError, optionNameError } from './fieldRules';
 import { useReloadSettings } from './useSettings';
 
-/** Add or edit an option: name, kind and field type; a new list-type option can bring closed-text sub-options. */
-export function OptionDialog({ unitId, bookingTypeId, settings, field, target, siblings, onClose }) {
+/**
+ * Add or edit an option: name, kind and field type; a new list-type option can bring closed-text sub-options.
+ * An option may carry a stable `code` (letters, digits, `_`, `-`; e.g. a clearance level `secret`) for the screens'
+ * logic; on a field whose options all have one (`requireCode`) a new option must have one too.
+ */
+export function OptionDialog({ unitId, bookingTypeId, settings, field, target, siblings, requireCode = false, onClose }) {
   const reload = useReloadSettings(unitId, bookingTypeId);
   const ids = useId();
   const { option, parent } = target;
@@ -35,9 +39,12 @@ export function OptionDialog({ unitId, bookingTypeId, settings, field, target, s
   const [name, setName] = useState(option?.name ?? '');
   const [kind, setKind] = useState(option?.is_input ? 'input' : 'choice');
   const [typeId, setTypeId] = useState(known);
+  const [code, setCode] = useState(option?.code ?? '');
   const [extras, setExtras] = useState([]);
   const [problem, setProblem] = useState('');
+  const [codeProblem, setCodeProblem] = useState('');
   const [error, setError] = useState('');
+  const savedCode = option?.code ?? '';
 
   // once the looked-up type arrives, take it (adjusted during render)
   const [seenType, setSeenType] = useState(loadedType);
@@ -54,6 +61,7 @@ export function OptionDialog({ unitId, bookingTypeId, settings, field, target, s
   const chosen = typeId !== null && types.some((type) => type.id === typeId) ? typeId : (types.find((type) => type.id === FIELD_TYPE_TEXT)?.id ?? types[0]?.id ?? null);
   const isList = chosen !== null && OPTION_FIELD_TYPES.includes(chosen);
   const offerExtras = !option && kind === 'choice' && isList;
+  const codeChanged = code.trim() !== savedCode;
 
   const mutation = useSaveMutation({
     mutationFn: async () => {
@@ -64,6 +72,8 @@ export function OptionDialog({ unitId, bookingTypeId, settings, field, target, s
         has_category: isList || Boolean(option?.has_category),
         field_type_id: chosen,
         is_input: kind === 'input',
+        // sent = set (or cleared with ""), absent = kept as it is
+        ...(codeChanged || (!option && code.trim()) ? { code: code.trim() } : {}),
       });
       const savedId = saved.data?.option_id;
       if (offerExtras && savedId) {
@@ -80,10 +90,12 @@ export function OptionDialog({ unitId, bookingTypeId, settings, field, target, s
   });
 
   function submit() {
-    const unchanged = option && name.trim() === option.name && chosen === loadedType && (kind === 'input') === Boolean(option.is_input);
+    const unchanged = option && name.trim() === option.name && chosen === loadedType && (kind === 'input') === Boolean(option.is_input) && !codeChanged;
     const found = unchanged ? 'לא בוצע שינוי.' : optionNameError(name, siblings) ?? extras.map((extra, index) => (extra.trim() ? optionNameError(extra, extras.filter((_, other) => other !== index)) : null)).find(Boolean) ?? null;
+    const codeFound = optionCodeError(code, requireCode && !option);
     setProblem(found ?? '');
-    if (found) return;
+    setCodeProblem(codeFound ?? '');
+    if (found || codeFound) return;
     setError('');
     mutation.mutate();
   }
@@ -92,7 +104,7 @@ export function OptionDialog({ unitId, bookingTypeId, settings, field, target, s
 
   return (
     <FormDialog
-      dirty={name.trim() !== (option?.name ?? '').trim() || kind !== (option?.is_input ? 'input' : 'choice') || extras.some((extra) => extra.trim() !== '') || (typeId !== null && typeId !== loadedType)}
+      dirty={name.trim() !== (option?.name ?? '').trim() || kind !== (option?.is_input ? 'input' : 'choice') || extras.some((extra) => extra.trim() !== '') || (typeId !== null && typeId !== loadedType) || codeChanged}
       title={option ? 'עריכת אפשרות' : 'אפשרות חדשה'}
       onClose={onClose}
       busy={mutation.isPending}
@@ -142,6 +154,28 @@ export function OptionDialog({ unitId, bookingTypeId, settings, field, target, s
       </Field>
       <p className="small muted" style={{ margin: 0 }}>
         {kind === 'input' ? 'המבקש יקליד ערך במקום לבחור.' : isList ? 'אפשרות מסוג רשימה מכילה תתי-אפשרויות משלה.' : 'אפשרות רגילה לבחירה.'}
+      </p>
+
+      <Field label={requireCode && !option ? 'קוד (חובה בשדה זה)' : 'קוד (רשות)'}>
+        <input
+          className="input"
+          dir="ltr"
+          maxLength={50}
+          value={code}
+          placeholder="secret, career…"
+          aria-invalid={codeProblem ? true : undefined}
+          aria-describedby={`${ids}-code-err`}
+          onChange={(event) => {
+            setCode(event.target.value);
+            setCodeProblem('');
+          }}
+        />
+      </Field>
+      <div id={`${ids}-code-err`} className="err" aria-live="polite">
+        {codeProblem}
+      </div>
+      <p className="small muted" style={{ margin: 0 }}>
+        מזהה קבוע של האפשרות למערכת (אותיות באנגלית, ספרות, קו תחתון ומקף), שאינו משתנה כששמה משתנה.
       </p>
 
       {offerExtras ? (

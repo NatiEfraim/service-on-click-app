@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { fieldNameError, fieldTypeName, newOptionsError, optionNameError, parseOptionLines, retypeChoices } from './fieldRules';
+import { fieldNameError, fieldTypeName, newOptionsError, optionCodeError, optionNameError, parseOptionLines, retypeChoices } from './fieldRules';
 
 const others = [{ field_display_name: 'שם אירוע' }, { field_display_name: 'Phone' }];
 
@@ -74,5 +74,16 @@ describe('field types', () => {
     expect(retypeChoices(types, types[2]).map((t) => t.id)).toEqual([5, 8]);
     expect(retypeChoices(types, types[0]).map((t) => t.id)).toEqual([2, 3]);
     expect(retypeChoices(types, undefined)).toHaveLength(4);
+  });
+});
+
+describe('optionCodeError', () => {
+  it('allows letters, digits, underscore and hyphen up to 50, or nothing unless required', () => {
+    expect(optionCodeError('top_secret')).toBeNull();
+    expect(optionCodeError('level-1')).toBeNull();
+    expect(optionCodeError('')).toBeNull();
+    expect(optionCodeError('', true)).toBe('יש להגדיר קוד לאפשרות בשדה זה');
+    expect(optionCodeError('סודי')).toContain('אותיות באנגלית');
+    expect(optionCodeError('a'.repeat(51))).toContain('עד 50');
   });
 });
