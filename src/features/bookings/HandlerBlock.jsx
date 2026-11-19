@@ -3,6 +3,8 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
+import { AnimatedText } from '@/components/ui/AnimatedText';
+import { Fade } from '@/components/ui/Fade';
 import { FormError, Loading } from '@/components/ui/Feedback';
 import { Field } from '@/components/ui/Field';
 import { FormDialog } from '@/components/ui/FormDialog';
@@ -88,7 +90,10 @@ export function HandlerBlock({ booking }) {
   const client = useQueryClient();
   const { me, catalog } = useSession();
   const [assigning, setAssigning] = useState(false);
+  // the block's own error (a take / clear that failed) and the dialog's (an assignment from it that failed), kept apart:
+  // opening the dialog leaves the block as it is, so nothing behind the dialog folds or jumps
   const [error, setError] = useState('');
+  const [dialogError, setDialogError] = useState('');
   const route = routeOf(booking.booking_type_id, catalog);
   const { handler } = booking;
   // the assignment may be cleared only while the request waits at the start of its route
@@ -98,46 +103,57 @@ export function HandlerBlock({ booking }) {
     mutationFn: (handlerUuid) => bookingsApi.setHandler(booking.uuid ?? booking.serial_number, { handler_uuid: handlerUuid, version: booking.version }),
     success: (result) => result?.message || (result?.data?.handler ? 'המטפל הוקצה' : 'הקצאת המטפל בוטלה'),
     reload: () => invalidateWork(client),
-    onSaved: () => setAssigning(false),
-    onHandled: () => setAssigning(false),
+    // the last error stays until a save goes through: a retry that fails the same way leaves it in place (no flicker)
+    onSaved: () => {
+      setError('');
+      setDialogError('');
+      setAssigning(false);
+    },
+    onHandled: () => {
+      setError('');
+      setDialogError('');
+      setAssigning(false);
+    },
     // a 422 (not a candidate any more) shows in the dialog when it is open, as a toast otherwise
-    onFailed: (shown) => setError(shown.message),
+    onFailed: (shown) => (assigning ? setDialogError : setError)(shown.message),
   });
-  const assign = (uuid) => {
-    setError('');
-    mutation.mutate(uuid);
-  };
+  const assign = (uuid) => mutation.mutate(uuid);
 
   return (
     <>
       <div className="handler-block">
         <Icon name="user" />
         <span>
-          <b>מטפל:</b> {handler ? handler.full_name : <span className="muted">טרם הוקצה</span>}
+          {/* a new handler (or none) crossfades with the old one */}
+          <b>מטפל:</b> <AnimatedText>{handler ? handler.full_name : <span className="muted">טרם הוקצה</span>}</AnimatedText>
         </span>
-        {handler?.assigned_at ? <span className="small muted">הוקצה {fmtDateTime(handler.assigned_at)}</span> : null}
-        {booking.can_take || booking.can_assign_handler || canClear ? (
-          <span className="handler-actions">
-            {booking.can_take ? (
-              <Button size="sm" variant="primary" icon="user" loading={mutation.isPending && mutation.variables === me.user.uuid} onClick={() => assign(me.user.uuid)}>
-                קח לטיפולי
-              </Button>
-            ) : null}
-            {booking.can_assign_handler ? (
-              <Button size="sm" icon="users" onClick={() => setAssigning(true)}>
-                {handler ? 'שינוי מטפל' : 'הקצה מטפל'}
-              </Button>
-            ) : null}
-            {canClear ? (
-              <Button size="sm" variant="danger" icon="x" loading={mutation.isPending && mutation.variables === null} onClick={() => assign(null)}>
-                ביטול הקצאה
-              </Button>
-            ) : null}
-          </span>
-        ) : null}
-        {!assigning && error ? <FormError>{error}</FormError> : null}
+        <Fade show={Boolean(handler?.assigned_at)} as="span" className="small muted">
+          הוקצה <AnimatedText>{handler?.assigned_at ? fmtDateTime(handler.assigned_at) : ''}</AnimatedText>
+        </Fade>
+        {/* each button fades in when the new state offers it and out when it no longer does (taking, assigning, clearing) */}
+        <span className="handler-actions">
+          <Fade show={booking.can_take} as="span">
+            <Button size="sm" variant="primary" icon="user" loading={mutation.isPending && mutation.variables === me.user.uuid} onClick={() => assign(me.user.uuid)}>
+              קח לטיפולי
+            </Button>
+          </Fade>
+          <Fade show={booking.can_assign_handler} as="span">
+            <Button size="sm" icon="users" onClick={() => {
+              setDialogError('');
+              setAssigning(true);
+            }}>
+              <AnimatedText>{handler ? 'שינוי מטפל' : 'הקצה מטפל'}</AnimatedText>
+            </Button>
+          </Fade>
+          <Fade show={canClear} as="span">
+            <Button size="sm" variant="danger" icon="x" loading={mutation.isPending && mutation.variables === null} onClick={() => assign(null)}>
+              ביטול הקצאה
+            </Button>
+          </Fade>
+        </span>
+        <FormError>{error}</FormError>
       </div>
-      {assigning ? <AssignHandlerDialog booking={booking} busy={mutation.isPending} error={error} onAssign={assign} onClose={() => setAssigning(false)} /> : null}
+      {assigning ? <AssignHandlerDialog booking={booking} busy={mutation.isPending} error={dialogError} onAssign={assign} onClose={() => setAssigning(false)} /> : null}
     </>
   );
 }

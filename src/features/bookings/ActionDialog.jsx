@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
 import { FieldInput } from '@/components/booking/FieldInput';
-import { FormError, Loading, Notice } from '@/components/ui/Feedback';
+import { FieldError, FormError, Loading, Notice } from '@/components/ui/Feedback';
 import { FormDialog } from '@/components/ui/FormDialog';
 import { ApiError } from '@/lib/api/client';
 import { bookingsApi } from '@/lib/api/endpoints';
@@ -192,9 +192,9 @@ export function ActionDialog({ booking, action, onClose, onDone, onDecided }) {
           }}
         />
       </label>
-      <div id="action-comment-error" className="err" aria-live="polite">
+      <FieldError id="action-comment-error">
         {fieldError}
-      </div>
+      </FieldError>
       <FormError>{error}</FormError>
     </FormDialog>
   );

@@ -1,20 +1,16 @@
 'use client';
 
-import { useMutation } from '@tanstack/react-query';
 import { useId, useState } from 'react';
-import { FormError } from '@/components/ui/Feedback';
+import { FieldError, FormError } from '@/components/ui/Feedback';
 import { Field } from '@/components/ui/Field';
 import { FormDialog } from '@/components/ui/FormDialog';
-import { ApiError } from '@/lib/api/client';
 import { orgApi } from '@/lib/api/endpoints';
-
-import { useToast } from '@/providers/UiProvider';
+import { useSaveMutation } from '@/lib/useSaveMutation';
 import { NAME_MAX, validateDepartment } from './rules';
 import { useAfterOrgChange } from './useAfterOrgChange';
 
 /** Add or rename a department of a unit. */
 export function DepartmentDialog({ unit, department, onClose }) {
-  const toast = useToast();
   const afterChange = useAfterOrgChange();
   const formId = useId();
 
@@ -23,14 +19,13 @@ export function DepartmentDialog({ unit, department, onClose }) {
   const [problem, setProblem] = useState('');
   const [formError, setFormError] = useState('');
 
-  const mutation = useMutation({
+  const mutation = useSaveMutation({
     mutationFn: (clean) => (department ? orgApi.updateDepartment(department.id, { name: clean }) : orgApi.createDepartment(unit.id, { name: clean })),
-    onSuccess: async (result) => {
-      toast(result.message || 'המחלקה נשמרה.', 'ok');
-      onClose();
-      await afterChange();
-    },
-    onError: (e) => setFormError(e instanceof ApiError ? e.message : 'השמירה נכשלה.'),
+    success: (result) => result.message || 'המחלקה נשמרה.',
+    reload: afterChange,
+    onSaved: onClose,
+    onFailed: (error) => setFormError(error.message || 'השמירה נכשלה.'),
+    onHandled: onClose,
   });
 
   function submit(event) {
@@ -64,9 +59,9 @@ export function DepartmentDialog({ unit, department, onClose }) {
               onChange={(event) => setName(event.target.value)}
             />
           </Field>
-          <div id={`${formId}-error`} className="err" aria-live="polite">
+          <FieldError id={`${formId}-error`}>
             {problem}
-          </div>
+          </FieldError>
         </div>
         <p className="small muted" style={{ margin: 0 }}>
           שם המחלקה פנימי בלבד ולא מועבר לאפליקציה.

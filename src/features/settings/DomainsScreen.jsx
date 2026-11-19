@@ -35,13 +35,7 @@ export function DomainsScreen() {
           {me.is_super_admin ? (
             <label className="st-unit">
               יחידה
-              <Select className="input" value={unitId} onChange={(event) => setUnit(Number(event.target.value))}>
-                {catalog.units.map((unit) => (
-                  <option key={unit.id} value={unit.id}>
-                    {unit.name}
-                  </option>
-                ))}
-              </Select>
+              <Select className="input" value={unitId} onChange={(event) => setUnit(Number(event.target.value))} options={catalog.units} optionLabel={(unit) => unit.name} />
             </label>
           ) : null}
         </div>

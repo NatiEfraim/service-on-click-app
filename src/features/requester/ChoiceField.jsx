@@ -34,10 +34,7 @@ export function ChoiceField({ id, field, value, typed, onChange, onTyped, invali
               onChange(event.target.value || (level.parent ? String(level.parent.id) : ''));
               onTyped('');
             }}
-          >
-            <option value="">{index === 0 ? 'בחירה…' : 'בחירת תת-אפשרות…'}</option>
-            {level.options.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}
-          </Select>
+            all={index === 0 ? 'בחירה…' : 'בחירת תת-אפשרות…'} options={level.options} optionLabel={(option) => option.name} />
         </div>
       ))}
       {chosen?.isInput ? (

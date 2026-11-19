@@ -5,7 +5,7 @@ import { Select } from '@/components/ui/Select';
 import { useId, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Seg } from '@/components/ui/Controls';
-import { FormError } from '@/components/ui/Feedback';
+import { FieldError, FormError } from '@/components/ui/Feedback';
 import { Field } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
 import { settingsApi } from '@/lib/api/endpoints';
@@ -140,9 +140,9 @@ export function FieldDialog({ unitId, bookingTypeId, settings, field, onClose })
           }}
         />
       </Field>
-      <div id={`${ids}-name-err`} className="err" aria-live="polite">
+      <FieldError id={`${ids}-name-err`}>
         <AnimatedText>{nameError}</AnimatedText>
-      </div>
+      </FieldError>
 
       <div className="field st-types">
         <label htmlFor={`${ids}-type`}>סוג השדה</label>
@@ -156,13 +156,7 @@ export function FieldDialog({ unitId, bookingTypeId, settings, field, onClose })
               setTypeId(next);
               if (!fieldTypes.find((type) => type.id === next)?.can_be_editable) setEditable(false);
             }}
-          >
-            {choices.map((type) => (
-              <option key={type.id} value={type.id}>
-                {type.display_name}
-              </option>
-            ))}
-          </Select>
+            options={choices} />
         ) : (
           <>
             <div id={`${ids}-type`} className="st-locked">
@@ -176,19 +170,12 @@ export function FieldDialog({ unitId, bookingTypeId, settings, field, onClose })
       {routeForm ? (
         isNew ? (
           <>
-            <div className="field">
-              <span>מי ממלא את השדה</span>
+            <Field as="div" label="מי ממלא את השדה">
               <Seg label="מי ממלא את השדה" value={section} onChange={setSection} options={sections.map((candidate) => ({ value: candidate.id, label: candidate.label }))} />
               <span className="small muted">{section === 'handler' ? 'ממולא על ידי הגורמים המטפלים במהלך הטיפול; אינו מוצג למבקש בהגשה.' : 'ממולא על ידי המבקש בעת ההגשה.'}</span>
-            </div>
+            </Field>
             <Field label="רוחב השדה בטופס">
-              <Select className="input" value={colSpan} onChange={(event) => setColSpan(Number(event.target.value))}>
-                {COL_SPANS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </Select>
+              <Select className="input" value={colSpan} onChange={(event) => setColSpan(Number(event.target.value))} options={COL_SPANS} />
             </Field>
           </>
         ) : (
@@ -213,9 +200,9 @@ export function FieldDialog({ unitId, bookingTypeId, settings, field, onClose })
               }}
             />
           </Field>
-          <div id={`${ids}-opt-err`} className="err" aria-live="polite">
+          <FieldError id={`${ids}-opt-err`}>
             <AnimatedText>{optionsError}</AnimatedText>
-          </div>
+          </FieldError>
         </>
       ) : null}
       {!isNew && currentType?.has_options ? (

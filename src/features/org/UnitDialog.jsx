@@ -1,21 +1,17 @@
 'use client';
 
-import { useMutation } from '@tanstack/react-query';
 import { useId, useState } from 'react';
-import { FormError } from '@/components/ui/Feedback';
+import { FieldError, FormError } from '@/components/ui/Feedback';
 import { Field } from '@/components/ui/Field';
 import { FormDialog } from '@/components/ui/FormDialog';
-import { ApiError } from '@/lib/api/client';
 import { orgApi } from '@/lib/api/endpoints';
-
-import { useToast } from '@/providers/UiProvider';
+import { useSaveMutation } from '@/lib/useSaveMutation';
 import { cleanCode, CODE_MAX, isUnnamed, NAME_MAX, validateUnit } from './rules';
 import { useAfterOrgChange } from './useAfterOrgChange';
 import './org.css';
 
 /** Add or rename a unit. The letter is fixed once created (the mobile app relies on it); edits resend it. */
 export function UnitDialog({ unit, units, onClose, onSaved }) {
-  const toast = useToast();
   const afterChange = useAfterOrgChange();
   const formId = useId();
 
@@ -25,15 +21,16 @@ export function UnitDialog({ unit, units, onClose, onSaved }) {
   const [errors, setErrors] = useState({});
   const [formError, setFormError] = useState('');
 
-  const mutation = useMutation({
+  const mutation = useSaveMutation({
     mutationFn: (input) => (unit ? orgApi.updateUnit(unit.id, { code: unit.code, name: input.name }) : orgApi.createUnit(input)),
-    onSuccess: async (result) => {
-      toast(result.message || 'היחידה נשמרה.', 'ok');
+    success: (result) => result.message || 'היחידה נשמרה.',
+    reload: afterChange,
+    onSaved: (result) => {
       onSaved(result.data.id);
       onClose();
-      await afterChange();
     },
-    onError: (e) => setFormError(e instanceof ApiError ? e.message : 'השמירה נכשלה.'),
+    onFailed: (error) => setFormError(error.message || 'השמירה נכשלה.'),
+    onHandled: onClose,
   });
 
   function submit(event) {
@@ -71,9 +68,9 @@ export function UnitDialog({ unit, units, onClose, onSaved }) {
                 onChange={(event) => setCode(cleanCode(event.target.value))}
               />
             </Field>
-            <div id={`${formId}-code-error`} className="err" aria-live="polite">
+            <FieldError id={`${formId}-code-error`}>
               {errors.code}
-            </div>
+            </FieldError>
           </div>
           <div>
             <Field label="שם היחידה (פנימי)">
@@ -88,9 +85,9 @@ export function UnitDialog({ unit, units, onClose, onSaved }) {
                 onChange={(event) => setName(event.target.value)}
               />
             </Field>
-            <div id={`${formId}-name-error`} className="err" aria-live="polite">
+            <FieldError id={`${formId}-name-error`}>
               {errors.name}
-            </div>
+            </FieldError>
           </div>
         </div>
         <p className="small muted" style={{ margin: 0 }}>

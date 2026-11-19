@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Select } from '@/components/ui/Select';
 import { useId, useState } from 'react';
 import { Button } from '@/components/ui/Button';
-import { FormError } from '@/components/ui/Feedback';
+import { FieldError, FormError } from '@/components/ui/Feedback';
 import { Field } from '@/components/ui/Field';
 import { FormDialog } from '@/components/ui/FormDialog';
 import { ApiError } from '@/lib/api/client';
@@ -104,9 +104,9 @@ export function NewUserDialog({ onClose, onCreated }) {
   });
 
   const fieldError = (name) => (
-    <div id={errorId(name)} className="err" aria-live="polite">
+    <FieldError id={errorId(name)}>
       {errors[name]}
-    </div>
+    </FieldError>
   );
 
   return (
@@ -198,25 +198,12 @@ export function NewUserDialog({ onClose, onCreated }) {
                   setChosenUnit(Number(event.target.value));
                   setDepartmentId('');
                 }}
-              >
-                {catalog.units.map((unit) => (
-                  <option key={unit.id} value={unit.id}>
-                    {unit.name}
-                  </option>
-                ))}
-              </Select>
+                options={catalog.units} optionLabel={(unit) => unit.name} />
             </Field>
           ) : null}
           {SHOW_DEPARTMENTS ? (
           <Field label="מחלקה (רשות)">
-            <Select className="input" value={departmentId} onChange={(event) => setDepartmentId(event.target.value)}>
-              <option value="">ללא מחלקה</option>
-              {departments.map((department) => (
-                <option key={department.id} value={department.id}>
-                  {department.name}
-                </option>
-              ))}
-            </Select>
+            <Select className="input" value={departmentId} onChange={(event) => setDepartmentId(event.target.value)} all="ללא מחלקה" options={departments} optionLabel={(department) => department.name} />
           </Field>
           ) : null}
         </div>

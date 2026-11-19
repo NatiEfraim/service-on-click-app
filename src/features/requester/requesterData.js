@@ -123,11 +123,13 @@ export function choicePath(options, id) {
 function toField(raw) {
   const { kind, inputType, ltr } = fieldKind(raw.field_type?.name);
   const rules = fieldRules(raw.validations);
+  // a checkbox without options is a declaration to tick (פתיחת משתמש, העברת משתמש יחידה): sent as "1" when ticked
+  const declaration = raw.field_type?.name === 'checkbox' && !(raw.options ?? []).length;
   return {
     id: raw.id,
     fieldName: raw.field_name ?? '',
     label: raw.field_display_name ?? raw.field_name ?? '',
-    kind,
+    kind: declaration ? 'declaration' : kind,
     inputType,
     ltr,
     required: Boolean(raw.is_required),
@@ -140,6 +142,28 @@ function toField(raw) {
     options: (raw.options ?? []).map(toChoice),
     children: [...(raw.children ?? [])].sort((a, b) => a.position - b.position).map(toField),
   };
+}
+
+/**
+ * Fields the server keeps optional but that belong to one choice of another field (it has no conditional fields): shown,
+ * and required, only while that choice is picked; never sent otherwise. By `field_name`. התקנת מדפסת: the printer's IP
+ * is needed only for a connected printer.
+ */
+const SHOWN_WHEN = {
+  21: { printer_ip: { field: 'install_type', option: 'מדפסת מחוברת' } },
+};
+
+/** The fields to draw and send now, by the values chosen so far; a conditional field that is shown is required. */
+export function shownFields(typeId, fields, values) {
+  const rules = SHOWN_WHEN[Number(typeId)];
+  if (!rules) return fields;
+  return fields.flatMap((field) => {
+    const rule = rules[field.fieldName];
+    if (!rule) return [field];
+    const on = fields.find((other) => other.fieldName === rule.field);
+    const picked = on ? choicePath(on.options, values[on.id]).at(-1) : null;
+    return picked?.name === rule.option ? [{ ...field, required: true }] : [];
+  });
 }
 
 /**

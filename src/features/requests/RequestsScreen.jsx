@@ -187,13 +187,7 @@ export function RequestsScreen() {
               const chosen = SORTS.find((s) => s.value === event.target.value);
               if (chosen) update({ sort: chosen.sort, dir: chosen.dir });
             }}
-          >
-            {sorts.map((s) => (
-              <option key={s.value} value={s.value}>
-                {s.label}
-              </option>
-            ))}
-          </Select>
+            options={sorts} />
           </div>
         </div>
 
@@ -201,75 +195,32 @@ export function RequestsScreen() {
         {/* stays mounted so it can fade and fold both ways; inert while closed */}
         <Reveal open={advancedOpen} className="adv-wrap" innerClassName="adv requests-filters">
           <Field label="תחום">
-            <Select autoWidth className="input" value={filters.types} onChange={(event) => update({ types: event.target.value })}>
-              <option value="">כל התחומים</option>
-              {managedTypes.map((type) => (
-                <option key={type.id} value={type.id}>
-                  {type.display_name}
-                </option>
-              ))}
-            </Select>
+            <Select autoWidth className="input" value={filters.types} onChange={(event) => update({ types: event.target.value })} all="כל התחומים" options={managedTypes} />
           </Field>
           <Field label="שלב">
-            <Select autoWidth className="input" value={filters.stage} onChange={(event) => update({ stage: event.target.value })}>
-              <option value="">כל השלבים</option>
-              {filterOptions.stages.map((id) => (
-                <option key={id} value={id}>
-                  {STAGE_SHORT[id]}
-                </option>
-              ))}
-            </Select>
+            <Select autoWidth className="input" value={filters.stage} onChange={(event) => update({ stage: event.target.value })} all="כל השלבים" options={filterOptions.stages} optionLabel={(id) => STAGE_SHORT[id]} />
           </Field>
           <Field label="סטטוס">
-            <Select autoWidth className="input requests-status-select" value={filters.statuses} onChange={(event) => update({ statuses: event.target.value })}>
-              <option value="">כל הסטטוסים</option>
-              {filterOptions.statuses.map((status) => (
-                <option key={status.id} value={status.id}>
-                  {status.display_name}
-                </option>
-              ))}
-            </Select>
+            <Select autoWidth className="input requests-status-select" value={filters.statuses} onChange={(event) => update({ statuses: event.target.value })} all="כל הסטטוסים" options={filterOptions.statuses} />
           </Field>
           {showAssigned ? (
             <Field label="הקצאת מטפל">
-              <Select autoWidth className="input" value={filters.assigned} onChange={(event) => update({ assigned: event.target.value })}>
-                {ASSIGNED_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </Select>
+              <Select autoWidth className="input" value={filters.assigned} onChange={(event) => update({ assigned: event.target.value })} options={ASSIGNED_OPTIONS} />
             </Field>
           ) : null}
           {handlers.data?.length ? (
             <Field label="גורם מטפל">
-              <Select autoWidth className="input" value={filters.handler} onChange={(event) => update({ handler: event.target.value })}>
-                <option value="">כל הגורמים המטפלים</option>
-                {handlers.data.map((person) => (
-                  <option key={person.uuid} value={person.uuid}>
-                    {person.full_name}
-                  </option>
-                ))}
-              </Select>
+              <Select autoWidth className="input" value={filters.handler} onChange={(event) => update({ handler: event.target.value })} all="כל הגורמים המטפלים" options={handlers.data} optionValue={(person) => person.uuid} optionLabel={(person) => person.full_name} />
             </Field>
           ) : null}
           {me.is_super_admin ? (
             <Field label="יחידה">
-              <Select autoWidth className="input" value={filters.units} onChange={(event) => update({ units: event.target.value })}>
-                <option value="">כל היחידות</option>
-                {catalog.units.map((unit) => (
-                  <option key={unit.id} value={unit.id}>
-                    {unit.name}
-                  </option>
-                ))}
-              </Select>
+              <Select autoWidth className="input" value={filters.units} onChange={(event) => update({ units: event.target.value })} all="כל היחידות" options={catalog.units} optionLabel={(unit) => unit.name} />
             </Field>
           ) : null}
-          {/* a div, not Field's <label>: a click on the open calendar must not be forwarded to its button */}
-          <div className="field">
-            <span>תאריך פתיחה</span>
+          <Field as="div" label="תאריך פתיחה">
             <DateRangePicker label="" value={{ from: filters.from, to: filters.to }} onChange={(range) => update({ from: range.from, to: range.to })} />
-          </div>
+          </Field>
         </Reveal>
 
         {filters.ids ? (

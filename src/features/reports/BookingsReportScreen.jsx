@@ -86,22 +86,8 @@ export function BookingsReportScreen() {
 
       <section ref={card} className="card fit-card">
         <div className="toolbar">
-          <Select autoWidth value={filters.booking_type_id} aria-label="תחום" onChange={(event) => update({ booking_type_id: event.target.value })}>
-            <option value="">כל התחומים</option>
-            {catalog.booking_types.map((type) => (
-              <option key={type.id} value={type.id}>
-                {type.display_name}
-              </option>
-            ))}
-          </Select>
-          <Select autoWidth value={filters.status_id} aria-label="סטטוס" onChange={(event) => update({ status_id: event.target.value })}>
-            <option value="">כל הסטטוסים</option>
-            {catalog.statuses.map((status) => (
-              <option key={status.id} value={status.id}>
-                {status.display_name}
-              </option>
-            ))}
-          </Select>
+          <Select autoWidth value={filters.booking_type_id} aria-label="תחום" onChange={(event) => update({ booking_type_id: event.target.value })} all="כל התחומים" options={catalog.booking_types} />
+          <Select autoWidth value={filters.status_id} aria-label="סטטוס" onChange={(event) => update({ status_id: event.target.value })} all="כל הסטטוסים" options={catalog.statuses} />
           <DateRangePicker
             label="נוצרה"
             value={{ from: filters.from_created_at, to: filters.to_created_at }}

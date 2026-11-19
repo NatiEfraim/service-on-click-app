@@ -43,6 +43,12 @@
 .drp-clear .ico { width: 15px; height: 15px; }
 /* rendered in <body> and placed under its button (DateRangePicker); above dialogs, since a dialog may hold a picker */
 .drp-pop { width: 296px; padding: 12px; z-index: 80; }
+/* the calendar is a big panel: the dropdowns' grow-in (scale 0.97 from its corner) would shift its far edge by ~12px and
+   read as a jump, so it only fades with a 2px drop, and fades straight out */
+.drp-pop.menu { animation: drp-in 160ms var(--ease-out); }
+.drp-pop.menu[data-closing] { animation: drp-out 240ms var(--ease-out) forwards; }
+@keyframes drp-in { from { opacity: 0; transform: translateY(-2px); } }
+@keyframes drp-out { to { opacity: 0; transform: translateY(-3px); } }
 .drp-presets { display: flex; gap: 6px; flex-wrap: wrap; padding-bottom: 10px; margin-bottom: 8px; border-bottom: 1px solid var(--line-2); }
 .drp-presets button {
   border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 4px 10px; font-size: 13px; cursor: pointer; color: var(--ink);
@@ -56,6 +62,10 @@
 .drp-nav:hover { background: var(--hover); }
 .drp-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px 0; }
 .drp-wd { text-align: center; font-size: 12px; color: var(--mute); padding: 4px 0; }
+/* the days of the month, under the weekday names: they slide and fade when the month turns (DateRangePicker, useMonthSlide);
+   the leaving month is a copy laid over them, and the box clips both so nothing slides past the calendar */
+.drp-days-wrap { position: relative; overflow: clip; overflow-clip-margin: 4px; margin-top: 2px; }
+.drp-days-old { position: absolute; inset: 0; pointer-events: none; }
 .drp-day { all: unset; text-align: center; height: 34px; line-height: 34px; font-size: 14px; cursor: pointer; border-radius: 8px; color: var(--ink); transition: background-color 120ms ease; }
 .drp-day:hover { background: var(--hover); }
 .drp-day.out { color: var(--mute); opacity: .5; }
@@ -130,6 +140,17 @@ textarea.input { min-height: 80px; resize: vertical; }
 .check input { width: 16px; height: 16px; accent-color: var(--accent); }
 .err { color: var(--bad); font-size: 13px; }
 .err:empty { display: none; }
+/* a form error (FormError): its height unfolds (grid rows 0fr -> 1fr) and it fades in; on clearing it folds and fades out.
+   Transitions, not keyframes: an error that comes back while folding turns around from where it is, without a jump.
+   --err-gap: the container's gap above it, taken back while folded so the gap glides too */
+.form-err {
+  display: grid; grid-template-rows: 1fr; opacity: 1; margin-block-start: 0;
+  transition: grid-template-rows 260ms var(--ease-out), margin-block-start 260ms var(--ease-out), opacity 220ms var(--ease-out);
+}
+.form-err > .err { min-height: 0; overflow: hidden; }
+.form-err[data-closing] { grid-template-rows: 0fr; opacity: 0; margin-block-start: calc(-1 * var(--err-gap, 0px)); }
+@starting-style { .form-err { grid-template-rows: 0fr; opacity: 0; margin-block-start: calc(-1 * var(--err-gap, 0px)); } }
+@media (prefers-reduced-motion: reduce) { .form-err { transition: opacity 150ms ease; } }
 
 /* ---------- notices, empty states, skeletons */
 .notice { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: var(--r-sm); background: var(--info-w); font-size: 14px; }
@@ -510,3 +531,18 @@ body:has(.ticket.selected, .ticket-copy, .rq-row.selected, .sync-decision-previe
 @media (prefers-reduced-motion: reduce) {
   [data-scene-part="usb-cap"] { transform: none !important; transition: opacity 150ms ease; }
 }
+
+/* Fade (components/ui/Fade): fades in as it appears, out before it leaves */
+.fade-presence { opacity: 1; transition: opacity 200ms var(--ease-out); }
+.fade-presence[data-closing] { opacity: 0; }
+@starting-style { .fade-presence { opacity: 0; } }
+
+/* RollingDigits (components/ui/RollingDigits): each digit in its own slot, clipped top and bottom, so the leaving digit
+   (.rd-old, laid over it) and the arriving one roll within the line, like a clock's */
+.rd { display: inline-flex; font-variant-numeric: tabular-nums; }
+.rd-slot { position: relative; display: inline-block; overflow: clip; }
+.rd-char { display: inline-block; }
+.rd-old { position: absolute; inset: 0; text-align: center; pointer-events: none; }
+
+/* FitText (components/ui/FitText): the whole text in even lines; its size is set by the component */
+.fit-text { display: block; min-width: 0; max-width: 100%; line-height: 1.2; text-wrap: balance; overflow-wrap: anywhere; }

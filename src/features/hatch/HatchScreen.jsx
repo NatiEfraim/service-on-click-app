@@ -39,24 +39,10 @@ export function HatchScreen() {
           ftpOnlyFilters
         >
           <Field label="תחום">
-            <Select value={bookingTypeId} onChange={(event) => setBookingTypeId(event.target.value)}>
-              <option value="">כל התחומים</option>
-              {catalog.booking_types.map((type) => (
-                <option key={type.id} value={type.id}>
-                  {type.display_name}
-                </option>
-              ))}
-            </Select>
+            <Select value={bookingTypeId} onChange={(event) => setBookingTypeId(event.target.value)} all="כל התחומים" options={catalog.booking_types} />
           </Field>
           <Field label="סטטוס">
-            <Select value={statusId} onChange={(event) => setStatusId(event.target.value)}>
-              <option value="">כל הסטטוסים</option>
-              {catalog.statuses.map((status) => (
-                <option key={status.id} value={status.id}>
-                  {status.display_name}
-                </option>
-              ))}
-            </Select>
+            <Select value={statusId} onChange={(event) => setStatusId(event.target.value)} all="כל הסטטוסים" options={catalog.statuses} />
           </Field>
         </HatchCard>
         <HatchCard

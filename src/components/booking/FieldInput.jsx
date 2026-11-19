@@ -19,14 +19,7 @@ export function FieldInput({ id, typeName, value, onChange, label, invalid = fal
   if (inputType === 'time') return <TimePicker value={value ?? ''} onChange={(time) => onChange(time ?? '')} label={label} invalid={invalid} disabled={disabled} />;
   if (kind === 'select') {
     return (
-      <Select {...common} value={value ?? ''} onChange={(event) => onChange(event.target.value)}>
-        <option value="">בחירה…</option>
-        {options.map((option) => (
-          <option key={option.id} value={option.id}>
-            {option.name}
-          </option>
-        ))}
-      </Select>
+      <Select {...common} value={value ?? ''} onChange={(event) => onChange(event.target.value)} all="בחירה…" options={options} optionLabel={(option) => option.name} />
     );
   }
   if (kind === 'textarea') return <textarea {...common} className="input" rows={3} value={value ?? ''} onChange={(event) => onChange(event.target.value)} />;

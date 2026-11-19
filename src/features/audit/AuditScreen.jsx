@@ -111,22 +111,8 @@ export function AuditScreen() {
       <section ref={card} className="card fit-card">
         <div className="toolbar">
           <SearchField id="audit-search" width={220} value={searchText} placeholder="חיפוש" aria-label="חיפוש לפי מספר קריאה או מספר אישי" inputMode="numeric" onChange={setSearchText} />
-          <Select autoWidth value={filters.action} aria-label="סוג פעולה" onChange={(event) => update({ action: event.target.value })}>
-            <option value="">כל הפעולות</option>
-            {ACTION_GROUPS.map((group) => (
-              <option key={group.value} value={group.value}>
-                {group.label}
-              </option>
-            ))}
-          </Select>
-          <Select autoWidth value={filters.type} aria-label="תחום" onChange={(event) => update({ type: event.target.value })}>
-            <option value="">כל התחומים</option>
-            {catalog.booking_types.map((type) => (
-              <option key={type.id} value={type.id}>
-                {type.display_name}
-              </option>
-            ))}
-          </Select>
+          <Select autoWidth value={filters.action} aria-label="סוג פעולה" onChange={(event) => update({ action: event.target.value })} all="כל הפעולות" options={ACTION_GROUPS} />
+          <Select autoWidth value={filters.type} aria-label="תחום" onChange={(event) => update({ type: event.target.value })} all="כל התחומים" options={catalog.booking_types} />
           <Select autoWidth value={filters.result} aria-label="תוצאה" onChange={(event) => update({ result: event.target.value })}>
             <option value="">כל התוצאות</option>
             {Object.entries(RESULT).map(([value, result]) => (

@@ -2,7 +2,7 @@
 
 import { useId, useState } from 'react';
 import { Button } from '@/components/ui/Button';
-import { FormError } from '@/components/ui/Feedback';
+import { FieldError, FormError } from '@/components/ui/Feedback';
 import { Field } from '@/components/ui/Field';
 import { Seg } from '@/components/ui/Controls';
 import { settingsApi } from '@/lib/api/endpoints';
@@ -74,9 +74,9 @@ export function StatementTab({ unitId, bookingTypeId, settings }) {
           }}
         />
       </Field>
-      <div id={`${ids}-err`} className="err" aria-live="polite">
+      <FieldError id={`${ids}-err`}>
         {problem}
-      </div>
+      </FieldError>
       {placeholders.length ? (
         <span className="small muted">
           אפשר לשלב בנוסח ערכים מהגדרות התפעול:{' '}

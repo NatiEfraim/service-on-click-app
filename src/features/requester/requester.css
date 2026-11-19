@@ -100,6 +100,8 @@
 .rq-fields textarea { resize: vertical; min-height: 96px; }
 .rq-fields [aria-invalid="true"] { border-color: var(--bad); }
 .rq-err { color: var(--bad); font-size: 13px; }
+.rq-declare { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; width: fit-content; }
+.rq-declare input { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
 /* what the person lookup by ID number said (RequestForm): looking, found and filled, not found, not available */
 .rq-lookup { font-size: 13px; color: var(--mute); }
 .rq-lookup.found { color: var(--ok); }

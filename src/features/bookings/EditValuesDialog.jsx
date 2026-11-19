@@ -86,8 +86,7 @@ export function EditValuesDialog({ booking, onClose }) {
           </label>
         ) : (
           // a div, not a <label>: a click on the open calendar must not be forwarded to its button
-          <div key={field.form_field_id} className="field">
-            <span>{field.field_display_name}</span>
+          <Field key={field.form_field_id} as="div" label={field.field_display_name}>
             <DatePicker
               label=""
               clearable={false}
@@ -96,7 +95,7 @@ export function EditValuesDialog({ booking, onClose }) {
               value={values[field.form_field_id] ?? ''}
               onChange={(day) => setValues((current) => ({ ...current, [field.form_field_id]: day }))}
             />
-          </div>
+          </Field>
         ),
       )}
       <Field label="סיבת העדכון (רשות)">

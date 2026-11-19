@@ -1,19 +1,14 @@
 'use client';
 
-import { useState } from 'react';
 import { initials } from '@/lib/format';
 import { ROLE_NAME } from '@/lib/labels';
 import { useSession } from '@/providers/SessionProvider';
 import { Icon } from '@/components/ui/Icon';
-import { usePresence } from '@/components/ui/usePresence';
-import { useDismiss, useHoverOpen } from './menuHooks';
+import { useDropdown } from './menuHooks';
 
 export function UserMenu() {
   const { me, unitName, signOut } = useSession();
-  const [open, setOpen] = useState(false);
-  const ref = useDismiss(open, () => setOpen(false));
-  const hover = useHoverOpen(setOpen);
-  const presence = usePresence(open);
+  const { open, toggle, ref, hover, presence } = useDropdown();
 
   const name = me.user.full_name ?? me.user.personal_number;
   const roles = me.is_super_admin
@@ -25,7 +20,7 @@ export function UserMenu() {
 
   return (
     <div className="dd" ref={ref} {...hover}>
-      <button type="button" className="userbtn" aria-haspopup="true" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+      <button type="button" className="userbtn" aria-haspopup="true" aria-expanded={open} onClick={toggle}>
         <span className="avatar">{initials(name)}</span>
         <span className="nm">
           {name}

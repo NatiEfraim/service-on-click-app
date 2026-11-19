@@ -44,7 +44,10 @@
    height is set by PermissionsDialog: the window's cap (88vh) minus everything else in it, which does not depend on
    the box, so it cannot feed back. (Tying the body's height to the window instead looped with SmoothSize, which
    animates the body to its content's height: each glide changed the content's height, which started another.) */
-.modal .ppl-matrix-wrap { overflow: auto; overscroll-behavior: contain; }
+/* the scrollbar's room is kept from the start: a scrollbar appearing when a category opens must not narrow the cards
+   (they would rewrap mid-glide and the window would jump) */
+.modal .ppl-matrix-wrap { overflow: auto; overscroll-behavior: contain; scrollbar-gutter: stable; transition: max-height var(--dur-resize) var(--ease-out); }
+@media (prefers-reduced-motion: reduce) { .modal .ppl-matrix-wrap { transition: none; } }
 .modal:has(.ppl-matrix) .ppl-matrix thead th { position: sticky; top: 0; z-index: 2; }
 
 /* ---------- the permissions grid (PermissionsCards): three main categories (CategoryGroup, components/booking) that

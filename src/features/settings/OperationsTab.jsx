@@ -10,6 +10,7 @@ import { useSaveMutation } from '@/lib/useSaveMutation';
 import { draftFromValue, draftProblems, draftToValue, isDatesReference, isDraftDirty, refInputKind, refKeyLabel } from './refs';
 import { Switch } from './Switch';
 import { useReloadSettings } from './useSettings';
+import { Field } from '@/components/ui/Field';
 
 function RefRow({ reference, bookingTypeId, unitId, readOnly }) {
   const reload = useReloadSettings(unitId, bookingTypeId);
@@ -70,7 +71,7 @@ function RefRow({ reference, bookingTypeId, unitId, readOnly }) {
             );
           }
           const problem = problems[key];
-          if (kind === 'time') return <div key={key} className="field"><span>{label}</span><TimePicker label={label} value={typeof value === 'string' ? value : ''} onChange={(time) => change(key, time)} disabled={readOnly} invalid={Boolean(problem)} title={problem || undefined} /></div>;
+          if (kind === 'time') return <Field key={key} as="div" label={label}><TimePicker label={label} value={typeof value === 'string' ? value : ''} onChange={(time) => change(key, time)} disabled={readOnly} invalid={Boolean(problem)} title={problem || undefined} /></Field>;
           return (
             <label key={key} className="field">
               <span>{label}</span>

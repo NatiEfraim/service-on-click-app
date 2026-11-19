@@ -449,42 +449,26 @@ export function MyRequestsPanel({ full = false, extraCategories = null, category
           {requests.isSuccess ? <span className="small muted">{rows.length} קריאות</span> : null}
           <div className="requests-sort-control">
             <label className="small muted" htmlFor="rq-sort">מיון</label>
-            <Select autoWidth id="rq-sort" className="input requests-sort-select" style={{ paddingBlock: 5 }} value={sort} onChange={(event) => setSort(event.target.value)}>
-              {SORTS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-            </Select>
+            <Select autoWidth id="rq-sort" className="input requests-sort-select" style={{ paddingBlock: 5 }} value={sort} onChange={(event) => setSort(event.target.value)} options={SORTS} />
           </div>
         </div>
         {/* stays mounted so it can fold both ways (as in the management screen); inert while closed */}
         <Reveal open={filtersOpen} className="adv-wrap" innerClassName="adv requests-filters">
           <Field label="תחום">
-            <Select autoWidth className="input" value={current?.id ?? ''} onChange={(event) => onCategory(event.target.value || null)}>
-              <option value="">כל התחומים</option>
-              {list.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-            </Select>
+            <Select autoWidth className="input" value={current?.id ?? ''} onChange={(event) => onCategory(event.target.value || null)} all="כל התחומים" options={list} optionLabel={(item) => item.name} />
           </Field>
           <Field label="מצב">
-            <Select autoWidth className="input" value={bucket ?? ''} onChange={(event) => onBucket(event.target.value || null)}>
-              <option value="">כל המצבים</option>
-              {BUCKETS.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
-            </Select>
+            <Select autoWidth className="input" value={bucket ?? ''} onChange={(event) => onBucket(event.target.value || null)} all="כל המצבים" options={BUCKETS} />
           </Field>
           <Field label="שלב">
-            <Select autoWidth className="input" value={stage} onChange={(event) => setStage(event.target.value)}>
-              <option value="">כל השלבים</option>
-              {stageOptions.map((id) => <option key={id} value={id}>{STAGE_SHORT[id]}</option>)}
-            </Select>
+            <Select autoWidth className="input" value={stage} onChange={(event) => setStage(event.target.value)} all="כל השלבים" options={stageOptions} optionLabel={(id) => STAGE_SHORT[id]} />
           </Field>
           <Field label="סטטוס">
-            <Select autoWidth className="input" value={status} onChange={(event) => setStatus(event.target.value)}>
-              <option value="">כל הסטטוסים</option>
-              {statusNames.map((name) => <option key={name} value={name}>{name}</option>)}
-            </Select>
+            <Select autoWidth className="input" value={status} onChange={(event) => setStatus(event.target.value)} all="כל הסטטוסים" options={statusNames} />
           </Field>
-          {/* a div, not Field's <label>: a click on the open calendar must not be forwarded to its button */}
-          <div className="field">
-            <span>תאריך פתיחה</span>
+          <Field as="div" label="תאריך פתיחה">
             <DateRangePicker label="" value={range} onChange={(next) => setRange({ from: next.from, to: next.to })} />
-          </div>
+          </Field>
         </Reveal>
         </>
       ) : null}

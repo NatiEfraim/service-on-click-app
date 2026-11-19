@@ -1,22 +1,17 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
 import { isActivePath } from '@/lib/nav';
 import { Icon } from '@/components/ui/Icon';
-import { usePresence } from '@/components/ui/usePresence';
-import { useDismiss, useHoverOpen } from './menuHooks';
+import { useDropdown } from './menuHooks';
 
 export function ManageMenu({ group, pathname, onNavigate }) {
-  const [open, setOpen] = useState(false);
-  const ref = useDismiss(open, () => setOpen(false));
-  const hover = useHoverOpen(setOpen);
-  const presence = usePresence(open);
+  const { open, setOpen, toggle, ref, hover, presence } = useDropdown();
   const current = group.items.some((item) => isActivePath(pathname, item.href, item.also));
 
   return (
     <div className={`dd${current ? ' current' : ''}`} ref={ref} {...hover}>
-      <button type="button" aria-haspopup="true" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+      <button type="button" aria-haspopup="true" aria-expanded={open} onClick={toggle}>
         {group.label}
         <Icon name="down" />
       </button>

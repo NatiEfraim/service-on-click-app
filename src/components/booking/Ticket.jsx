@@ -20,6 +20,7 @@ import { AgeBar, MiniRoute } from './RouteViz';
 import { useLeave, useArrive } from './ticketMotion';
 import { topicBooking, topicHandlerName } from '@/lib/topicTypes';
 import { useWindowMeasure } from '@/components/ui/useWindowMeasure';
+import { FitText } from '@/components/ui/FitText';
 
 /** Measures the selected row against the drawer's resting edge. */
 function useCoveredBox(ref, selected) {
@@ -155,7 +156,8 @@ export function Ticket({ booking: given, showActions = true, onAction, outcome, 
               data-tip={action.enabled === false ? action.disabled_reason ?? undefined : undefined}
               onClick={() => onAction(booking, action)}
             >
-              {action.label}
+              {/* the whole label, in the button's fixed height: a long one shrinks its text to fit two lines */}
+              <FitText>{action.label}</FitText>
             </Button>
           ))}
         </div>

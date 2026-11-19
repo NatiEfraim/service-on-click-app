@@ -4,7 +4,7 @@ import { SHOW_DEPARTMENTS } from '@/lib/labels';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Select } from '@/components/ui/Select';
 import { useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { EmptyState, ErrorNotice, FormError, Loading, Notice } from '@/components/ui/Feedback';
+import { EmptyState, ErrorNotice, FieldError, FormError, Loading, Notice } from '@/components/ui/Feedback';
 import { Field } from '@/components/ui/Field';
 import { FormDialog } from '@/components/ui/FormDialog';
 import { ApiError } from '@/lib/api/client';
@@ -50,6 +50,9 @@ function successMessage(saved) {
   if (roles) return 'ההרשאות עודכנו ונרשמו בהיסטוריית השינויים.';
   return 'שיוך המחלקה עודכן.';
 }
+
+/** Room left unused under the window's height cap when the domains table is sized to fill it (see the fit below). */
+const ROOM_SLACK_PX = 6;
 
 /** Department and permissions matrix of one person; saving sends only changed booking types, with a required reason. */
 export function PermissionsDialog({ target, onClose }) {
@@ -218,8 +221,16 @@ export function PermissionsDialog({ target, onClose }) {
         // the parts' own heights (not the window's, which SmoothSize may be gliding at that moment): title, body
         // (its natural height, inside SmoothSize) without the table's box, and the buttons
         const part = (selector) => modal.querySelector(selector)?.offsetHeight ?? 0;
-        const others = part(':scope > header') + part('.mb') - wrap.offsetHeight + part(':scope > footer');
-        const room = Math.floor(window.innerHeight * 0.88 - others);
+        // the reason field counts at the height it is folding to (its full height when opening, none when closing), not
+        // the height it has mid-fold: the table's box gets its new size at once and glides there in step with the fold
+        // (people.css), so the window's total height stays put instead of wobbling a frame behind the fold
+        const reveal = modal.querySelector('.ppl-reason-reveal');
+        const revealNow = reveal?.offsetHeight ?? 0;
+        const revealTarget = reveal?.classList.contains('open') ? reveal.firstElementChild?.scrollHeight ?? 0 : 0;
+        const others = part(':scope > header') + part('.mb') - wrap.offsetHeight - revealNow + revealTarget + part(':scope > footer');
+        // a few pixels short of the cap: filling it exactly left the window one rounding (or one frame of its height glide)
+        // away from overflowing, and for that frame it showed its own scrollbar, shoving the whole content sideways
+        const room = Math.floor(window.innerHeight * 0.88 - others) - ROOM_SLACK_PX;
         const next = `${Math.max(160, room)}px`;
         if (wrap.style.maxHeight !== next) wrap.style.maxHeight = next;
       });
@@ -229,10 +240,15 @@ export function PermissionsDialog({ target, onClose }) {
     // a part other than the table changing height (the change summary, an error line) refits; the table does not count
     const observer = new ResizeObserver(fit);
     for (const part of modal.querySelectorAll(':scope > header, :scope > footer, .ppl-head, .ppl-summary, .ppl-reason-reveal')) observer.observe(part);
+    // the reason field starting to open or close (its class flips): refit right away, so both glides start in the same frame
+    const flips = new MutationObserver(fit);
+    const reveal = modal.querySelector('.ppl-reason-reveal');
+    if (reveal) flips.observe(reveal, { attributes: true, attributeFilter: ['class'] });
     return () => {
       cancelAnimationFrame(frame);
       window.removeEventListener('resize', fit);
       observer.disconnect();
+      flips.disconnect();
     };
   }, [Boolean(matrix)]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -326,9 +342,9 @@ export function PermissionsDialog({ target, onClose }) {
               }}
             />
             </Field>
-            <div id={reasonErrorId} className="err" aria-live="polite">
+            <FieldError id={reasonErrorId}>
             {reasonProblem}
-            </div>
+            </FieldError>
           </Reveal>
 
           {alreadySaved ? <Notice tone="warn">{alreadySaved}</Notice> : null}

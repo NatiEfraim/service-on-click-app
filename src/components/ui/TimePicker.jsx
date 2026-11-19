@@ -3,6 +3,7 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from './Button';
+import { RollingDigits } from './RollingDigits';
 import { usePresence } from './usePresence';
 import { timeParts, timeValue } from './time-picker-utils';
 
@@ -97,7 +98,7 @@ export function TimePicker({ value, onChange, label = 'שעה', disabled = false
     </button>
     {presence.mounted && place ? createPortal(
       <div ref={popup} id={id} role="dialog" aria-label={'בחירת ' + label} className="menu tp-popup" data-closing={presence.closing || undefined} inert={presence.closing || undefined} onKeyDown={keyboard} style={{ position: 'fixed', ...place, right: 'auto' }}>
-        <header className="tp-head"><span>{label}</span><strong dir="ltr" aria-live="polite">{timeValue(draft.hour, draft.minute)}</strong><small>תצוגת 24 שעות</small></header>
+        <header className="tp-head"><span>{label}</span><strong dir="ltr" aria-live="polite"><RollingDigits value={timeValue(draft.hour, draft.minute)} /></strong><small>תצוגת 24 שעות</small></header>
         <div className="tp-columns" dir="ltr">
           <TimeColumn label="שעות" values={HOURS} value={draft.hour} onChange={(hour) => setDraft((current) => ({ ...current, hour }))} />
           <TimeColumn label="דקות" values={MINUTES} value={draft.minute} onChange={(minute) => setDraft((current) => ({ ...current, minute }))} />

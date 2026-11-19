@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Select } from '@/components/ui/Select';
 import { useId, useState } from 'react';
 import { Button } from '@/components/ui/Button';
-import { FormError } from '@/components/ui/Feedback';
+import { FieldError, FormError } from '@/components/ui/Feedback';
 import { Field } from '@/components/ui/Field';
 import { Seg } from '@/components/ui/Controls';
 import { FormDialog } from '@/components/ui/FormDialog';
@@ -130,8 +130,7 @@ export function OptionDialog({ unitId, bookingTypeId, settings, field, target, s
         />
       </Field>
 
-      <div className="field">
-        <span>סוג האפשרות</span>
+      <Field as="div" label="סוג האפשרות">
         <Seg
           label="סוג האפשרות"
           value={kind}
@@ -141,16 +140,10 @@ export function OptionDialog({ unitId, bookingTypeId, settings, field, target, s
             { value: 'input', label: 'הזנת ערך' },
           ]}
         />
-      </div>
+      </Field>
 
       <Field label="סוג שדה">
-        <Select className="input" value={chosen ?? ''} onChange={(event) => setTypeId(Number(event.target.value))}>
-          {types.map((type) => (
-            <option key={type.id} value={type.id}>
-              {type.display_name}
-            </option>
-          ))}
-        </Select>
+        <Select className="input" value={chosen ?? ''} onChange={(event) => setTypeId(Number(event.target.value))} options={types} />
       </Field>
       <p className="small muted" style={{ margin: 0 }}>
         {kind === 'input' ? 'המבקש יקליד ערך במקום לבחור.' : isList ? 'אפשרות מסוג רשימה מכילה תתי-אפשרויות משלה.' : 'אפשרות רגילה לבחירה.'}
@@ -171,9 +164,9 @@ export function OptionDialog({ unitId, bookingTypeId, settings, field, target, s
           }}
         />
       </Field>
-      <div id={`${ids}-code-err`} className="err" aria-live="polite">
+      <FieldError id={`${ids}-code-err`}>
         {codeProblem}
-      </div>
+      </FieldError>
       <p className="small muted" style={{ margin: 0 }}>
         מזהה קבוע של האפשרות למערכת (אותיות באנגלית, ספרות, קו תחתון ומקף), שאינו משתנה כששמה משתנה.
       </p>
@@ -204,9 +197,9 @@ export function OptionDialog({ unitId, bookingTypeId, settings, field, target, s
         </div>
       ) : null}
 
-      <div id={`${ids}-err`} className="err" aria-live="polite">
+      <FieldError id={`${ids}-err`}>
         {problem}
-      </div>
+      </FieldError>
       <p className="small muted" style={{ margin: 0 }}>
         השינוי נשמר מיד ונרשם בהיסטוריית השינויים.
       </p>

@@ -10,7 +10,7 @@ import { TimePicker } from '@/components/ui/TimePicker';
 import { requesterApi } from '@/lib/api/endpoints';
 import { validateValue } from '@/lib/form-fields';
 import { ChoiceField } from './ChoiceField';
-import { ATTACH_ACCEPT, choicePath, fetchForm, MAX_FILE_BYTES, MAX_FILES, submitRequest } from './requesterData';
+import { ATTACH_ACCEPT, choicePath, fetchForm, MAX_FILE_BYTES, MAX_FILES, shownFields, submitRequest } from './requesterData';
 import { markSeen } from './seen';
 import { REQUESTER_KEY } from './useRequester';
 import { TypePicture } from '@/components/booking/TypePicture';
@@ -21,6 +21,8 @@ const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'ap
 /** The error of one field, or '' when its value is fine (the server checks the same again, with the same messages). */
 function fieldError(field, raw, typed) {
   const value = String(raw ?? '').trim();
+  // a declaration: ticked or not; unticked on a required one is the server's own 'accepted' message
+  if (field.kind === 'declaration') return value === '1' || !field.required ? '' : field.rules.messages.accepted ?? field.rules.required ?? 'יש לאשר את ההצהרה';
   if (field.kind === 'select') {
     if (!value) return field.required ? field.rules.required ?? 'שדה חובה' : '';
     const chosen = choicePath(field.options, value).at(-1);
@@ -43,7 +45,7 @@ const flatten = (fields, depth = 0) => fields.flatMap((field) => [{ ...field, de
  * other forms the rule as it always was - two columns, a text area taking the whole row. A sub-field takes the row.
  */
 function spanOf(field, columns) {
-  if (field.depth) return columns;
+  if (field.depth || field.kind === 'declaration') return columns;
   if (columns === 4) return Math.min(field.colSpan, 4);
   return field.kind === 'textarea' ? 2 : 1;
 }
@@ -61,8 +63,10 @@ const ID_NUMBER = /^\d{9}$/;
 export function RequestForm({ found, onHome, onDone }) {
   const { topic, group, type } = found;
   const form = useQuery({ queryKey: [...REQUESTER_KEY, 'form', type.id], queryFn: ({ signal }) => fetchForm(type.id, signal), staleTime: 5 * 60_000 });
-  const fields = flatten(form.data ?? []);
+  const allFields = flatten(form.data ?? []);
   const [values, setValues] = useState({});
+  // what is drawn and sent now: a field tied to another field's choice (the printer's IP) only while that choice is picked
+  const fields = shownFields(type.id, allFields, values);
   // the value typed with a chosen "type in a value" choice, by its field id
   const [typed, setTyped] = useState({});
   const [touched, setTouched] = useState(false);
@@ -114,7 +118,7 @@ export function RequestForm({ found, onHome, onDone }) {
   }, [lookupValue]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const send = useMutation({
-    mutationFn: () => submitRequest(type.id, values, files, typed),
+    mutationFn: () => submitRequest(type.id, Object.fromEntries(fields.map((field) => [field.id, values[field.id]])), files, typed),
     onSuccess: (booking) => {
       // the user's own new request is already "seen": it must not stand out as changed
       if (booking?.uuid) markSeen([{ id: booking.uuid, statusId: booking.status_id ?? booking.status?.id }]);
@@ -235,7 +239,13 @@ export function RequestForm({ found, onHome, onDone }) {
                       {field.label}
                       {field.required ? <span className="req" aria-hidden> *</span> : null}
                     </label>
-                    {field.kind === 'textarea' ? (
+                    {field.kind === 'declaration' ? (
+                      // the label above is the declaration's text; the box under it ticks it (sent as "1")
+                      <label className="rq-declare">
+                        <input type="checkbox" id={props.id} checked={values[field.id] === '1'} onChange={(event) => set(field.id, event.target.checked ? '1' : '')} aria-invalid={Boolean(error) || undefined} />
+                        מאשר/ת
+                      </label>
+                    ) : field.kind === 'textarea' ? (
                       <textarea className="input" rows={4} {...props} />
                     ) : field.kind === 'select' ? (
                       <ChoiceField
@@ -288,7 +298,7 @@ export function RequestForm({ found, onHome, onDone }) {
                 ) : null}
               </div>
             </div>
-            {send.isError ? <FormError>{send.error?.message ?? 'שליחת הקריאה נכשלה.'}</FormError> : null}
+            <FormError>{send.isError ? send.error?.message ?? 'שליחת הקריאה נכשלה.' : ''}</FormError>
             <div className="rq-actions">
               <Button type="submit" className="rq-send" icon="check" loading={send.isPending}>שליחת הקריאה</Button>
               <Button variant="ghost" onClick={onHome} disabled={send.isPending}>ביטול</Button>

@@ -84,7 +84,7 @@
 .setting .vals .field { min-width: 0; }
 .setting .vals .st-bool { padding-bottom: 8px; }
 .setting .what span { display: block; max-width: 70ch; }
-.setting .err { grid-column: 1 / -1; }
+.setting :is(.err, .form-err) { grid-column: 1 / -1; }
 .setting.st-locked-row .save { display: none; }
 
 /* ----- blocked dates */
@@ -260,11 +260,8 @@
 /* the choices section of the field dialog fades in */
 .st-dialog-options { transition: opacity var(--dur-base) var(--ease-out); }
 @starting-style { .st-dialog-options { opacity: 0; } }
-/* a save error (FormError) fades in */
-.modal .err[role="alert"] { transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out); }
-@starting-style { .modal .err[role="alert"] { opacity: 0; transform: translateY(-3px); } }
 @media (prefers-reduced-motion: reduce) {
-  .st-opt, .modal .err[role="alert"] { transition-property: opacity; transform: none; }
+  .st-opt { transition-property: opacity; transform: none; }
   .st-opt.leaving { transform: none; }
 }
 

@@ -1,8 +1,21 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MENU_HOVER_CLOSE_MS } from '@/lib/motion';
 import { useOutsideClose } from '@/components/ui/useOutsideClose';
+import { usePresence } from '@/components/ui/usePresence';
+
+/**
+ * Everything a top-bar dropdown needs: its open state, the wrapper `ref` that closes it on an outside click / Escape,
+ * the `hover` handlers to spread on the wrapper, its enter / exit `presence`, and `toggle` for its button.
+ */
+export function useDropdown() {
+  const [open, setOpen] = useState(false);
+  const ref = useDismiss(open, () => setOpen(false));
+  const hover = useHoverOpen(setOpen);
+  const presence = usePresence(open);
+  return { open, setOpen, toggle: () => setOpen((value) => !value), ref, hover, presence };
+}
 
 /** Closes a dropdown on outside click or Escape (useOutsideClose with the dropdown's own wrapper as "inside"). */
 export function useDismiss(open, close) {

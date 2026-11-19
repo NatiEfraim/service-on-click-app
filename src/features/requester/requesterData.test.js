@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { OPEN_STATUS_IDS, requesterApi } from '@/lib/api/endpoints';
-import { counterOf, fetchMyRequests, requestCategories, requestRoute, stageOf } from './requesterData';
+import { counterOf, fetchMyRequests, requestCategories, requestRoute, shownFields, stageOf } from './requesterData';
 
 /** Booking type ids: a plain domain (בינוי), הובלות (starts at the control officer), the barber. */
 const CONSTRUCTION = 13;
@@ -132,5 +132,27 @@ describe('the clearance grant (14): a route of its own', () => {
     expect(counterOf({ statusId: 101 })).toBe('handling');
     expect(counterOf({ statusId: 104 })).toBe('handling');
     expect(counterOf({ statusId: 4 })).toBeNull();
+  });
+});
+
+describe('shownFields (fields tied to a choice of another field)', () => {
+  const choice = (id, name) => ({ id, name, code: null, isInput: false, inputType: 'text', ltr: false, children: [] });
+  const installType = { id: 1, fieldName: 'install_type', required: true, options: [choice(11, 'מדפסת מחוברת'), choice(12, 'מדפסת חדשה')] };
+  const printerIp = { id: 2, fieldName: 'printer_ip', required: false, options: [] };
+  const fields = [installType, printerIp];
+
+  it('hides the printer IP until a connected printer is picked', () => {
+    expect(shownFields(21, fields, {}).map((f) => f.id)).toEqual([1]);
+    expect(shownFields(21, fields, { 1: 12 }).map((f) => f.id)).toEqual([1]);
+  });
+
+  it('shows the printer IP, required, for a connected printer', () => {
+    const shown = shownFields(21, fields, { 1: 11 });
+    expect(shown.map((f) => f.id)).toEqual([1, 2]);
+    expect(shown[1].required).toBe(true);
+  });
+
+  it('leaves other types alone', () => {
+    expect(shownFields(22, fields, {})).toBe(fields);
   });
 });

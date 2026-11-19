@@ -15,6 +15,14 @@ import { EASE_OUT, prefersReducedMotion, RESIZE_MS } from '@/lib/motion';
  * `paused`: no glide (and no clipping) while true - the size just follows its content. For content that is meant to
  * stand out past its box for a while (an opened row growing apart from its neighbours), which a glide would cut.
  */
+/** CSS transitions that already change a box's height smoothly (Reveal's rows, a height / max-height ease). */
+const HEIGHT_TRANSITIONS = new Set(['grid-template-rows', 'height', 'max-height']);
+
+/** Whether something inside `content` is gliding its own height right now. */
+function growsSmoothly(content) {
+  return content.getAnimations({ subtree: true }).some((animation) => HEIGHT_TRANSITIONS.has(animation.transitionProperty));
+}
+
 export function SmoothSize({ children, as: Tag = 'div', easing = EASE_OUT, duration = RESIZE_MS, paused = false, ...rest }) {
   const outer = useRef(null);
   const inner = useRef(null);
@@ -45,6 +53,9 @@ export function SmoothSize({ children, as: Tag = 'div', easing = EASE_OUT, durat
       last = next;
       running?.cancel();
       running = null;
+      // the content is already gliding its own height (a Reveal unfolding, a box easing its max-height): follow it frame
+      // by frame instead of gliding on top - a second glide would restart every frame, chase it and stop with a jump
+      if (growsSmoothly(content)) return;
       if (reduce.matches || glide.current.paused || Math.abs(from - next) < 1) return;
       // clipped only while gliding, so focus rings and popovers are never cut otherwise
       running = box.animate([{ height: `${from}px`, overflow: 'clip' }, { height: `${next}px`, overflow: 'clip' }], { duration: glide.current.duration, easing: glide.current.easing });
