@@ -397,8 +397,9 @@ button.rq-counter:focus-visible { outline: 2px solid var(--accent); outline-offs
 /* tighter blocks here than in the permissions window, so the list keeps its room */
 .rq-cat-groups { gap: 6px; margin-bottom: 8px; }
 .rq-cat-groups .pp-group-head { padding: 7px 12px; gap: 10px; }
-.rq-cat-groups .pp-group-ic { width: 34px; height: 34px; border-radius: 10px; }
-.rq-cat-groups .pp-group-ic .svc { width: 22px; height: 22px; }
+/* a main category's icon is a touch larger than its sub-categories' (40px, picture 32px), not smaller */
+.rq-cat-groups .pp-group-ic { width: 44px; height: 44px; border-radius: 12px; }
+.rq-cat-groups .pp-group-ic .svc { width: 30px; height: 30px; }
 .rq-cat-groups .pp-group-txt b { font-size: 14px; }
 .rq-cat-groups .rq-cats { padding: 2px 10px 10px; }
 /* while a request is open its list stays put (its row sits above the dimming); the gutter keeps the width steady */

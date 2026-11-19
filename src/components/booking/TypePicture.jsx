@@ -10,11 +10,12 @@ import { CategoryArtwork, hasCategoryArtwork } from './CategoryArtwork';
  * ICT types 20-25 that have no image, their interactive picture (TypeIcon), else a generic icon. `size` in px for both
  * (left to the CSS when not given). The one place that rule lives; frames around it (.dom, .ic) stay with the callers.
  */
-export function TypePicture({ typeId, src, size, className = '' }) {
+/** `playOn` ("hover" | "click"): when an animated picture plays its full sequence (CategoryArtwork). */
+export function TypePicture({ typeId, src, size, className = '', playOn = 'hover' }) {
   const url = src ?? (typeId != null ? domainIconSrc(typeId) : null);
   const isEquipmentIcon = url === '/icons/domains/3.svg' || url === '/icons/domains/4.svg';
   const pictureClass = isEquipmentIcon ? className : `type-picture ${className}`.trim();
-  if (url && hasCategoryArtwork(url)) return <CategoryArtwork src={url} size={size} className={pictureClass} />;
+  if (url && hasCategoryArtwork(url)) return <CategoryArtwork src={url} size={size} className={pictureClass} playOn={playOn} />;
   if (url) {
     // eslint-disable-next-line @next/next/no-img-element -- static svg
     return <img className={pictureClass} src={url} alt="" width={size} height={size} />;

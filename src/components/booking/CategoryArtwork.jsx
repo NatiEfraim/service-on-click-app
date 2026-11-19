@@ -202,11 +202,24 @@ const ARTWORK = {
   '/icons/requester/security-incident.svg': {
     viewBox: '0 0 32 32',
     art: (
+      // an eye (monitoring) that turns like a coin into a flashing alarm light
       <g fill="none">
-        <path d="M16 4 L29 27 H3 Z" fill="#E8826A" stroke="#26232B" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-        <g className="category-art-part" style={{ "--art-preview": "scale(1.12)", "--art-full": "scale(1.32)" }}>
-          <path d="M16 12 V19" stroke="#26232B" strokeWidth="2.2" strokeLinecap="round" />
-          <circle cx="16" cy="23" r="1.3" fill="#26232B" />
+        <g data-scene-part="incident-coin" style={{ transformBox: 'view-box', transformOrigin: '16px 16px' }}>
+          <g data-scene-part="incident-eye">
+            <path d="M2.5 16 C6.5 9 11 6.5 16 6.5 C21 6.5 25.5 9 29.5 16 C25.5 23 21 25.5 16 25.5 C11 25.5 6.5 23 2.5 16 Z" fill="#DCE4F7" stroke="#26232B" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            <g data-scene-part="incident-pupil">
+              <circle cx="16" cy="16" r="5" fill="#3E5C8A" stroke="#26232B" strokeWidth="1.6" />
+              <circle cx="17.5" cy="14.5" r="1.4" fill="#FFFFFF" />
+            </g>
+          </g>
+          <g data-scene-part="incident-alarm" className="category-art-scene-effect">
+            <path d="M9 22 V15 a7 7 0 0 1 14 0 V22 Z" fill="#E8826A" stroke="#26232B" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            <rect x="6" y="22" width="20" height="5" rx="1.5" fill="#9AA3AE" stroke="#26232B" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M12.5 15.5 a3.5 3.5 0 0 1 3.5 -3.5" stroke="#FFFFFF" strokeWidth="1.6" strokeLinecap="round" />
+            <g data-scene-part="incident-rays" className="category-art-scene-effect" stroke="#F2A53A" strokeWidth="1.8" strokeLinecap="round">
+              <path d="M16 2.5 V5 M5 7 L7 9 M27 7 L25 9 M2.5 16 H5 M29.5 16 H27" />
+            </g>
+          </g>
         </g>
       </g>
     ),
@@ -270,8 +283,8 @@ const ARTWORK = {
       <g fill="none">
         <path d="M16 3 L26 7 V15 C26 21.5 21.6 26.5 16 29 C10.4 26.5 6 21.5 6 15 V7 Z" fill="#8FB3E8" stroke="#26232B" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
         <path className="category-art-light" d="M16 5.5 L23.6 8.6 V15 C23.6 20 20.4 24 16 26.3" stroke="#FFFFFF" strokeWidth="1.4" strokeLinecap="round" />
-        <g className="category-art-part" style={{ "--art-preview": "translateY(-1px)", "--art-full": "translateY(-2.5px)" }}>
-          <path d="M13.5 15 V13 a2.5 2.5 0 0 1 5 0 V15" stroke="#26232B" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        <g data-scene-part="lock-shackle" className="category-art-part" style={{ "--art-preview": "translateY(-1px)", "--art-full": "translateY(-2.5px)" }}>
+          <path d="M13.5 15 V13 a2.5 2.5 0 0 1 5 0 V15"stroke="#26232B" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
         </g>
         <rect x="12" y="15" width="8" height="7" rx="1.2" fill="#F2C14E" stroke="#26232B" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
         <path d="M16 18 V19.5" stroke="#26232B" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
@@ -302,31 +315,187 @@ const HOST = 'a[href], button, .ticket, .dgroup, .dtile, [role="button"], [role=
  * The animated version of a category / type illustration (by its image path), else `fallback`. Hovering the button,
  * link or row it sits in plays its short sequence once.
  */
-export function CategoryArtwork({ src, size, fallback = null, className = '' }) {
+/**
+ * `playOn`: "hover" plays the sequence when a mouse enters its control; "click" gives only a small taste of it on hover
+ * and plays it in full when the control is pressed; "state" shows its control's open state instead (aria-expanded).
+ */
+export function CategoryArtwork({ src, size, fallback = null, className = '', playOn = 'hover' }) {
   const ref = useRef(null);
   const artwork = ARTWORK[src];
 
   useEffect(() => {
     const svg = ref.current;
     const host = svg?.closest(HOST);
-    if (!host || !window.matchMedia('(hover: hover) and (pointer: fine)').matches) return undefined;
-    const play = (event) => { if (event.pointerType === 'mouse') playArtwork(svg); };
-    host.addEventListener('pointerenter', play);
-    return () => host.removeEventListener('pointerenter', play);
-  }, [artwork]);
+    if (!host || playOn === 'state') return undefined;
+    const mouse = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    // the security incident in a pressable category: a glance around on hover; the selected category's eye becomes the alarm
+    if (playOn === 'click' && svg.querySelector('[data-scene-part="incident-coin"]')) {
+      const pressed = () => host.getAttribute('aria-pressed') === 'true';
+      setIncidentAlarm(svg, pressed(), false);
+      const watch = new MutationObserver(() => {
+        // picked: the eye stops looking around as it turns into the alarm
+        if (pressed()) stopIncidentGlance(svg, false);
+        setIncidentAlarm(svg, pressed(), true);
+      });
+      watch.observe(host, { attributes: true, attributeFilter: ['aria-pressed'] });
+      // the eye looks around only while the mouse is on the icon itself (its frame); leaving brings the pupil back
+      const icon = svg.closest('.ic') ?? svg;
+      const onEnter = (event) => {
+        if (event.pointerType === 'mouse' && !pressed()) startIncidentGlance(svg);
+      };
+      const onLeave = () => stopIncidentGlance(svg);
+      if (mouse) {
+        icon.addEventListener('pointerenter', onEnter);
+        icon.addEventListener('pointerleave', onLeave);
+      }
+      return () => {
+        watch.disconnect();
+        icon.removeEventListener('pointerenter', onEnter);
+        icon.removeEventListener('pointerleave', onLeave);
+        stopIncidentGlance(svg, false);
+      };
+    }
+    const onEnter = (event) => {
+      if (event.pointerType !== 'mouse') return;
+      if (playOn === 'click') previewArtwork(svg);
+      else playArtwork(svg);
+    };
+    const onClick = () => playArtwork(svg);
+    if (mouse) host.addEventListener('pointerenter', onEnter);
+    if (playOn === 'click') host.addEventListener('click', onClick);
+    return () => {
+      host.removeEventListener('pointerenter', onEnter);
+      host.removeEventListener('click', onClick);
+    };
+  }, [artwork, playOn]);
 
   if (!artwork) return fallback;
   return (
-    <svg ref={ref} className={`category-artwork ${className}`.trim()} viewBox={artwork.viewBox} width={size} height={size} aria-hidden="true">
+    <svg ref={ref} className={`category-artwork${playOn === 'state' ? ' art-state' : playOn === 'click' ? ' art-click' : ''} ${className}`.trim()} viewBox={artwork.viewBox} width={size} height={size} aria-hidden="true">
       {artwork.art}
     </svg>
   );
+}
+
+/** Where the pupil can look (px from the middle): sideways further than up / down, so it stays inside the eye. */
+const GLANCES = [[4, 0], [-4, 0], [0, -2.5], [0, 2.5], [3, -2], [-3, -2], [3, 2], [-3, 2]];
+/** A glance: the move to a spot and the pause there (ms). */
+const GLANCE_MOVE_MS = 420;
+const GLANCE_HOLD_MS = 320;
+
+/** The pupil's glancing per picture, while the mouse is on it: the glance playing and the spot it looked at last. */
+const glancing = new WeakMap();
+
+/** Where the pupil is drawn right now (mid-move too), as a transform string. */
+const pupilNow = (pupil) => getComputedStyle(pupil).transform;
+
+/** The security incident's eye starts looking around: one random spot after another (never the same twice), until it stops. */
+function startIncidentGlance(svg) {
+  if (prefersReducedMotion()) return;
+  const pupil = svg.querySelector('[data-scene-part="incident-pupil"]');
+  if (!pupil || glancing.has(svg)) return;
+  const state = { animation: null, last: null };
+  glancing.set(svg, state);
+  const next = () => {
+    if (glancing.get(svg) !== state) return;
+    let spot;
+    do spot = GLANCES[Math.floor(Math.random() * GLANCES.length)];
+    while (spot === state.last);
+    state.last = spot;
+    const to = `translate(${spot[0]}px, ${spot[1]}px)`;
+    const total = GLANCE_MOVE_MS + GLANCE_HOLD_MS;
+    // from wherever it is to the spot, then it rests there a moment (the glance before it is read, then let go)
+    const from = pupilNow(pupil);
+    state.animation?.cancel();
+    state.animation = pupil.animate(
+      [{ transform: from, easing: EASE_IN_OUT }, { transform: to, offset: GLANCE_MOVE_MS / total }, { transform: to }],
+      { duration: total, fill: 'forwards' },
+    );
+    state.animation.onfinish = next;
+  };
+  next();
+}
+
+/** The eye stops looking around: the pupil glides back to the middle from where it is (`animated` false: at once). */
+function stopIncidentGlance(svg, animated = true) {
+  const state = glancing.get(svg);
+  if (!state) return;
+  glancing.delete(svg);
+  const pupil = svg.querySelector('[data-scene-part="incident-pupil"]');
+  if (!pupil) return;
+  const from = pupilNow(pupil);
+  state.animation?.cancel();
+  if (!animated) return;
+  pupil.animate([{ transform: from }, { transform: 'none' }], { duration: GLANCE_MOVE_MS, easing: EASE_IN_OUT });
+}
+
+/**
+ * Shows the security incident as the alarm (`alarm` true) or the eye, and keeps it: turned like a coin when `animated`
+ * (the eye squeezes to its edge, the other face opens out; the alarm flashes once as it arrives), at once otherwise.
+ */
+function setIncidentAlarm(svg, alarm, animated) {
+  const part = (name) => svg.querySelector(`[data-scene-part="${name}"]`);
+  const coin = part('incident-coin');
+  const eye = part('incident-eye');
+  const light = part('incident-alarm');
+  if (!coin || !eye || !light) return;
+  for (const animation of coin.getAnimations()) animation.cancel();
+  const show = () => {
+    eye.style.opacity = alarm ? '0' : '1';
+    light.style.opacity = alarm ? '1' : '0';
+  };
+  if (!animated || prefersReducedMotion()) {
+    show();
+    return;
+  }
+  const close = coin.animate([{ transform: 'scaleX(1)' }, { transform: 'scaleX(0)' }], { duration: 170, easing: 'ease-in' });
+  close.onfinish = () => {
+    show();
+    coin.animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { duration: 220, easing: 'ease-out' });
+    const rays = part('incident-rays');
+    if (alarm && rays) rays.animate([{ opacity: 0 }, { opacity: 1, offset: 0.3 }, { opacity: 0, offset: 0.6 }, { opacity: 1, offset: 0.8 }, { opacity: 0 }], { duration: 700, delay: 120 });
+  };
 }
 
 /** Play the illustration at the point of selection without holding up the category filter. */
 export function playCategoryArtwork(button) {
   const artwork = button.querySelector('.category-artwork, .ti');
   if (artwork) playArtwork(artwork);
+}
+
+/**
+ * A small taste of the sequence (hover, when the full one waits for a click): the parts that have a preview pose
+ * (--art-preview) lean into it and back; a scene without one gives its main part a tiny lift.
+ */
+function previewArtwork(artwork) {
+  // the disk-on-key's cap follows hover / selection in CSS (components.css, .art-click)
+  if (prefersReducedMotion() || artwork.querySelector('[data-scene-part="usb-cap"]')) return;
+  const lean = (element, to) => {
+    for (const animation of element.getAnimations()) if (animation.id === 'category-preview') animation.cancel();
+    const animation = element.animate([{ transform: 'none' }, { transform: to, offset: 0.45 }, { transform: 'none' }], { duration: 440, easing: EASE_IN_OUT });
+    animation.id = 'category-preview';
+  };
+  const posed = [...artwork.querySelectorAll('.category-art-part')]
+    .map((part) => [part, getComputedStyle(part).getPropertyValue('--art-preview').trim()])
+    .filter(([, pose]) => pose && pose !== 'none');
+  if (posed.length) {
+    for (const [part, pose] of posed) lean(part, pose);
+    return;
+  }
+  // the security incident: the eye starts to turn, as if about to become the alarm, and turns back
+  const coin = artwork.querySelector('[data-scene-part="incident-coin"]');
+  if (coin) {
+    lean(coin, 'scaleX(.55)');
+    return;
+  }
+  // the garage: its door lifts a little (the pickup behind it stays hidden)
+  const door = artwork.querySelector('[data-scene-part="garage-door"]');
+  if (door) {
+    lean(door, 'scaleY(.82)');
+    return;
+  }
+  const main = artwork.querySelector('.category-art-food-top, [data-scene-part]:not(.category-art-scene-effect)');
+  lean(main ?? artwork, 'translateY(-1.5px)');
 }
 
 /** Play one illustration's sequence (an inline .category-artwork or .ti svg). */
@@ -352,6 +521,25 @@ function playArtwork(artwork) {
   const part = (name) => artwork.querySelector(`[data-scene-part="${name}"]`);
   // the USB cap follows hover / selection in CSS (components.css), not a one-shot sequence
   if (part('usb-cap')) return;
+
+  const coin = part('incident-coin');
+  if (coin) {
+    // the eye turns like a coin into the alarm light, which flashes; then it turns back
+    const TURN = 1500;
+    animate(coin, [
+      { transform: 'scaleX(1)', easing: 'ease-in' },
+      { transform: 'scaleX(0)', offset: 0.18, easing: 'ease-out' },
+      { transform: 'scaleX(1)', offset: 0.36 },
+      { transform: 'scaleX(1)', offset: 0.72, easing: 'ease-in' },
+      { transform: 'scaleX(0)', offset: 0.86, easing: 'ease-out' },
+      { transform: 'scaleX(1)' },
+    ], { duration: TURN });
+    const swap = (from, to) => [{ opacity: from }, { opacity: from, offset: 0.179 }, { opacity: to, offset: 0.18 }, { opacity: to, offset: 0.859 }, { opacity: from, offset: 0.86 }, { opacity: from }];
+    animate(part('incident-eye'), swap(1, 0), { duration: TURN });
+    animate(part('incident-alarm'), swap(0, 1), { duration: TURN });
+    animate(part('incident-rays'), [{ opacity: 0 }, { opacity: 1, offset: 0.25 }, { opacity: 0, offset: 0.5 }, { opacity: 1, offset: 0.75 }, { opacity: 0 }], { duration: 700, delay: 470 });
+    return;
+  }
 
   const shackle = part('folder-shackle');
   if (shackle) {

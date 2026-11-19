@@ -6,6 +6,7 @@
 
 import { OPEN_STATUS_IDS, requesterApi } from '@/lib/api/endpoints';
 import { routeFor, routePosition } from '@/features/bookings/route';
+import { parsePermissionName } from '@/features/people/permissions';
 import { fieldKind, fieldRules } from '@/lib/form-fields';
 import { domainIconSrc, requesterIconSrc } from '@/lib/labels';
 import { routeStageOf } from '@/lib/routeTypes';
@@ -50,6 +51,21 @@ export async function fetchCatalog(signal) {
     ...domains.map((domain) => ({ id: `d${domain.id}`, name: domain.display_name, img: domainIconSrc(domain.id), typeIds: [domain.id] })),
   ];
   return { topics, categories };
+}
+
+/**
+ * Every booking type the signed-in user has access to: all of them for the super admin, else the types they manage or
+ * have a dashboard for, plus every type any of their permissions names ("infosec_officer_15", "approver_3", "user_20").
+ * `me.managed_booking_types` alone misses roles the server does not count as managing (the officers of 15-25).
+ */
+export function accessibleBookingTypeIds(me, allTypeIds) {
+  if (me?.is_super_admin) return [...allTypeIds];
+  const ids = new Set([...(me?.managed_booking_types ?? []), ...(me?.dashboard_booking_types ?? [])].map(Number));
+  for (const name of me?.permissions ?? []) {
+    const parsed = parsePermissionName(String(name));
+    if (parsed) ids.add(parsed.bookingTypeId);
+  }
+  return allTypeIds.filter((id) => ids.has(Number(id)));
 }
 
 /** Filter categories for the user’s own requests, including types missing from the permission-filtered catalogs. */

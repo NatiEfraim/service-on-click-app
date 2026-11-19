@@ -405,8 +405,13 @@ export function MyRequestsPanel({ full = false, extraCategories = null, category
             >
               <div className="rq-cats">
                 {section.items.map((item, index) => (
-                  <button key={item.id} type="button" className="rq-cat" style={{ '--i': index }} aria-pressed={current?.id === item.id} onClick={(event) => { playCategoryArtwork(event.currentTarget); pick(item.id); }}>
-                    <span className="ic pic"><CountBadge count={openIn(item)} label={`${openIn(item)} קריאות פתוחות ב${item.name}`} /><CategoryArtwork src={item.img ?? domainIconSrc(item.typeIds[0])} size={32} fallback={<TypePicture typeId={item.typeIds[0]} src={item.img} size={32} />} /></span>
+                  <button key={item.id} type="button" className="rq-cat" style={{ '--i': index }} aria-pressed={current?.id === item.id} onClick={(event) => {
+                    // an animated picture plays in full by itself on the click (playOn="click"); a TypeIcon picture is played here
+                    if (!event.currentTarget.querySelector('.category-artwork')) playCategoryArtwork(event.currentTarget);
+                    pick(item.id);
+                  }}>
+                    {/* hover gives only a small taste of the picture's sequence; the click plays it in full */}
+                    <span className="ic pic"><CountBadge count={openIn(item)} label={`${openIn(item)} קריאות פתוחות ב${item.name}`} /><CategoryArtwork src={item.img ?? domainIconSrc(item.typeIds[0])} size={32} playOn="click" fallback={<TypePicture typeId={item.typeIds[0]} src={item.img} size={32} playOn="click" />} /></span>
                     {item.name}
                   </button>
                 ))}

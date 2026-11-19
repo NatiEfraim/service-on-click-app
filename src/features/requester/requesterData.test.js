@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { OPEN_STATUS_IDS, requesterApi } from '@/lib/api/endpoints';
-import { counterOf, fetchMyRequests, requestCategories, requestRoute, shownFields, stageOf } from './requesterData';
+import { counterOf, fetchMyRequests, requestCategories, requestRoute, shownFields, stageOf, accessibleBookingTypeIds } from './requesterData';
 
 /** Booking type ids: a plain domain (בינוי), הובלות (starts at the control officer), the barber. */
 const CONSTRUCTION = 13;
@@ -154,5 +154,47 @@ describe('shownFields (fields tied to a choice of another field)', () => {
 
   it('leaves other types alone', () => {
     expect(shownFields(22, fields, {})).toBe(fields);
+  });
+});
+
+describe('accessibleBookingTypeIds (every category a user has access to)', () => {
+  const ALL = Array.from({ length: 25 }, (_, i) => i + 1);
+  const range = (from, to) => Array.from({ length: to - from + 1 }, (_, i) => from + i);
+  const perms = (role, ids) => ids.map((id) => `${role}_${id}`);
+
+  it('super admin: every type', () => {
+    expect(accessibleBookingTypeIds({ is_super_admin: true, permissions: [] }, ALL)).toEqual(ALL);
+  });
+
+  it('infosec officer: 14, 15, 16 although the server manages only 14 for them', () => {
+    const me = { permissions: perms('infosec_officer', [14, 15, 16]), managed_booking_types: [14], dashboard_booking_types: [14] };
+    expect(accessibleBookingTypeIds(me, ALL)).toEqual([14, 15, 16]);
+  });
+
+  it('infosec officer who also holds the camp roles: the service domains too', () => {
+    const me = { permissions: [...perms('infosec_officer', [14, 15, 16]), ...perms('approver', range(1, 13))], managed_booking_types: [14] };
+    expect(accessibleBookingTypeIds(me, ALL)).toEqual(range(1, 16));
+  });
+
+  it('ICT handler: 17-25, which the server does not count as managed', () => {
+    expect(accessibleBookingTypeIds({ permissions: perms('ict_handler', range(17, 25)), managed_booking_types: [] }, ALL)).toEqual(range(17, 25));
+  });
+
+  it('department security officer and interview coordinator: the clearance grant', () => {
+    expect(accessibleBookingTypeIds({ permissions: ['department_security_officer_14'] }, ALL)).toEqual([14]);
+    expect(accessibleBookingTypeIds({ permissions: ['interview_coordinator_14'], managed_booking_types: [14] }, ALL)).toEqual([14]);
+  });
+
+  it('plain user: every type they may submit (user_1 .. user_25 but not 14)', () => {
+    const ids = ALL.filter((id) => id !== 14);
+    expect(accessibleBookingTypeIds({ permissions: perms('user', ids) }, ALL)).toEqual(ids);
+  });
+
+  it('camp commander: the domains they administer', () => {
+    expect(accessibleBookingTypeIds({ permissions: perms('admin', [1, 2, 5]), managed_booking_types: [1, 2, 5] }, ALL)).toEqual([1, 2, 5]);
+  });
+
+  it('a type outside the catalog is never invented', () => {
+    expect(accessibleBookingTypeIds({ permissions: ['approver_99'] }, ALL)).toEqual([]);
   });
 });

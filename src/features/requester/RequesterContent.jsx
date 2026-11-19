@@ -56,7 +56,8 @@ function TopicCard({ topic, open, onToggle, onOpenType }) {
   return (
     <section ref={card} className={`card rq-topic fit-card${open ? '' : ' closed'}`} aria-label={topic.name}>
       <button type="button" className="rq-topic-head" aria-expanded={open} onClick={onToggle}>
-        <span className="pic"><TypePicture src={topic.img} /></span>
+        {/* the topic's picture shows whether it is open (the chart drawn, the lock opened) and stays that way */}
+        <span className="pic"><TypePicture src={topic.img} playOn="state" /></span>
         <span className="txt">
           <b>{topic.name}</b>
           <span>{count} סוגי קריאות</span>

@@ -546,3 +546,25 @@ body:has(.ticket.selected, .ticket-copy, .rq-row.selected, .sync-decision-previe
 
 /* FitText (components/ui/FitText): the whole text in even lines; its size is set by the component */
 .fit-text { display: block; min-width: 0; max-width: 100%; line-height: 1.2; text-wrap: balance; overflow-wrap: anywhere; }
+
+/* an artwork that shows its control's open state (CategoryArtwork playOn="state"): closed = at rest, open = done, and it stays */
+.art-state [data-scene-part="chart"] { stroke-dasharray: 100; stroke-dashoffset: 100; transition: stroke-dashoffset 520ms var(--ease-out); }
+[aria-expanded="true"] .art-state [data-scene-part="chart"] { stroke-dashoffset: 0; }
+.art-state [data-scene-part="chart-dot"] { transform-box: fill-box; transform-origin: center; transform: scale(.4); transition: opacity 160ms ease, transform 160ms ease; }
+[aria-expanded="true"] .art-state [data-scene-part="chart-dot"] { opacity: 1; transform: none; transition: opacity 200ms ease 420ms, transform 360ms cubic-bezier(.34, 1.56, .64, 1) 420ms; }
+.art-state [data-scene-part="lock-shackle"] { transform-box: view-box; transform-origin: 18.5px 15px; transition: transform 300ms var(--ease-out); }
+[aria-expanded="true"] .art-state [data-scene-part="lock-shackle"] { transform: translateY(-2.5px) rotate(28deg); transition: transform 420ms cubic-bezier(.34, 1.56, .64, 1); }
+@media (prefers-reduced-motion: reduce) { .art-state [data-scene-part] { transition: none !important; } }
+
+/* the cap in a click-to-play picture (CategoryArtwork playOn="click", the requester home's categories): hover only starts
+   to pull it out (it stays in view); the pressed category has it fully off */
+@media (hover: hover) and (pointer: fine) {
+  :is(a[href], button:enabled, .ticket, .dtile, [role="option"]):hover .art-click [data-scene-part="usb-cap"] {
+    opacity: 1; transform: translate(-3px, -1px) rotate(-10deg);
+    transition: transform 280ms cubic-bezier(.34, 1.56, .64, 1), opacity 160ms ease;
+  }
+}
+:is(a[href], button, .ticket, .dtile, [role="option"]):is([aria-pressed="true"], [aria-selected="true"], [aria-current="page"]) .art-click [data-scene-part="usb-cap"] {
+  opacity: 0; transform: translate(-14px, -5px) rotate(-45deg);
+  transition: transform 320ms var(--ease-out), opacity 220ms ease 100ms;
+}
