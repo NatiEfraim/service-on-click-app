@@ -26,6 +26,7 @@ export const keys = {
   usersAll: ['users'],
   person: (uuid) => ['users', 'person', uuid],
   approvers: (query) => ['approvers', query],
+  handlers: ['handlers'],
   approversAll: ['approvers'],
   /** Everyone holding a role, all pages, as the users screen shows them. */
   roleHolders: ['approvers', 'role-holders'],

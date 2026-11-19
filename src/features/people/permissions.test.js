@@ -16,8 +16,45 @@ import {
   parsePermissionName,
   pendingChanges,
   reasonError,
+  REQUESTER,
   shownValue,
 } from './permissions';
+
+describe('the requester flag (is_user: may open requests of the domain)', () => {
+  // a car domain row: the two roles it has and the requester flag, all editable
+  const free = (value) => ({ value, lock: null });
+  const matrix = {
+    roles: ['approver', 'vice_approver'],
+    rows: [{ bookingTypeId: 1, cells: { approver: free(false), vice_approver: free(false), [REQUESTER]: free(true) } }],
+  };
+
+  it('is read from the server row as its own cell, not as a role column', () => {
+    const caller = { isSuperAdmin: true, administered: new Set(), uuid: 'me' };
+    const built = buildMatrix({
+      approver: { permissions: [{ booking_type_id: 1, is_approver: true, is_vice_approver: false, is_user: true }], role_options: { approver: 3, vice_approver: 4 } },
+      admin: null,
+      permissionNames: [],
+      caller,
+      targetUuid: 'someone',
+    });
+    expect(built.rows[0].cells[REQUESTER].value).toBe(true);
+    expect(built.roles).not.toContain(REQUESTER);
+  });
+
+  it('is sent only when it was changed', () => {
+    const onlyFlag = approverAssignments(matrix, { [cellKey(REQUESTER, 1)]: false });
+    expect(onlyFlag).toEqual([{ booking_type_id: 1, is_approver: false, is_vice_approver: false, is_user: false }]);
+  });
+
+  it('is not sent when only a role changed (so a role change never touches it)', () => {
+    const onlyRole = approverAssignments(matrix, { [cellKey('approver', 1)]: true });
+    expect(onlyRole).toEqual([{ booking_type_id: 1, is_approver: true, is_vice_approver: false }]);
+  });
+
+  it('counts as a pending change of its own', () => {
+    expect(pendingChanges(matrix, { [cellKey(REQUESTER, 1)]: false })).toEqual([{ bookingTypeId: 1, role: REQUESTER, from: true, to: false }]);
+  });
+});
 
 const typeName = (id) => `תחום ${id}`;
 

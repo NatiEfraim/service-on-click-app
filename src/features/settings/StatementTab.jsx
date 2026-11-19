@@ -9,7 +9,7 @@ import { settingsApi } from '@/lib/api/endpoints';
 import { useSaveMutation } from '@/lib/useSaveMutation';
 
 import { statementError, statementFromServer } from './statement';
-import { Switch } from './Switch';
+import { Switch } from '@/components/ui/Switch';
 import { useReloadSettings } from './useSettings';
 
 

@@ -20,7 +20,7 @@ import { PageHead } from '@/components/ui/PageHead';
 import { SearchField } from '@/components/ui/SearchField';
 import { useSmoothHeight } from '@/components/ui/SmoothSize';
 import { useStatusAction } from '@/features/bookings/useStatusAction';
-import { bookingsApi, peopleApi } from '@/lib/api/endpoints';
+import { bookingsApi } from '@/lib/api/endpoints';
 import { keys } from '@/lib/api/keys';
 import { STAGE_SHORT } from '@/lib/labels';
 import { CONTENT_FADE_MS, EASE_OUT, prefersReducedMotion } from '@/lib/motion';
@@ -134,7 +134,8 @@ export function RequestsScreen() {
   useInfiniteScroll({ sentinel, scroller, query, ahead: LOAD_AHEAD_PX, remountKey: hasRows });
 
   // Handler filter options; only for users who manage users.
-  const handlers = useQuery({ queryKey: keys.approvers(''), queryFn: ({ signal }) => peopleApi.approvers('', signal), enabled: can('users.manage'), staleTime: 5 * 60_000 });
+  // the handler filter: every handler by name (GET handlers, unpaged; not the roles screen's paged list)
+  const handlers = useQuery({ queryKey: keys.handlers, queryFn: ({ signal }) => bookingsApi.handlers(signal), enabled: can('users.manage'), staleTime: 5 * 60_000 });
 
   const overview = useQuery({ queryKey: keys.overview, queryFn: ({ signal }) => insightsApi.overview(signal), enabled: canAct, staleTime: 60_000 });
   const waiting = overview.data?.awaiting_me?.count;

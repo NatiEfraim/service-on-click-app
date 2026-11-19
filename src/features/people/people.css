@@ -97,6 +97,9 @@
 
 /* the role buttons - feedback: a press gives a short push in; the chosen one fills */
 .pp-card-roles { display: flex; flex-wrap: wrap; gap: 6px; }
+/* may the person open requests in this domain (is_user): its own switch, under the role buttons */
+.pp-card-requester { padding-top: 8px; border-top: 1px dashed var(--line-2); font-size: 13px; }
+.pp-card-requester .st-switch { font-size: 13px; }
 .pp-card-roles button {
   all: unset; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; cursor: pointer;
   border: 1px solid var(--line); color: var(--ink-2);

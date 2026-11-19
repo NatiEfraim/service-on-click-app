@@ -8,7 +8,7 @@ import { settingsApi } from '@/lib/api/endpoints';
 import { useSaveMutation } from '@/lib/useSaveMutation';
 
 import { draftFromValue, draftProblems, draftToValue, isDatesReference, isDraftDirty, refInputKind, refKeyLabel } from './refs';
-import { Switch } from './Switch';
+import { Switch } from '@/components/ui/Switch';
 import { useReloadSettings } from './useSettings';
 import { Field } from '@/components/ui/Field';
 

@@ -22,6 +22,7 @@ import {
   pendingChanges,
   reasonError,
   REASON_MAX,
+  REQUESTER,
 } from './permissions';
 import { invalidatePeople, usePerson } from './queries';
 import { PermissionsCards } from './PermissionsPicker';
@@ -84,10 +85,17 @@ export function PermissionsDialog({ target, onClose }) {
     setEdits((current) => {
       const updated = { ...current };
       for (const [other, cell] of Object.entries(row.cells)) {
-        if (cell.lock === null) updated[cellKey(other, row.bookingTypeId)] = other === role;
+        // the requester flag is not one of the domain's roles: choosing a role leaves it as it is
+        if (other !== REQUESTER && cell.lock === null) updated[cellKey(other, row.bookingTypeId)] = other === role;
       }
       return updated;
     });
+    setFormError('');
+  };
+  // may this person open requests of the domain (is_user), on its own toggle
+  const setRequester = (row, value) => {
+    if (row.cells[REQUESTER]?.lock !== null) return;
+    setEdits((current) => ({ ...current, [cellKey(REQUESTER, row.bookingTypeId)]: value }));
     setFormError('');
   };
   const [departmentEdit, setDepartmentEdit] = useState(null);
@@ -313,7 +321,7 @@ export function PermissionsDialog({ target, onClose }) {
 
           {matrix.rows.length ? (
             <div ref={matrixWrap} className="ppl-matrix-wrap pp-wrap">
-              <PermissionsCards matrix={matrix} edits={edits} busy={busy} changed={changed} onSetRole={setRole} typeName={typeName} />
+              <PermissionsCards matrix={matrix} edits={edits} busy={busy} changed={changed} onSetRole={setRole} onSetRequester={setRequester} typeName={typeName} />
             </div>
           ) : (
             <EmptyState title="אין תחומים לשיבוץ">אין תחומים שניתן לשבץ בהם את המשתמש הזה.</EmptyState>

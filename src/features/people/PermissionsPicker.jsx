@@ -15,7 +15,8 @@ function PendingTag({ show }) {
   return <span className="pp-group-pending" data-closing={presence.closing || undefined}>שינויים ממתינים</span>;
 }
 import { domainColor } from '@/lib/labels';
-import { cellKey, roleLabel, shownValue } from './permissions';
+import { cellKey, REQUESTER, roleLabel, shownValue } from './permissions';
+import { Switch } from '@/components/ui/Switch';
 import { useToggleSet } from '@/lib/useToggleSet';
 
 /**
@@ -24,9 +25,9 @@ import { useToggleSet } from '@/lib/useToggleSet';
  * (no column per role, no "—" for the roles it does not have). Built on the same matrix, edits and locks as before.
  */
 
-/** The role a domain is set to now (with the edits), or null. */
+/** The role a domain is set to now (with the edits), or null; the requester flag is not a role. */
 function currentRole(row, edits) {
-  return Object.keys(row.cells).find((role) => shownValue(row, role, edits)) ?? null;
+  return Object.keys(row.cells).find((role) => role !== REQUESTER && shownValue(row, role, edits)) ?? null;
 }
 
 /** The roles of a domain, in the matrix's column order. */
@@ -38,8 +39,11 @@ const lockOf = (row) => Object.values(row.cells).find((cell) => cell.lock)?.lock
 /** Whether this domain's choice differs from what is saved. */
 const isChanged = (row, changed) => Object.keys(row.cells).some((role) => changed.has(cellKey(role, row.bookingTypeId)));
 
-/** One domain: its icon and name, its role as a badge, and a button for each of its roles (again to remove). */
-function DomainCard({ index = 0, row, roles, edits, busy, changed, onSetRole, typeName }) {
+/**
+ * One domain: its icon and name, its role as a badge, a button for each of its roles (again to remove), and - where the
+ * domain's requester is the plain user - a switch for whether the person may open requests in it (is_user).
+ */
+function DomainCard({ index = 0, row, roles, edits, busy, changed, onSetRole, onSetRequester, typeName }) {
   const lock = lockOf(row);
   const now = currentRole(row, edits);
   return (
@@ -61,6 +65,13 @@ function DomainCard({ index = 0, row, roles, edits, busy, changed, onSetRole, ty
           </button>
         ))}
       </div>
+      {row.cells[REQUESTER] ? (
+        <div className="pp-card-requester">
+          <Switch checked={Boolean(shownValue(row, REQUESTER, edits))} disabled={Boolean(row.cells[REQUESTER].lock) || busy} onChange={(value) => onSetRequester(row, value)}>
+            רשאי לפתוח קריאה
+          </Switch>
+        </div>
+      ) : null}
     </article>
   );
 }
@@ -69,7 +80,7 @@ function DomainCard({ index = 0, row, roles, edits, busy, changed, onSetRole, ty
  * The three main categories, closed at first: each header says how many of its domains hold a role and whether any has a
  * change waiting; pressing it opens (or closes) its domain cards.
  */
-export function PermissionsCards({ matrix, edits, busy, changed, onSetRole, typeName }) {
+export function PermissionsCards({ matrix, edits, busy, changed, onSetRole, onSetRequester, typeName }) {
   const [open, toggle] = useToggleSet();
   // the main categories (CategoryGroup): the service domains, ביטחון מידע, תקשוב
   const sections = groupBySection(matrix.rows, (row) => row.bookingTypeId).map((section) => ({ ...section, rows: section.items }));
@@ -93,7 +104,7 @@ export function PermissionsCards({ matrix, edits, busy, changed, onSetRole, type
           >
             <div className="pp-cards-grid">
               {section.rows.map((row, index) => (
-                <DomainCard key={row.bookingTypeId} index={index} row={row} roles={matrix.roles} edits={edits} busy={busy} changed={changed} onSetRole={onSetRole} typeName={typeName} />
+                <DomainCard key={row.bookingTypeId} index={index} row={row} roles={matrix.roles} edits={edits} busy={busy} changed={changed} onSetRole={onSetRole} onSetRequester={onSetRequester} typeName={typeName} />
               ))}
             </div>
           </CategoryGroup>

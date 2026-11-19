@@ -15,7 +15,7 @@ import { useToast } from '@/providers/UiProvider';
 import { fieldNameError, fieldTypeName, newOptionsError, parseOptionLines, retypeChoices } from './fieldRules';
 import { AnimatedText } from '@/components/ui/AnimatedText';
 import { FieldOptionsEditor } from './FieldOptionsEditor';
-import { Switch } from './Switch';
+import { Switch } from '@/components/ui/Switch';
 import { handleWriteError, useReloadSettings } from './useSettings';
 
 /** The widths a field may take on a route form's 4-column grid. */

@@ -100,6 +100,12 @@ export function lockReason(caller, targetUuid, bookingTypeId) {
 
 
 const FLAG = /^is_(.+)$/;
+
+/**
+ * The requester flag (`is_user`: may open requests of the domain). Not a role of the domain's one-role choice: a person may
+ * hold a role and also open requests, so it is a cell of its own (`user`) with its own toggle, sent only when changed.
+ */
+export const REQUESTER = 'user';
 const isApproverSide = (role) => role !== 'admin' && !NOT_A_GRANT.has(role);
 
 /** Statuses only a control officer sets; a type reaching them has the control officer step. */
@@ -154,6 +160,8 @@ export function buildMatrix({ approver, admin, permissionNames, caller, targetUu
     for (const [key, value] of Object.entries(row)) {
       const flag = FLAG.exec(key);
       if (flag && typeof value === 'boolean' && isApproverSide(flag[1])) put(row.booking_type_id, flag[1], value);
+      // the requester flag: only on a type whose requester is the plain user (the server sends it there, never on 14)
+      else if (flag && flag[1] === REQUESTER && typeof value === 'boolean') put(row.booking_type_id, REQUESTER, value);
     }
   }
 
@@ -175,7 +183,8 @@ export function buildMatrix({ approver, admin, permissionNames, caller, targetUu
   // a column for every role the server offers (role_options; the camp commander for the super admin), even with no row yet
   // (no rows, no columns: the dialog then says there is no domain to assign)
   const offered = sorted.length ? [...Object.keys(approver.role_options ?? {}).filter(isApproverSide), ...(caller.isSuperAdmin && adminRows.length ? ['admin'] : [])] : [];
-  const roles = [...new Set([...offered, ...sorted.flatMap((row) => Object.keys(row.cells))])].sort(byRole);
+  // the requester flag is a cell of its own (its switch), never a role column
+  const roles = [...new Set([...offered, ...sorted.flatMap((row) => Object.keys(row.cells))])].filter((role) => role !== REQUESTER).sort(byRole);
   return { roles, rows: sorted };
 }
 
@@ -196,7 +205,7 @@ export function shownValue(row, role, edits) {
 export function pendingChanges(matrix, edits) {
   const changes = [];
   for (const row of matrix.rows) {
-    for (const role of matrix.roles) {
+    for (const role of [...matrix.roles, REQUESTER]) {
       const cell = row.cells[role];
       const to = shownValue(row, role, edits);
       if (cell && to !== undefined && to !== cell.value) changes.push({ bookingTypeId: row.bookingTypeId, role, from: cell.value, to });
@@ -213,8 +222,13 @@ export function approverAssignments(matrix, edits) {
     .map((row) => {
       const assignment = { booking_type_id: row.bookingTypeId };
       for (const role of Object.keys(row.cells).sort(byRole)) {
-        if (role !== 'admin') assignment[`is_${role}`] = shownValue(row, role, edits) ?? false;
+        if (role === 'admin' || role === REQUESTER) continue;
+        assignment[`is_${role}`] = shownValue(row, role, edits) ?? false;
       }
+      // the requester flag is optional: sent only when it was changed, so a role change never touches it
+      const requester = row.cells[REQUESTER];
+      const asked = shownValue(row, REQUESTER, edits);
+      if (requester && asked !== requester.value) assignment.is_user = asked;
       return assignment;
     });
 }

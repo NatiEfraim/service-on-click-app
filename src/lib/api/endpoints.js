@@ -89,6 +89,8 @@ export const bookingsApi = {
     send('put', `${APPROVER}/bookings/${uuid}/handler`, body),
   /** Route types: who may be assigned - `[{ uuid, full_name, personal_number, roles }]`, the unit's holders of the route roles. */
   handlerCandidates: (uuid, signal) => getData(`${APPROVER}/bookings/${uuid}/handler-candidates`, undefined, signal),
+  /** Everyone who handles requests (the requests screen's handler filter): `[{ uuid, full_name }]`, unpaged; `users.manage` only. */
+  handlers: (signal) => getData(`${APPROVER}/handlers`, undefined, signal),
 };
 
 
