@@ -1,10 +1,9 @@
 'use client';
 
-import { useRef } from 'react';
 import { ApiError } from '@/lib/api/client';
 import { Button } from './Button';
 import { Icon } from './Icon';
-import { usePresence } from './usePresence';
+import { Fold } from './Fold';
 
 
 
@@ -39,26 +38,14 @@ export function ErrorNotice({ error, onRetry, title = 'לא ניתן לטעון 
   );
 }
 
-/** How long a form error takes to fade out (components.css, .form-err). */
-const FORM_ERROR_EXIT_MS = 260;
-
-/**
- * A form's error message: it unfolds and fades in when it appears, and folds and fades out - still showing its last
- * message - when it is cleared, so the box around it grows and shrinks smoothly. Nothing is in the page while there is
- * no error. A container whose gap sits above it sets `--err-gap` to that gap, and the gap glides in too. Styles:
- * components.css (.form-err).
- */
+/** A form's error message: it unfolds and fades in, and folds and fades out with its last message (Fold); nothing while there is none. */
 export function FormError({ children }) {
-  const last = useRef(children);
-  if (children) last.current = children;
-  const presence = usePresence(Boolean(children), FORM_ERROR_EXIT_MS);
-  if (!presence.mounted) return null;
   return (
-    <div className="form-err" data-closing={presence.closing || undefined}>
+    <Fold show={Boolean(children)} className="form-err">
       <div className="err" role="alert">
-        {children || last.current}
+        {children}
       </div>
-    </div>
+    </Fold>
   );
 }
 

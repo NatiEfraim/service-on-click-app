@@ -37,7 +37,7 @@ export function InlineCategoryGroup({ tile, index }) {
         aria-controls={menuId}
         onClick={() => setOpen(true)}
       >
-        <TileBody iconType={tile.iconType} iconSrc={tile.iconSrc} name={tile.name} open={tile.open} overdue={tile.overdue} />
+        <TileBody iconType={tile.iconType} iconSrc={tile.iconSrc} name={tile.name} open={tile.open} overdue={tile.overdue} playOn="state" />
       </button>
       <div id={menuId} className="dgroup-menu" data-members={tile.members.length} inert={!open}>
         {tile.members.map((domain) => (

@@ -174,17 +174,12 @@ export function MyRequestsPanel({ full = false, extraCategories = null, category
   const Swap = full ? Fragment : SwapBox;
   // switching category on the home: the shown list fades out, then the new one fades in as the card glides to its new
   // height (SmoothSize) - instead of the list and the card snapping
-  // Measured frame by frame: the new category arrives through the address (~100ms after it is asked for), and a list
-  // that gets shorter makes the body's scroll drop in one frame. So: the list fades out while the body glides back to
-  // its top; only then is the category asked for; and the list stays faded until that category has really arrived.
+  // The new category arrives through the address (~100ms after it is asked for): the list fades out, only then is the
+  // category asked for, and the list stays faded until it has really arrived. The scroll stays where it is.
   const [pending, setPending] = useState(undefined);
   const swapping = pending !== undefined;
   const swapTimer = useRef(0);
-  const glide = useRef(0);
-  useEffect(() => () => {
-    window.clearTimeout(swapTimer.current);
-    cancelAnimationFrame(glide.current);
-  }, []);
+  useEffect(() => () => window.clearTimeout(swapTimer.current), []);
   // the asked-for category has arrived: the new list fades in (as the card glides to its new height - SmoothSize)
   if (swapping && (category ?? null) === pending) setPending(undefined);
   const pick = (id) => {
@@ -195,19 +190,8 @@ export function MyRequestsPanel({ full = false, extraCategories = null, category
     }
     setPending(id);
     window.clearTimeout(swapTimer.current);
-    cancelAnimationFrame(glide.current);
-    // the body glides back to its top while the list fades, so the shorter list never makes it snap
-    const scroller = card.current?.querySelector('.rq-mine-scroll');
-    const from = scroller?.scrollTop ?? 0;
-    if (scroller && from > 0) {
-      const started = performance.now();
-      const step = (now) => {
-        const p = Math.min(1, (now - started) / SWAP_OUT_MS);
-        scroller.scrollTop = from * (1 - (1 - (1 - p) ** 3));
-        if (p < 1) glide.current = requestAnimationFrame(step);
-      };
-      glide.current = requestAnimationFrame(step);
-    }
+    // the scroll stays where it is: switching categories never takes the panel back to its top (a shorter list only
+    // brings it up as far as that list reaches, while the list is faded out)
     swapTimer.current = window.setTimeout(() => onCategory(id), SWAP_OUT_MS);
     // never left faded if the address does not change (the same category asked again)
     window.setTimeout(() => setPending((now) => (now === id ? undefined : now)), SWAP_OUT_MS + 1500);

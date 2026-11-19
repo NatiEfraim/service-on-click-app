@@ -77,7 +77,7 @@ export function GroupTile({ tile, subs, index }) {
           if (!event.currentTarget.contains(event.relatedTarget) && !document.querySelector('.dpop')?.contains(event.relatedTarget)) hide();
         }}
       >
-        <TileBody iconType={tile.iconType} iconSrc={tile.iconSrc} name={tile.name} open={tile.open} overdue={tile.overdue} />
+        <TileBody iconType={tile.iconType} iconSrc={tile.iconSrc} name={tile.name} open={tile.open} overdue={tile.overdue} playOn="state" />
       </button>
       {presence.mounted && place
         ? createPortal(

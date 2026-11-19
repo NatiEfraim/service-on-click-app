@@ -92,14 +92,33 @@
 .rq-form-head h1 { margin: 0; font-size: 21px; }
 .rq-form-head p { margin: 2px 0 0; }
 /* two columns, or the four a form was designed on (a field's col_span, the clearance grant): RequestForm sets --rq-cols */
+/* the form's fields scroll between the fixed title and the fixed send bar (a block, not .fit-fill's flex column, which squeezed them) */
+.fit-card.rq-form-card > .rq-form-scroll { display: block; flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 .rq-fields { display: grid; grid-template-columns: repeat(var(--rq-cols, 2), minmax(0, 1fr)); gap: 16px 18px; padding: 20px; }
-.rq-fields .field { display: flex; flex-direction: column; gap: 6px; }
+.rq-fields .field { display: flex; flex-direction: column; gap: 6px; --err-gap: 6px; }
 .rq-fields .field.wide { grid-column: 1 / -1; }
 .rq-fields .field > label, .rq-fields .field > .label { font-weight: 600; font-size: 14px; }
 .rq-fields .req { color: var(--bad); }
 .rq-fields textarea { resize: vertical; min-height: 96px; }
 .rq-fields [aria-invalid="true"] { border-color: var(--bad); }
+/* a field that turns invalid glows red for a second; every send attempt glows again: the attempt parity (data-flash) swaps
+   between two identical keyframes, and a new animation name restarts the animation */
+.rq-fields :is([aria-invalid="true"], .tp-trigger[data-invalid="true"]) { animation: rq-field-flash-a 1s var(--ease-out); }
+.rq-fields[data-flash="1"] :is([aria-invalid="true"], .tp-trigger[data-invalid="true"]) { animation-name: rq-field-flash-b; }
+@keyframes rq-field-flash-a {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--bad) 0%, transparent); }
+  18% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--bad) 32%, transparent); background-color: color-mix(in srgb, var(--bad) 7%, var(--surface)); }
+  100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--bad) 0%, transparent); }
+}
+@keyframes rq-field-flash-b {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--bad) 0%, transparent); }
+  18% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--bad) 32%, transparent); background-color: color-mix(in srgb, var(--bad) 7%, var(--surface)); }
+  100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--bad) 0%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) { .rq-fields :is([aria-invalid="true"], .tp-trigger[data-invalid="true"]) { animation: none; } }
 .rq-err { color: var(--bad); font-size: 13px; }
+/* how much of its limit a long text has used, under the text area */
+.rq-count { align-self: flex-end; margin-top: -2px; font-size: 12px; color: var(--mute); font-variant-numeric: tabular-nums; }
 .rq-declare { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; width: fit-content; }
 .rq-declare input { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
 /* what the person lookup by ID number said (RequestForm): looking, found and filled, not found, not available */

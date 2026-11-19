@@ -140,17 +140,17 @@ textarea.input { min-height: 80px; resize: vertical; }
 .check input { width: 16px; height: 16px; accent-color: var(--accent); }
 .err { color: var(--bad); font-size: 13px; }
 .err:empty { display: none; }
-/* a form error (FormError): its height unfolds (grid rows 0fr -> 1fr) and it fades in; on clearing it folds and fades out.
+/* a Fold (components/ui/Fold: FormError, the errors under fields): its height unfolds (grid rows 0fr -> 1fr) and it fades in; on clearing it folds and fades out.
    Transitions, not keyframes: an error that comes back while folding turns around from where it is, without a jump.
    --err-gap: the container's gap above it, taken back while folded so the gap glides too */
-.form-err {
+.fold {
   display: grid; grid-template-rows: 1fr; opacity: 1; margin-block-start: 0;
   transition: grid-template-rows 260ms var(--ease-out), margin-block-start 260ms var(--ease-out), opacity 220ms var(--ease-out);
 }
-.form-err > .err { min-height: 0; overflow: hidden; }
-.form-err[data-closing] { grid-template-rows: 0fr; opacity: 0; margin-block-start: calc(-1 * var(--err-gap, 0px)); }
-@starting-style { .form-err { grid-template-rows: 0fr; opacity: 0; margin-block-start: calc(-1 * var(--err-gap, 0px)); } }
-@media (prefers-reduced-motion: reduce) { .form-err { transition: opacity 150ms ease; } }
+.fold > * { min-height: 0; overflow: hidden; }
+.fold[data-closing] { grid-template-rows: 0fr; opacity: 0; margin-block-start: calc(-1 * var(--err-gap, 0px)); }
+@starting-style { .fold { grid-template-rows: 0fr; opacity: 0; margin-block-start: calc(-1 * var(--err-gap, 0px)); } }
+@media (prefers-reduced-motion: reduce) { .fold { transition: opacity 150ms ease; } }
 
 /* ---------- notices, empty states, skeletons */
 .notice { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: var(--r-sm); background: var(--info-w); font-size: 14px; }
@@ -552,8 +552,14 @@ body:has(.ticket.selected, .ticket-copy, .rq-row.selected, .sync-decision-previe
 [aria-expanded="true"] .art-state [data-scene-part="chart"] { stroke-dashoffset: 0; }
 .art-state [data-scene-part="chart-dot"] { transform-box: fill-box; transform-origin: center; transform: scale(.4); transition: opacity 160ms ease, transform 160ms ease; }
 [aria-expanded="true"] .art-state [data-scene-part="chart-dot"] { opacity: 1; transform: none; transition: opacity 200ms ease 420ms, transform 360ms cubic-bezier(.34, 1.56, .64, 1) 420ms; }
-.art-state [data-scene-part="lock-shackle"] { transform-box: view-box; transform-origin: 18.5px 15px; transition: transform 300ms var(--ease-out); }
-[aria-expanded="true"] .art-state [data-scene-part="lock-shackle"] { transform: translateY(-2.5px) rotate(28deg); transition: transform 420ms cubic-bezier(.34, 1.56, .64, 1); }
+.art-state [data-scene-part="safe-door"] { transition: transform 380ms var(--ease-out); }
+.art-state [data-scene-part="safe-dial"] { transition: transform 380ms var(--ease-out); }
+.art-state [data-scene-part="safe-glow"] { transition: opacity 260ms var(--ease-out); }
+.art-state [data-scene-part="safe-item"] { transform-box: fill-box; transform-origin: center; transform: scale(.6); transition: transform 300ms var(--ease-out), opacity 200ms var(--ease-out); }
+[aria-expanded="true"] .art-state [data-scene-part="safe-door"] { transform: scaleX(.16); }
+[aria-expanded="true"] .art-state [data-scene-part="safe-dial"] { transform: rotate(-180deg); }
+[aria-expanded="true"] .art-state [data-scene-part="safe-glow"] { opacity: .8; }
+[aria-expanded="true"] .art-state [data-scene-part="safe-item"] { opacity: 1; transform: translateY(-1px) scale(1.12); transition: transform 520ms cubic-bezier(.34, 1.56, .64, 1) 120ms, opacity 200ms var(--ease-out) 120ms; }
 @media (prefers-reduced-motion: reduce) { .art-state [data-scene-part] { transition: none !important; } }
 
 /* the cap in a click-to-play picture (CategoryArtwork playOn="click", the requester home's categories): hover only starts

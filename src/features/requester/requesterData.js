@@ -161,6 +161,69 @@ function toField(raw) {
 }
 
 /**
+ * What may be typed in a field, by its `field_name` (the forms of 14-25 share these names; the integration guide §5).
+ * `digits` (with `max`), `letters` (no digits), `allow` (one character's pattern), `block` (characters to drop), `max`
+ * (length), `ltr` (written left to right), `notBefore` / `notAfter: 'today'` (a date's earliest / latest day).
+ * Characters outside the rule are dropped as they are typed.
+ */
+const COMPUTER_NAME = { allow: /[A-Za-z0-9-]/, ltr: true };
+const INPUT_RULES = {
+  // people (the clearance grant, פתיחת משתמש)
+  personal_id: { digits: true, max: 9 },
+  personal_number: { digits: true, max: 8 },
+  phone: { digits: true, max: 10 },
+  commander_phone: { digits: true, max: 10 },
+  first_name: { letters: true },
+  last_name: { letters: true },
+  department: { letters: true },
+  branch: { letters: true },
+  section: { letters: true },
+  role: { letters: true },
+  rank: { letters: true },
+  commander_name: { letters: true },
+  // the permission's receiver (folder, מנת"ה): the server takes 5-9 digits
+  beneficiary: { digits: true, max: 9 },
+  // removable media: the device's serial number
+  serial: { allow: /[A-Za-z0-9-]/, max: 100, ltr: true },
+  // folders: a path, a folder name (no character a folder name cannot hold), owners (personal numbers), a size in GB
+  path: { ltr: true },
+  folder_name: { block: /[\\/:*?"<>|]/g },
+  owners: { allow: /[0-9,\s]/ },
+  size: { digits: true },
+  // ICT: the computer's name, the printer's address, the user's OUs
+  computer_name: COMPUTER_NAME,
+  printer_ip: { allow: /[0-9.]/, max: 15, ltr: true },
+  ou_upper: { ltr: true },
+  ou_lower: { ltr: true },
+  // dates: an "until" is not in the past, an incident not in the future
+  until: { notBefore: 'today' },
+  incident_date: { notAfter: 'today' },
+};
+
+/** The typing rule of a field, or null. */
+export const inputRuleOf = (fieldName) => INPUT_RULES[fieldName] ?? null;
+
+/** Hebrew and English letters, spaces, and the marks names use (geresh, gershayim, quotes, hyphen, dot). */
+const NOT_A_LETTER = /[^A-Za-z֐-׿\s'"\-.׳״]/g;
+
+/** A typed value with what its rule does not allow removed (and cut to its length). */
+export function cleanInput(rule, value) {
+  if (!rule) return value;
+  let text = String(value ?? '');
+  if (rule.digits) text = text.replace(/\D/g, '');
+  else if (rule.letters) text = text.replace(NOT_A_LETTER, '');
+  else if (rule.allow) text = [...text].filter((char) => rule.allow.test(char)).join('');
+  else if (rule.block) text = text.replace(rule.block, '');
+  return rule.max ? text.slice(0, rule.max) : text;
+}
+
+/** Today as 'YYYY-MM-DD', in local time (a date rule's "today"). */
+export function todayIso(now = new Date()) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
+
+/**
  * Fields the server keeps optional but that belong to one choice of another field (it has no conditional fields): shown,
  * and required, only while that choice is picked; never sent otherwise. By `field_name`. התקנת מדפסת: the printer's IP
  * is needed only for a connected printer.

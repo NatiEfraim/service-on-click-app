@@ -57,6 +57,36 @@ const ARTWORK = {
       </g>
     ),
   },
+  // ציוד גברים: the ♂ of the original picture; small ties float up from its ring (as the hearts of ציוד נשים)
+  '/icons/domains/3.svg': {
+    viewBox: '0 0 24 24',
+    art: (
+      <g fill="none">
+        <g stroke="#81bcdb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="10" cy="14" r="6" />
+          <path d="M14.2 9.8 L20 4 M14 4 H20 V10" />
+        </g>
+        <path data-scene-part="tie-0" className="category-art-scene-effect" d="M2.7 4.5 H4.3 L4 5.5 L4.6 8.1 L3.5 8.9 L2.4 8.1 L3 5.5 Z" fill="#81bcdb" />
+        <path data-scene-part="tie-1" className="category-art-scene-effect" d="M8.7 2.5 H10.3 L10 3.5 L10.6 6.1 L9.5 6.9 L8.4 6.1 L9 3.5 Z" fill="#81bcdb" />
+        <path data-scene-part="tie-2" className="category-art-scene-effect" d="M13.2 4.5 H14.8 L14.5 5.5 L15.1 8.1 L14 8.9 L12.9 8.1 L13.5 5.5 Z" fill="#81bcdb" />
+      </g>
+    ),
+  },
+  // ציוד נשים: the ♀ of the original picture; small hearts float up from its ring
+  '/icons/domains/4.svg': {
+    viewBox: '0 0 24 24',
+    art: (
+      <g fill="none">
+        <g stroke="#db95d8" strokeWidth="2" strokeLinecap="round">
+          <circle cx="12" cy="9" r="6" />
+          <path d="M12 15 V22 M8 19 H16" />
+        </g>
+        <path data-scene-part="heart-0" className="category-art-scene-effect" d="M6.5 4.6 C4.7 3.3 5.3 1.6 6.5 2.6 C7.7 1.6 8.3 3.3 6.5 4.6 Z" fill="#db95d8" />
+        <path data-scene-part="heart-1" className="category-art-scene-effect" d="M17.5 4.1 C15.7 2.8 16.3 1.1 17.5 2.1 C18.7 1.1 19.3 2.8 17.5 4.1 Z" fill="#db95d8" />
+        <path data-scene-part="heart-2" className="category-art-scene-effect" d="M12 2.2 C10.2 0.9 10.8 -0.8 12 0.2 C13.2 -0.8 13.8 0.9 12 2.2 Z" fill="#db95d8" />
+      </g>
+    ),
+  },
   '/icons/domains/5.svg': {
     viewBox: '0 0 37 31',
     art: (
@@ -280,14 +310,20 @@ const ARTWORK = {
   '/icons/requester/infosec.svg': {
     viewBox: '0 0 32 32',
     art: (
+      // the safe of the category headers (ServiceIcon's SafeIcon): its door opens on a gold glow and a gold shield springs out
       <g fill="none">
-        <path d="M16 3 L26 7 V15 C26 21.5 21.6 26.5 16 29 C10.4 26.5 6 21.5 6 15 V7 Z" fill="#8FB3E8" stroke="#26232B" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-        <path className="category-art-light" d="M16 5.5 L23.6 8.6 V15 C23.6 20 20.4 24 16 26.3" stroke="#FFFFFF" strokeWidth="1.4" strokeLinecap="round" />
-        <g data-scene-part="lock-shackle" className="category-art-part" style={{ "--art-preview": "translateY(-1px)", "--art-full": "translateY(-2.5px)" }}>
-          <path d="M13.5 15 V13 a2.5 2.5 0 0 1 5 0 V15"stroke="#26232B" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        <rect x="4" y="5.5" width="24" height="21" rx="3" fill="#8FB3E8" stroke="#26232B" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        <rect x="7" y="8.5" width="18" height="15" rx="1.5" fill="#2C3E66" stroke="#26232B" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        <circle data-scene-part="safe-glow" className="category-art-scene-effect" cx="16" cy="16" r="6.5" fill="#F2C14E" />
+        <path data-scene-part="safe-item" className="category-art-scene-effect" d="M16 11 L20.5 12.8 V16 C20.5 18.8 18.6 20.8 16 22 C13.4 20.8 11.5 18.8 11.5 16 V12.8 Z" fill="#F2C14E" stroke="#26232B" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        <g data-scene-part="safe-door" style={{ transformBox: 'fill-box', transformOrigin: '0% 50%' }}>
+          <rect x="7" y="8.5" width="18" height="15" rx="1.5" fill="#C7D8F2" stroke="#26232B" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+          <g data-scene-part="safe-dial" style={{ transformBox: 'fill-box', transformOrigin: 'center' }}>
+            <circle cx="16" cy="16" r="3.4" fill="#FFFFFF" stroke="#26232B" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M16 12.6 V14.2 M16 17.8 V19.4 M12.6 16 H14.2 M17.8 16 H19.4" stroke="#26232B" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+          </g>
         </g>
-        <rect x="12" y="15" width="8" height="7" rx="1.2" fill="#F2C14E" stroke="#26232B" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M16 18 V19.5" stroke="#26232B" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M7 26.5 V28.5 M25 26.5 V28.5" stroke="#26232B" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
       </g>
     ),
   },
@@ -521,6 +557,42 @@ function playArtwork(artwork) {
   const part = (name) => artwork.querySelector(`[data-scene-part="${name}"]`);
   // the USB cap follows hover / selection in CSS (components.css), not a one-shot sequence
   if (part('usb-cap')) return;
+
+  // ציוד נשים / ציוד גברים: three small hearts (or ties) float up from the ring, one after another, and fade
+  const floater = part('heart-0') ? 'heart' : part('tie-0') ? 'tie' : null;
+  if (floater) {
+    for (const i of [0, 1, 2]) {
+      const heart = part(`${floater}-${i}`);
+      heart.style.transformBox = 'fill-box';
+      heart.style.transformOrigin = 'center';
+      animate(heart, [
+        { opacity: 0, transform: 'translateY(4px) scale(.5)' },
+        { opacity: 1, transform: 'none', offset: 0.35 },
+        { opacity: 0, transform: 'translateY(-5px) scale(.9)' },
+      ], { duration: 900, delay: i * 150, easing: EASE_OUT });
+    }
+    return;
+  }
+
+  const door = part('safe-door');
+  if (door) {
+    // the dial turns, the door swings open on a gold glow, a gold shield springs out; then the safe closes again
+    const SAFE = 1500;
+    animate(part('safe-dial'), [{ transform: 'none' }, { transform: 'rotate(-180deg)', offset: 0.3 }, { transform: 'rotate(-180deg)', offset: 0.8 }, { transform: 'none' }], { duration: SAFE, easing: EASE_IN_OUT });
+    animate(door, [{ transform: 'none' }, { transform: 'none', offset: 0.2 }, { transform: 'scaleX(.16)', offset: 0.42 }, { transform: 'scaleX(.16)', offset: 0.8 }, { transform: 'none' }], { duration: SAFE, easing: EASE_IN_OUT });
+    animate(part('safe-glow'), [{ opacity: 0 }, { opacity: 0, offset: 0.25 }, { opacity: 0.8, offset: 0.42 }, { opacity: 0.8, offset: 0.8 }, { opacity: 0 }], { duration: SAFE });
+    const item = part('safe-item');
+    item.style.transformBox = 'fill-box';
+    item.style.transformOrigin = 'center';
+    animate(item, [
+      { opacity: 0, transform: 'scale(.6)' },
+      { opacity: 0, transform: 'scale(.6)', offset: 0.36 },
+      { opacity: 1, transform: 'translateY(-1px) scale(1.12)', offset: 0.55, easing: 'cubic-bezier(.34, 1.56, .64, 1)' },
+      { opacity: 1, transform: 'translateY(-1px) scale(1.12)', offset: 0.78 },
+      { opacity: 0, transform: 'scale(.6)' },
+    ], { duration: SAFE });
+    return;
+  }
 
   const coin = part('incident-coin');
   if (coin) {

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { OPEN_STATUS_IDS, requesterApi } from '@/lib/api/endpoints';
-import { counterOf, fetchMyRequests, requestCategories, requestRoute, shownFields, stageOf, accessibleBookingTypeIds } from './requesterData';
+import { counterOf, fetchMyRequests, requestCategories, requestRoute, shownFields, stageOf, accessibleBookingTypeIds, cleanInput, inputRuleOf, todayIso } from './requesterData';
 
 /** Booking type ids: a plain domain (בינוי), הובלות (starts at the control officer), the barber. */
 const CONSTRUCTION = 13;
@@ -196,5 +196,70 @@ describe('accessibleBookingTypeIds (every category a user has access to)', () =>
 
   it('a type outside the catalog is never invented', () => {
     expect(accessibleBookingTypeIds({ permissions: ['approver_99'] }, ALL)).toEqual([]);
+  });
+});
+describe('cleanInput (what may be typed in a form field)', () => {
+  it('ID number: digits only, at most 9', () => {
+    expect(cleanInput(inputRuleOf('personal_id'), '12a3-456 78901')).toBe('123456789');
+  });
+  it('personal number: digits only, at most 8', () => {
+    expect(cleanInput(inputRuleOf('personal_number'), '123456789')).toBe('12345678');
+  });
+  it('phone: digits only, at most 10', () => {
+    expect(cleanInput(inputRuleOf('phone'), '054-123 45678')).toBe('0541234567');
+    expect(cleanInput(inputRuleOf('commander_phone'), '05412345678')).toBe('0541234567');
+  });
+  it('names, department, branch, rank, commander: letters only, no digits', () => {
+    expect(cleanInput(inputRuleOf('first_name'), 'דניאל1')).toBe('דניאל');
+    expect(cleanInput(inputRuleOf('last_name'), "בן-חיים אבו'ת")).toBe("בן-חיים אבו'ת");
+    expect(cleanInput(inputRuleOf('rank'), 'רס"ל 7')).toBe('רס"ל ');
+    expect(cleanInput(inputRuleOf('commander_name'), 'Dan 2')).toBe('Dan ');
+  });
+  it('any other field is left as typed', () => {
+    expect(cleanInput(inputRuleOf('notes'), 'abc 123')).toBe('abc 123');
+  });
+  it('section and role (פתיחת משתמש): letters only', () => {
+    expect(cleanInput(inputRuleOf('section'), 'מדור 3')).toBe('מדור ');
+    expect(cleanInput(inputRuleOf('role'), 'קצין1')).toBe('קצין');
+  });
+  it("a permission's receiver: digits only, at most 9 (the server takes 5-9)", () => {
+    expect(cleanInput(inputRuleOf('beneficiary'), 'm.a 1234567890')).toBe('123456789');
+  });
+  it('a device serial: letters, digits and hyphen, at most 100, left to right', () => {
+    expect(cleanInput(inputRuleOf('serial'), 'SN-12 34/ab!')).toBe('SN-1234ab');
+    expect(cleanInput(inputRuleOf('serial'), 'A'.repeat(120))).toHaveLength(100);
+    expect(inputRuleOf('serial').ltr).toBe(true);
+  });
+  it('a folder name drops what a folder name cannot hold', () => {
+    expect(cleanInput(inputRuleOf('folder_name'), 'דוחות: 2026/רבעון "1"?')).toBe('דוחות 2026רבעון 1');
+  });
+  it('folder owners: personal numbers with commas, spaces and new lines', () => {
+    expect(cleanInput(inputRuleOf('owners'), '1234567, 7654321\n99805335;abc')).toBe('1234567, 7654321\n99805335');
+  });
+  it('size in GB: digits only', () => {
+    expect(cleanInput(inputRuleOf('size'), '12.5 GB')).toBe('125');
+  });
+  it('a computer name: English letters, digits and hyphen, no spaces', () => {
+    expect(cleanInput(inputRuleOf('computer_name'), 'PC-12 אב_3')).toBe('PC-123');
+  });
+  it("a printer's IP: digits and dots, at most 15", () => {
+    expect(cleanInput(inputRuleOf('printer_ip'), '10.0.0.1 ip')).toBe('10.0.0.1');
+    expect(cleanInput(inputRuleOf('printer_ip'), '255.255.255.2555')).toBe('255.255.255.255');
+  });
+  it('paths and OUs are written left to right, as typed', () => {
+    for (const name of ['path', 'ou_upper', 'ou_lower']) {
+      expect(inputRuleOf(name).ltr).toBe(true);
+      expect(cleanInput(inputRuleOf(name), '\\\\srv\\share')).toBe('\\\\srv\\share');
+    }
+  });
+  it('dates: an "until" not before today, an incident not after today', () => {
+    expect(inputRuleOf('until').notBefore).toBe('today');
+    expect(inputRuleOf('incident_date').notAfter).toBe('today');
+  });
+});
+
+describe('todayIso', () => {
+  it('is the local date as YYYY-MM-DD', () => {
+    expect(todayIso(new Date(2026, 0, 5, 23, 30))).toBe('2026-01-05');
   });
 });

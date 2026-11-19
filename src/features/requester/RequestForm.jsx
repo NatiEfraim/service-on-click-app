@@ -5,12 +5,14 @@ import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { DatePicker } from '@/components/ui/DateRangePicker';
 import { EmptyState, ErrorNotice, FormError, Loading } from '@/components/ui/Feedback';
+import { Fold } from '@/components/ui/Fold';
 import { Icon } from '@/components/ui/Icon';
 import { TimePicker } from '@/components/ui/TimePicker';
 import { requesterApi } from '@/lib/api/endpoints';
 import { validateValue } from '@/lib/form-fields';
+import { useFitToWindow } from '@/lib/useFitToWindow';
 import { ChoiceField } from './ChoiceField';
-import { ATTACH_ACCEPT, choicePath, fetchForm, MAX_FILE_BYTES, MAX_FILES, shownFields, submitRequest } from './requesterData';
+import { ATTACH_ACCEPT, choicePath, cleanInput, fetchForm, inputRuleOf, MAX_FILE_BYTES, MAX_FILES, shownFields, submitRequest, todayIso } from './requesterData';
 import { markSeen } from './seen';
 import { REQUESTER_KEY } from './useRequester';
 import { TypePicture } from '@/components/booking/TypePicture';
@@ -75,6 +77,9 @@ export function RequestForm({ found, onHome, onDone }) {
   // the server's own messages, by field id (values.<id>) and for the files; a field's goes once it is edited
   const [serverErrors, setServerErrors] = useState({});
   const picker = useRef(null);
+  // the card is capped at the window's bottom, so only its fields scroll (useFitToWindow)
+  const card = useRef(null);
+  useFitToWindow(card, 320);
   const client = useQueryClient();
   // a form designed on a 4-column grid (a field's col_span); every other form keeps its two columns
   const columns = fields.some((field) => field.colSpan > 1) ? 4 : 2;
@@ -169,9 +174,12 @@ export function RequestForm({ found, onHome, onDone }) {
     setServerErrors((previous) => ({ ...previous, files: undefined }));
   };
 
+  // every send attempt flashes the invalid fields again (its parity swaps the glow's name, which restarts it)
+  const [attempts, setAttempts] = useState(0);
   const submit = (event) => {
     event.preventDefault();
     setTouched(true);
+    setAttempts((count) => count + 1);
     // POST /bookings/{id} is not idempotent: never send twice
     if (valid && !send.isPending) send.mutate();
   };
@@ -198,7 +206,8 @@ export function RequestForm({ found, onHome, onDone }) {
   return (
     <form className="rq-form" onSubmit={submit} noValidate>
       {head}
-      <section className="card">
+      {/* fitted to the window: the title stays on top, the fields scroll, the send bar stays at the bottom */}
+      <section ref={card} className="card fit-card rq-form-card">
         <div className="rq-form-head">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <span className="ic"><TypePicture typeId={type.id} src={type.img} /></span>
@@ -215,19 +224,29 @@ export function RequestForm({ found, onHome, onDone }) {
           <EmptyState title="לטופס זה אין שדות ביחידה שלך">לא ניתן לפתוח בו קריאה כרגע. פנו למנהל המערכת.</EmptyState>
         ) : (
           <>
-            <div className="rq-fields" style={{ '--rq-cols': columns }}>
+            <div className="fit-fill scroll-y rq-form-scroll">
+            <div className="rq-fields" data-flash={attempts % 2} style={{ '--rq-cols': columns }}>
               {fields.map((field) => {
                 const error = serverErrors[field.id] || (touched ? errors[field.id] : '');
                 const isLookup = lookupField !== null && field.id === lookupField.id;
+                // what may be typed here (digits, letters, allowed characters...); the rest is dropped as it is typed
+                const rule = inputRuleOf(field.fieldName);
+                // a text's length limit: the field's own rule, else the server's `max` (on a number field `max` is a value)
+                const lengthCap = rule?.max ?? (field.inputType !== 'number' ? field.rules.max ?? undefined : undefined);
+                const today = todayIso();
                 const props = {
                   id: `rq-${field.id}`,
                   value: values[field.id] ?? '',
-                  onChange: (event) => set(field.id, event.target.value),
+                  onChange: (event) => set(field.id, cleanInput(rule, event.target.value)),
                   'aria-invalid': error ? true : undefined,
                   'aria-required': field.required || undefined,
                   dir: field.ltr ? 'ltr' : undefined,
                   // the ID number: looked up as soon as the field is left (the pause after typing does it too)
                   ...(isLookup ? { onBlur: (event) => void runLookup(event.target.value.trim()), inputMode: 'numeric', autoComplete: 'off' } : {}),
+                  // the length cap; a number field gets the numeric keypad; numbers, paths, names of computers go left to right
+                  ...(lengthCap ? { maxLength: lengthCap } : {}),
+                  ...(rule?.digits ? { inputMode: 'numeric' } : {}),
+                  ...(rule?.digits || rule?.ltr ? { dir: 'ltr' } : {}),
                 };
                 return (
                   <div
@@ -246,7 +265,11 @@ export function RequestForm({ found, onHome, onDone }) {
                         מאשר/ת
                       </label>
                     ) : field.kind === 'textarea' ? (
-                      <textarea className="input" rows={4} {...props} />
+                      <>
+                        <textarea className="input" rows={4} {...props} />
+                        {/* how much of its limit a long text has used */}
+                        {lengthCap ? <span className="rq-count" aria-hidden>{String(values[field.id] ?? '').length} / {lengthCap}</span> : null}
+                      </>
                     ) : field.kind === 'select' ? (
                       <ChoiceField
                         id={props.id}
@@ -259,15 +282,27 @@ export function RequestForm({ found, onHome, onDone }) {
                       />
                     ) : field.inputType === 'date' ? (
                       // the app's own calendar (not the browser's); its value is 'YYYY-MM-DD' as the API expects
-                      <DatePicker value={values[field.id] ?? ''} onChange={(day) => set(field.id, day ?? '')} label={field.label} />
+                      // an "until" cannot be in the past, an incident not in the future: those days are disabled in the calendar
+                      <DatePicker
+                        value={values[field.id] ?? ''}
+                        onChange={(day) => set(field.id, day ?? '')}
+                        label={field.label}
+                        min={rule?.notBefore === 'today' ? today : undefined}
+                        max={rule?.notAfter === 'today' ? today : undefined}
+                      />
                     ) : field.inputType === 'time' ? (
                       <TimePicker value={values[field.id] ?? ''} onChange={(time) => set(field.id, time ?? '')} label={field.label} invalid={Boolean(error)} />
                     ) : (
                       <input className="input" type={field.inputType} {...props} />
                     )}
-                    {error ? <span className="rq-err">{error}</span> : null}
+                    {/* the field's error and the lookup's word fold in and out (Fold), so the form around them glides */}
+                    <Fold show={Boolean(error)}>
+                      <span className="rq-err">{error}</span>
+                    </Fold>
                     {/* what the person lookup said: found and filled, not found, or not available right now */}
-                    {isLookup && lookup.state !== 'idle' ? <span className={`rq-lookup ${lookup.state}`} aria-live="polite">{lookup.message}</span> : null}
+                    <Fold show={isLookup && lookup.state !== 'idle'}>
+                      <span className={`rq-lookup ${lookup.state}`} aria-live="polite">{lookup.message}</span>
+                    </Fold>
                   </div>
                 );
               })}
@@ -298,6 +333,8 @@ export function RequestForm({ found, onHome, onDone }) {
                 ) : null}
               </div>
             </div>
+            </div>
+            {/* outside the scroll: the error and the send bar stay in view whatever the fields' length */}
             <FormError>{send.isError ? send.error?.message ?? 'שליחת הקריאה נכשלה.' : ''}</FormError>
             <div className="rq-actions">
               <Button type="submit" className="rq-send" icon="check" loading={send.isPending}>שליחת הקריאה</Button>
