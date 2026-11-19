@@ -374,8 +374,8 @@ export function CategoryArtwork({ src, size, fallback = null, className = '', pl
         setIncidentAlarm(svg, pressed(), true);
       });
       watch.observe(host, { attributes: true, attributeFilter: ['aria-pressed'] });
-      // the eye looks around only while the mouse is on the icon itself (its frame); leaving brings the pupil back
-      const icon = svg.closest('.ic') ?? svg;
+      // the eye looks around while the mouse is anywhere on the category (its icon or its name); leaving brings the pupil back
+      const icon = host;
       const onEnter = (event) => {
         if (event.pointerType === 'mouse' && !pressed()) startIncidentGlance(svg);
       };
