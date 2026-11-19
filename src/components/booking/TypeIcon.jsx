@@ -40,13 +40,19 @@ function PrinterInstall() {
   );
 }
 
-/** תקלה במייל - an envelope with a warning badge: the envelope tilts and the badge pops. */
+/** תקלה במייל - an envelope with a warning badge: the flap opens, the letter rises out and the badge pops. */
 function EmailFault() {
   return (
     <>
       <g className="ti-em-mail">
-        <rect x="2.5" y="7.5" width="22" height="16" rx="2.2" fill="#F2C46D" {...STROKE} />
-        <path d="M3.5 9 L13.5 16.5 L23.5 9" fill="none" {...STROKE} />
+        <rect x="2.5" y="9.5" width="22" height="15" rx="2" fill="#E0A94A" {...STROKE} />
+        <path className="ti-em-flap-open" d="M2.5 9.5 L13.5 2.5 L24.5 9.5 Z" fill="#F7D488" {...STROKE} />
+        <g className="ti-em-letter">
+          <rect x="5.5" y="11" width="16" height="11" rx="1" fill="#FFFFFF" {...STROKE} />
+          <path d="M8 14.5 H19 M8 17.5 H15" stroke="#8FB3E8" strokeWidth="1.5" strokeLinecap="round" />
+        </g>
+        <path d="M2.5 11.5 L13.5 18.5 L24.5 11.5 V22.5 a2 2 0 0 1 -2 2 H4.5 a2 2 0 0 1 -2 -2 Z" fill="#F2C46D" {...STROKE} />
+        <path className="ti-em-flap" d="M2.5 11.5 a2 2 0 0 1 2 -2 H22.5 a2 2 0 0 1 2 2 L13.5 18.5 Z" fill="#F7D488" {...STROKE} />
       </g>
       <g className="ti-em-badge">
         <circle cx="24" cy="22.5" r="5.6" fill="#E8826A" {...STROKE} />

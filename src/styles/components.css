@@ -412,6 +412,10 @@ body:has(.ticket.selected, .ticket-copy, .rq-row.selected, .sync-decision-previe
 .ti-pr-paper { transform: translateY(-5px); transition: transform 420ms var(--ease-out); }
 .ti-pr-led { transition: fill 200ms ease 120ms; }
 .ti-em-mail { transform-box: fill-box; transform-origin: 50% 100%; transition: transform 320ms var(--ti-spring); }
+/* the envelope opens: the closed flap folds up out of sight, then the open flap unfolds above and the letter rises */
+.ti-em-flap { transform-box: view-box; transform-origin: 13.5px 9.5px; transition: transform 160ms ease-in 160ms; }
+.ti-em-flap-open { transform-box: view-box; transform-origin: 13.5px 9.5px; transform: scaleY(0); transition: transform 160ms ease-in; }
+.ti-em-letter { transition: transform 300ms var(--ease-out); }
 .ti-em-badge { transform-box: fill-box; transform-origin: 50% 50%; transition: transform 380ms var(--ti-spring); }
 .ti-rn-line { stroke-dasharray: 100; stroke-dashoffset: 100; transition: stroke-dashoffset 420ms var(--ease-out) 60ms; }
 .ti-rn-pen { transition: transform 420ms var(--ease-out); }
@@ -423,7 +427,10 @@ body:has(.ticket.selected, .ticket-copy, .rq-row.selected, .sync-decision-previe
   :is(a[href], button:enabled, .ticket:not(.ticket-copy)):is(:hover, :focus-visible) .ti-sw-bar { transform: scaleX(1); }
   :is(a[href], button:enabled, .ticket:not(.ticket-copy)):is(:hover, :focus-visible) .ti-pr-paper { transform: none; }
   :is(a[href], button:enabled, .ticket:not(.ticket-copy)):is(:hover, :focus-visible) .ti-pr-led { fill: #2FA85A; }
-  :is(a[href], button:enabled, .ticket:not(.ticket-copy)):is(:hover, :focus-visible) .ti-em-mail { transform: rotate(-8deg); }
+  :is(a[href], button:enabled, .ticket:not(.ticket-copy)):is(:hover, :focus-visible) .ti-em-mail { transform: rotate(-4deg); }
+  :is(a[href], button:enabled, .ticket:not(.ticket-copy)):is(:hover, :focus-visible) .ti-em-flap { transform: scaleY(0); transition: transform 160ms ease-in; }
+  :is(a[href], button:enabled, .ticket:not(.ticket-copy)):is(:hover, :focus-visible) .ti-em-flap-open { transform: none; transition: transform 200ms var(--ease-out) 150ms; }
+  :is(a[href], button:enabled, .ticket:not(.ticket-copy)):is(:hover, :focus-visible) .ti-em-letter { transform: translateY(-6px); transition: transform 320ms var(--ti-spring) 280ms; }
   :is(a[href], button:enabled, .ticket:not(.ticket-copy)):is(:hover, :focus-visible) .ti-em-badge { transform: scale(1.18); }
   :is(a[href], button:enabled, .ticket:not(.ticket-copy)):is(:hover, :focus-visible) .ti-rn-line { stroke-dashoffset: 0; }
   :is(a[href], button:enabled, .ticket:not(.ticket-copy)):is(:hover, :focus-visible) .ti-rn-pen { transform: translate(-3px, -3px); }
@@ -433,7 +440,7 @@ body:has(.ticket.selected, .ticket-copy, .rq-row.selected, .sync-decision-previe
 }
 /* reduced motion: only the colour changes stay; nothing moves */
 @media (prefers-reduced-motion: reduce) {
-  :is(.ti-sw-arrow, .ti-sw-bar, .ti-pr-paper, .ti-em-mail, .ti-em-badge, .ti-rn-line, .ti-rn-pen, .ti-uo-plus, .ti-mv-arrow, .ti-mv-person) { transition: none; }
+  :is(.ti-sw-arrow, .ti-sw-bar, .ti-pr-paper, .ti-em-mail, .ti-em-badge, .ti-em-flap, .ti-em-flap-open, .ti-em-letter, .ti-rn-line, .ti-rn-pen, .ti-uo-plus, .ti-mv-arrow, .ti-mv-person) { transition: none; }
 }
 
 /* every dialog's close button, at the end of its title row (Modal) */
@@ -479,3 +486,27 @@ body:has(.ticket.selected, .ticket-copy, .rq-row.selected, .sync-decision-previe
 
 /* the viewer's note while a file loads, or when it cannot be shown */
 .lb-msg { color: #fff; font-size: 15px; margin: 0; }
+
+/* ---------- the animated category artwork (components/booking/CategoryArtwork), shown wherever a type's picture is */
+.category-artwork { overflow: visible; flex: none; vertical-align: middle; }
+.category-art-part { transform-box: fill-box; transform-origin: center; }
+.category-art-pivot { transform-box: view-box; }
+.category-art-food-top { transform-box: fill-box; transform-origin: left center; }
+:is(.category-art-light, .category-art-ingredient, .category-art-scene-effect) { opacity: 0; }
+.category-art-scene-effect { transform-box: fill-box; transform-origin: center; }
+
+/* the disk-on-key's cap: off (and staying off) while its control is hovered, focused or the selected one; back on after */
+[data-scene-part="usb-cap"] { transition: transform 380ms cubic-bezier(.34, 1.56, .64, 1), opacity 220ms ease; }
+:is(a[href], button, .ticket, .dtile, [role="option"]):is([aria-pressed="true"], [aria-selected="true"], [aria-current="page"], :focus-visible) [data-scene-part="usb-cap"] {
+  opacity: 0; transform: translate(-14px, -5px) rotate(-45deg);
+  transition: transform 320ms var(--ease-out), opacity 220ms ease 100ms;
+}
+@media (hover: hover) and (pointer: fine) {
+  :is(a[href], button:enabled, .ticket, .dtile, [role="option"]):hover [data-scene-part="usb-cap"] {
+    opacity: 0; transform: translate(-14px, -5px) rotate(-45deg);
+    transition: transform 320ms var(--ease-out), opacity 220ms ease 100ms;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-scene-part="usb-cap"] { transform: none !important; transition: opacity 150ms ease; }
+}

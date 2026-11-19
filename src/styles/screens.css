@@ -89,7 +89,7 @@
 .dom { --dc: var(--accent); width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; background: #fff; border: 1px solid var(--line); color: var(--dc); flex: none; }
 .dom.sm { width: 30px; height: 30px; border-radius: 8px; }
 .dom.sm .ico { width: 16px; height: 16px; }
-.dom img { width: 70%; height: 70%; object-fit: contain; display: block; }
+.dom :is(img, .category-artwork) { width: 70%; height: 70%; object-fit: contain; display: block; }
 img.dico { width: 18px; height: 18px; object-fit: contain; flex: none; vertical-align: -3px; }
 .mr { display: inline-flex; align-items: center; direction: rtl; vertical-align: middle; }
 .mr i { width: 7px; height: 7px; border-radius: 50%; background: var(--line); display: block; }
@@ -193,9 +193,9 @@ svg.chart text { fill: var(--mute); font-size: 13px; font-family: var(--font); }
 /* tile contents follow the tile's size (1 to 6 tiles, or half a group tile), within readable limits */
 .home .dtile, .home .dgroup-item { container-type: size; }
 .home .dtile-ic { width: clamp(44px, 30cqmin, 112px); height: clamp(44px, 30cqmin, 112px); border-radius: clamp(12px, 7cqmin, 26px); }
-.home .dtile-ic img { width: 60%; height: 60%; }
+.home .dtile-ic :is(img, .category-artwork) { width: 60%; height: 60%; }
 .home .tiles > .dtile > .dtile-ic, .home .tiles > .dtile > .dgroup-face > .dtile-ic { width: clamp(28px, 44cqh, 96px); height: clamp(28px, 44cqh, 96px); }
-.home .tiles > .dtile > .dtile-ic img, .home .tiles > .dtile > .dgroup-face > .dtile-ic img { width: 72%; height: 72%; }
+.home .tiles > .dtile > .dtile-ic :is(img, .category-artwork), .home .tiles > .dtile > .dgroup-face > .dtile-ic :is(img, .category-artwork) { width: 72%; height: 72%; }
 .home .dtile-name { font-size: clamp(14px, 8cqmin, 26px); }
 .home .dtile-meta { font-size: clamp(12px, 5cqmin, 17px); }
 .home .dgroup-item { gap: 2px; padding: 3px 4px; }
@@ -204,7 +204,7 @@ svg.chart text { fill: var(--mute); font-size: 13px; font-family: var(--font); }
 .home .dgroup-item .dtile-meta { font-size: clamp(10px, 12cqh, 12px); }
 .home .dgroup-menu[data-members="2"] .dgroup-item { gap: clamp(2px, 3cqh, 8px); }
 .home .dgroup-menu[data-members="2"] .dtile-ic { width: clamp(24px, 39cqh, 80px); height: clamp(24px, 39cqh, 80px); border-radius: clamp(9px, 8cqh, 17px); }
-.home .dgroup-menu[data-members="2"] .dtile-ic img { width: 72%; height: 72%; }
+.home .dgroup-menu[data-members="2"] .dtile-ic :is(img, .category-artwork) { width: 72%; height: 72%; }
 .home .dgroup-menu[data-members="2"] .dtile-name { font-size: clamp(11px, 14cqh, 20px); }
 .home .dgroup-menu[data-members="2"] .dtile-meta { font-size: clamp(10px, 10cqh, 15px); }
 .dgroup-menu[data-members="3"] { flex-direction: column; gap: 3px; padding: 4px; }
@@ -250,7 +250,7 @@ span.chart-fade { flex-direction: row; align-items: center; gap: 8px; white-spac
 .dtile:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .dtile-ic { width: 64px; height: 64px; border-radius: 16px; display: grid; place-items: center; background: #fff; border: 1px solid var(--line); box-shadow: 0 1px 3px rgba(43, 36, 51, .06); color: var(--dc); }
 .dtile-ic .ico { width: 30px; height: 30px; stroke-width: 1.6; }
-.dtile-ic img { width: 38px; height: 38px; object-fit: contain; }
+.dtile-ic :is(img, .category-artwork) { width: 38px; height: 38px; object-fit: contain; }
 .dtile-name { font-weight: 700; font-size: 16px; line-height: 1.25; color: var(--ink); }
 .dtile-meta { font-size: 13px; color: var(--mute); }
 .dtile-meta b { color: var(--ink); }
@@ -693,7 +693,7 @@ span.chart-fade { flex-direction: row; align-items: center; gap: 8px; white-spac
    count 11%) */
 .home .tiles > .dtile { gap: 4px; padding: 6px; }
 .home .tiles > .dtile > .dtile-ic, .home .tiles > .dtile > .dgroup-face > .dtile-ic { width: clamp(32px, 46cqh, 110px); height: clamp(32px, 46cqh, 110px); border-radius: clamp(10px, 9cqh, 24px); }
-.home .tiles > .dtile > .dtile-ic img, .home .tiles > .dtile > .dgroup-face > .dtile-ic img { width: 74%; height: 74%; }
+.home .tiles > .dtile > .dtile-ic :is(img, .category-artwork), .home .tiles > .dtile > .dgroup-face > .dtile-ic :is(img, .category-artwork) { width: 74%; height: 74%; }
 .home .tiles > .dtile > .dtile-name, .home .tiles > .dtile > .dgroup-face > .dtile-name { font-size: clamp(15px, 14cqh, 28px); line-height: 1.25; }
 .home .tiles > .dtile > .dtile-meta, .home .tiles > .dtile > .dgroup-face > .dtile-meta { font-size: clamp(13px, 11cqh, 19px); line-height: 1.25; }
 
@@ -729,7 +729,7 @@ span.chart-fade { flex-direction: row; align-items: center; gap: 8px; white-spac
   transition: border-color .15s ease, background-color .15s ease;
 }
 .dpop-line .dline-ic { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--line-2); background: var(--surface); }
-.dpop-line .dline-ic :is(img, .ti) { width: 22px; height: 22px; }
+.dpop-line .dline-ic :is(img, .ti, .category-artwork) { width: 22px; height: 22px; }
 .dpop-line .dline-name { white-space: normal; font-size: 13px; font-weight: 600; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .dpop-line .dline-n { min-width: 26px; padding: 1px 8px; border-radius: 999px; background: var(--accent-wash); color: var(--accent); text-align: center; font-size: 12px; }
 .dpop-line:hover, .dpop-line:focus-visible { border-color: var(--dc, var(--accent)); background: var(--hover); }

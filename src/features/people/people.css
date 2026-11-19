@@ -117,7 +117,7 @@
 /* the domain picture of a permissions card: in its tile at 40px (the picture ~30px), so its outline stays a crisp line
    instead of a blurred sub-pixel one at 18px; tinted with the domain colour when the card holds a role */
 .pp-card header .dom { width: 40px; height: 40px; border-radius: 11px; transition: background-color var(--dur-base) ease, border-color var(--dur-base) ease; }
-.pp-card header .dom img { width: 76%; height: 76%; }
+.pp-card header .dom :is(img, .category-artwork) { width: 76%; height: 76%; }
 .pp-card.set header .dom { background: color-mix(in srgb, var(--dc) 12%, var(--surface)); border-color: color-mix(in srgb, var(--dc) 45%, var(--line)); }
 
 /* the change-reason field: folds open and fades in once a permission changed; reverses when the changes are undone */

@@ -28,7 +28,7 @@
 .rq-topic.closed .rq-topic-head { border-bottom-color: transparent; }
 .rq-topic-head:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .rq-topic-head .pic { width: 46px; height: 46px; border-radius: 12px; border: 1px solid var(--line); display: grid; place-items: center; flex: none; background: var(--surface); }
-.rq-topic-head .pic img { width: 30px; height: 30px; }
+.rq-topic-head .pic :is(img, .category-artwork) { width: 30px; height: 30px; }
 .rq-topic-head .txt, .rq-type .txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .rq-topic-head .txt b { font-size: 19px; }
 .rq-topic-head .txt span, .rq-type .txt span { color: var(--mute); font-size: 13px; font-weight: 400; }
@@ -41,7 +41,7 @@
   all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 14px; padding: 12px; cursor: pointer;
   border-radius: 12px; transition: background-color .15s ease;
 }
-.rq-type img { width: 28px; height: 28px; flex: none; }
+.rq-type :is(img, .category-artwork) { width: 28px; height: 28px; flex: none; }
 .rq-type .txt b { font-size: 15px; }
 .rq-type .go { margin-inline-start: auto; color: var(--mute); transition: transform .18s var(--ease-out), color .15s ease; }
 .rq-type:hover { background: var(--accent-wash); }
@@ -88,7 +88,7 @@
 .rq-crumbs b { color: var(--ink); }
 .rq-form-head { display: flex; gap: 14px; align-items: center; padding: 18px 20px; border-bottom: 1px solid var(--line-2); }
 .rq-form-head .ic { width: 52px; height: 52px; background: var(--surface); border: 1px solid var(--line); }
-.rq-form-head .ic img { width: 32px; height: 32px; }
+.rq-form-head .ic :is(img, .category-artwork) { width: 32px; height: 32px; }
 .rq-form-head h1 { margin: 0; font-size: 21px; }
 .rq-form-head p { margin: 2px 0 0; }
 /* two columns, or the four a form was designed on (a field's col_span, the clearance grant): RequestForm sets --rq-cols */
@@ -117,12 +117,7 @@
 /* a category with a colour picture: white tile, the picture keeps its own colours (also when picked) */
 .rq-cat .ic.pic, .rq-cat[aria-pressed="true"] .ic.pic { background: var(--surface); border: 1px solid var(--line); }
 .rq-cat .ic.pic img { width: 32px; height: 32px; }
-.rq-cat .category-artwork { display: block; overflow: visible; }
-.rq-cat .category-art-part { transform-box: fill-box; transform-origin: center; }
-.rq-cat .category-art-pivot { transform-box: view-box; }
-.rq-cat .category-art-food-top { transform-box: fill-box; transform-origin: left center; }
-.rq-cat :is(.category-art-light, .category-art-ingredient, .category-art-scene-effect) { opacity: 0; }
-.rq-cat .category-art-scene-effect { transform-box: fill-box; transform-origin: center; }
+.rq-cat .category-artwork { display: block; }
 /* a new category's list on its way: the previous one stays, dimmed, so nothing jumps */
 .rq-list { transition: opacity var(--dur-base) ease; }
 .rq-list[data-loading] { opacity: .55; }
@@ -140,7 +135,7 @@
 .rq-drawer-sub { margin: 14px 0 6px; font-size: 14px; }
 .rq-drawer-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .rq-drawer-pic { width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--line); display: grid; place-items: center; background: var(--surface); }
-.rq-drawer-pic img { width: 26px; height: 26px; }
+.rq-drawer-pic :is(img, .category-artwork) { width: 26px; height: 26px; }
 .rq-files a { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--accent); }
 /* the scroll bar on the right, as in every other list (tokens.css): the scroller ltr, its rows back to rtl */
 .rq-mine.full .rq-list { direction: ltr; }
@@ -196,7 +191,7 @@ button.rq-counter:focus-visible { outline: 2px solid var(--accent); outline-offs
 
 /* the request types in the top-bar search show their picture */
 .rq-hit-pic { width: 22px; height: 22px; display: grid; place-items: center; flex: none; }
-.rq-hit-pic img { width: 22px; height: 22px; }
+.rq-hit-pic :is(img, .category-artwork) { width: 22px; height: 22px; }
 /* "הקריאה נשלחה בהצלחה" above the list */
 .rq-sent-slot { overflow: hidden; }
 .rq-sent { margin-bottom: 10px; }

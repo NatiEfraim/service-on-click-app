@@ -29,7 +29,7 @@ import { ROUTE_STAGE_ORDER } from '@/lib/routeTypes';
 import { useCatalog, useMyRequests } from './useRequester';
 import { TypePicture } from '@/components/booking/TypePicture';
 import { domainIconSrc } from '@/lib/labels';
-import { CategoryArtwork, playCategoryArtwork } from './CategoryArtwork';
+import { CategoryArtwork, playCategoryArtwork } from '@/components/booking/CategoryArtwork';
 import { Reveal } from '@/components/ui/Reveal';
 import { useToggleSet } from '@/lib/useToggleSet';
 
