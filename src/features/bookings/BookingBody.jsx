@@ -11,14 +11,17 @@ import { auditSentence } from '@/lib/audit-sentence';
 import { describeValues, uploadAttachments } from '@/lib/booking-values';
 import { fmtDateTime, fmtHours } from '@/lib/format';
 import { targetHoursOr } from '@/lib/targets';
-import { actionTone, STAGE_SHORT } from '@/lib/labels';
+import { actionTone, actionVariant, STAGE_SHORT } from '@/lib/labels';
 import { useSession } from '@/providers/SessionProvider';
-import { bookingActions } from '@/lib/booking-actions';
+import { orderedActions } from '@/lib/booking-actions';
 import { isHoldStatus } from '@/lib/booking-workflow';
+import { hasOwnRoute, sectionLabel } from '@/lib/routeTypes';
+import { isTopicType, topicHandlerName } from '@/lib/topicTypes';
 import { AttachmentsPanel } from './Attachments';
+import { HandlerBlock } from './HandlerBlock';
+import { HandlerFieldsPanel } from './HandlerFieldsPanel';
 import { ResolveConflictDialog } from './ResolveConflictDialog';
 import { useStatusAction } from './useStatusAction';
-import { topicHandlerName } from '@/lib/topicTypes';
 import { CommentsPanel } from '@/components/booking/CommentsPanel';
 
 function FadingTag({ value, children }) {
@@ -47,18 +50,35 @@ function FadingTag({ value, children }) {
   );
 }
 
+/** The person (or process) behind a timeline row: the scheduler's rows carry no actor. */
+function actorOf(entry) {
+  return entry.actor_name || entry.actor_id || (entry.source === 'system' ? 'המערכת' : '');
+}
+
 export function Body({ booking }) {
   const session = useSession();
   const { catalog, can, canAct, unitName, typeName, departmentName } = session;
   const status = useStatusAction();
   const [resolving, setResolving] = useState(null);
 
-  const lines = describeValues(booking.booking_values);
+  // a type with a route of its own (lib/routeTypes): a progress bar, a handler, a section the handlers fill
+  const routeType = hasOwnRoute(booking.booking_type_id) || (Array.isArray(booking.progress) && booking.progress.length > 0);
+  const handlerFields = Array.isArray(booking.handler_fields) ? booking.handler_fields : [];
+  // the handler section is drawn on its own (HandlerFieldsPanel): the details keep the requester's values
+  const requesterValues = handlerFields.length ? (booking.booking_values ?? []).filter((node) => node.section !== 'handler') : booking.booking_values;
+  const lines = describeValues(requesterValues);
   const valueAttachments = uploadAttachments(booking.booking_values);
   const attachments = valueAttachments.length ? valueAttachments : booking.attachments;
   const conflict = booking.sync.open_conflict;
   const owner = booking.owner_name || booking.booking_owner?.full_name || null;
   const history = booking.history;
+  // ביטחון מידע / תקשוב have no handling target (and no mobile side): only how long the booking is open
+  const webOnly = isTopicType(booking.booking_type_id);
+  const actions = orderedActions(booking).toSorted((a, b) => {
+    if (routeType) return 0;
+    const rank = (item) => (actionTone(item) === 'danger' ? 2 : actionTone(item) === 'hold' ? 1 : 0);
+    return rank(a) - rank(b);
+  });
 
   return (
     <>
@@ -99,13 +119,14 @@ export function Body({ booking }) {
 
       <section className="panel">
         <header>
-          <h2>מסלול האישור</h2>
+          <h2>{routeType ? 'מסלול הבקשה' : 'מסלול האישור'}</h2>
           <span className="hint">
             {booking.stage_label}
-            {/* ביטחון מידע / תקשוב have no handling target: only how long the booking is open */}
-            {topicHandlerName(booking.booking_type_id)
+            {webOnly
               ? ` · פתוחה ${fmtHours(booking.total_age_hours)}`
               : ` · פתוחה ${fmtHours(booking.total_age_hours)} מתוך יעד ${fmtHours(targetHoursOr(booking.target_hours))}${booking.target_hours == null ? ' (ברירת מחדל)' : ''}`}
+            {/* the moment the scheduler waits for (the interview): the request moves on by itself once it passes */}
+            {booking.stage_due_at && booking.stage !== 'closed' ? ` · מועד התחקיר: ${fmtDateTime(booking.stage_due_at)}` : ''}
           </span>
         </header>
         <div className="body">
@@ -113,22 +134,29 @@ export function Body({ booking }) {
           {isHoldStatus(booking.status_id) ? (
             <Notice tone="warn">{booking.status_label}. {booking.stage?.startsWith('supplier') ? 'זו המתנה קודמת שלא משויך אליה שלב הטיפול המקורי.' : 'הקריאה נשארת באותו שלב: ' + booking.stage_label + '.'}</Notice>
           ) : null}
-          {booking.actions.length > 0 ? (
+          {routeType ? <HandlerBlock booking={booking} /> : null}
+          {actions.length > 0 ? (
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--line-2)' }}>
-              {bookingActions(booking.actions).toSorted((a, b) => { const rank = (item) => actionTone(item) === 'danger' ? 2 : actionTone(item) === 'hold' ? 1 : 0; return rank(a) - rank(b); }).map((action) => {
-                const tone = actionTone(action);
-                return (
-                  <Button key={action.status_id} variant={tone === 'danger' ? 'danger' : tone === 'hold' ? 'hold' : 'primary'} onClick={() => status.start(booking, action)}>
-                    {action.label}
-                  </Button>
-                );
-              })}
+              {actions.map((action) => (
+                // a move the request is not ready for yet (no handler) is shown disabled, its reason as the hint
+                <Button
+                  key={action.status_id}
+                  variant={actionVariant(action)}
+                  disabled={action.enabled === false}
+                  data-tip={action.enabled === false ? action.disabled_reason ?? undefined : undefined}
+                  onClick={() => status.start(booking, action)}
+                >
+                  {action.label}
+                </Button>
+              ))}
             </div>
           ) : (
             <p className="small muted" style={{ margin: '14px 0 0' }}>
               {booking.stage === 'closed'
                 ? 'הקריאה סגורה. אין פעולות זמינות.'
-                : `${canAct ? 'אין לך פעולה זמינה בשלב הזה.' : 'בתפקידך את/ה צופה בקריאה ואינך מאשר/ת אותה.'} הקריאה ממתינה ל${(booking.stage !== 'realization' && topicHandlerName(booking.booking_type_id)) || STAGE_SHORT[booking.stage] || 'גורם אחר'}, ורק בעל התפקיד שהתור שלו במסלול יכול לאשר או לדחות אותה כעת.`}
+                : routeType
+                  ? `${canAct ? 'אין לך פעולה זמינה בשלב הזה.' : 'בתפקידך את/ה צופה בקריאה.'} הקריאה בשלב "${booking.stage_label}"; רק בעל התפקיד שתורו במסלול יכול להעביר אותה כעת.`
+                  : `${canAct ? 'אין לך פעולה זמינה בשלב הזה.' : 'בתפקידך את/ה צופה בקריאה ואינך מאשר/ת אותה.'} הקריאה ממתינה ל${(booking.stage !== 'realization' && topicHandlerName(booking.booking_type_id)) || STAGE_SHORT[booking.stage] || 'גורם אחר'}, ורק בעל התפקיד שהתור שלו במסלול יכול לאשר או לדחות אותה כעת.`}
             </p>
           )}
         </div>
@@ -138,7 +166,7 @@ export function Body({ booking }) {
         <section className="panel">
           <header>
             <h2>פרטי הקריאה</h2>
-            <span className="hint" style={{ marginInlineStart: 'auto' }}>עדכון תאריך ושעה מתבצע באפליקציית המובייל בלבד.</span>
+            {webOnly ? null : <span className="hint" style={{ marginInlineStart: 'auto' }}>עדכון תאריך ושעה מתבצע באפליקציית המובייל בלבד.</span>}
           </header>
           <div className="body">
             <dl className="kv">
@@ -182,14 +210,14 @@ export function Body({ booking }) {
         <section className="panel">
           <header>
             <h2>היסטוריית סטטוסים</h2>
-            <span className="hint">כולל פעולות שבוצעו באפליקציה</span>
+            <span className="hint">{webOnly ? 'כולל מעברים אוטומטיים' : 'כולל פעולות שבוצעו באפליקציה'}</span>
           </header>
           <div className="body">
             <ol className="timeline">
               {history.map((entry, index) => {
                 const next = history[index + 1];
                 const dwell = next ? (Date.parse(next.occurred_at) - Date.parse(entry.occurred_at)) / 36e5 : null;
-                const actor = entry.actor_name || entry.actor_id;
+                const actor = actorOf(entry);
                 return (
                   <li key={index}>
                     <div className="t1">
@@ -210,6 +238,16 @@ export function Body({ booking }) {
         </section>
         </div>
       </div>
+
+      {/* the section the handlers fill (route types): inputs for whoever may write it now, read-only for everyone else */}
+      {handlerFields.length ? (
+        <HandlerFieldsPanel
+          key={booking.version}
+          booking={booking}
+          title={sectionLabel('handler', catalog)}
+          hint={handlerFields.some((field) => field.can_edit) ? 'ניתן לעדכן בשלב זה' : booking.stage === 'closed' ? undefined : 'לצפייה בלבד בשלב זה'}
+        />
+      ) : null}
 
       {attachments.length > 0 ? <AttachmentsPanel attachments={attachments} /> : null}
 

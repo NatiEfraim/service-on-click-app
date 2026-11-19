@@ -42,6 +42,17 @@ export function optionNameError(name, siblings) {
   return null;
 }
 
+/** An option's stable code (option_fields.code): letters, digits, underscore and hyphen, up to 50 characters. */
+const OPTION_CODE_PATTERN = /^[a-zA-Z0-9_-]{1,50}$/;
+
+/** Error for an option's code, or null; `required` when every other option of the field already has one. */
+export function optionCodeError(code, required = false) {
+  const text = String(code ?? '').trim();
+  if (!text) return required ? 'יש להגדיר קוד לאפשרות בשדה זה' : null;
+  if (!OPTION_CODE_PATTERN.test(text)) return 'קוד האפשרות יכול להכיל אותיות באנגלית, ספרות, קו תחתון ומקף בלבד (עד 50 תווים)';
+  return null;
+}
+
 /** The error for the options of a new choice field - at least one, none twice, each a plain name - or null. */
 export function newOptionsError(options) {
   if (options.length === 0) return 'שדה בחירה חייב לכלול לפחות אפשרות אחת';

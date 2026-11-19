@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildNav, canAct, homeKind, isActivePath, requestsHref } from './nav';
+import { buildNav, canAct, canOpenDomains, homeKind, isActivePath, requestsHref } from './nav';
 
 const NO_CAPABILITIES = {
   'audit.view': false,
@@ -117,5 +117,18 @@ describe('unified requests navigation', () => {
   });
   it('lets the super admin see the mine view even without per-type permissions', () => {
     expect(canAct(makeMe({ is_super_admin: true }))).toBe(true);
+  });
+});
+
+describe('the clearance grant\'s roles', () => {
+  it('lets the coordinator and the officer act (the "ממתינות לי" view), and the officer open the domains screens', () => {
+    expect(canAct(makeMe({ permissions: ['interview_coordinator_14'] }))).toBe(true);
+    expect(canAct(makeMe({ permissions: ['infosec_officer_14'] }))).toBe(true);
+    expect(canAct(makeMe({ permissions: ['department_security_officer_14'] }))).toBe(false);
+    const owner = makeMe({ permissions: ['infosec_officer_14'], caps: ['dashboard.view'], route_booking_types: [14], route_owner_booking_types: [14] });
+    const manage = buildNav(owner).find((entry) => entry.id === 'manage');
+    expect(manage?.kind === 'group' && manage.items.map((item) => item.id)).toEqual(['domains']);
+    expect(canOpenDomains(owner)).toBe(true);
+    expect(canOpenDomains(makeMe({ permissions: ['interview_coordinator_14'], is_handler_only: true, route_booking_types: [14], route_owner_booking_types: [] }))).toBe(false);
   });
 });

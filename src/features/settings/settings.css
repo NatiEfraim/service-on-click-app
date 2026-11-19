@@ -267,3 +267,9 @@
   .st-opt, .modal .err[role="alert"] { transition-property: opacity; transform: none; }
   .st-opt.leaving { transform: none; }
 }
+
+/* the preview of a form designed on a 4-column grid (a route form, lib/routeTypes): its two sections, each field at its width */
+.st-form-preview .preview-form { grid-template-columns: repeat(var(--pv-cols, 1), minmax(0, 1fr)); }
+.st-pv-field { display: grid; gap: 12px; min-width: 0; }
+.st-pv-section + .st-pv-section { margin-top: 14px; }
+.st-pv-section-title { margin: 0 0 8px; font-size: 13px; font-weight: 700; color: var(--ink-2); }

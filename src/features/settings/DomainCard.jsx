@@ -7,7 +7,7 @@ import { SmoothSize } from '@/components/ui/SmoothSize';
 import { domainColor } from '@/lib/labels';
 import { useSession } from '@/providers/SessionProvider';
 import { campCommanders, stationsForType } from './stations';
-import { topicHandlerRole } from '@/lib/topicTypes';
+import { isTopicType } from '@/lib/topicTypes';
 import { useSettingsQuery } from './useSettings';
 
 /** Names shown on a stage's line before "+N". */
@@ -42,8 +42,8 @@ export function DomainCard({ unitId, bookingTypeId, index }) {
   const admins = campCommanders(managers);
   // while loading, the same stages with no names yet: the placeholder is the card's final height, so nothing shifts
   const stations = stationsForType(bookingTypeId, catalog, managers);
-  // ביטחון מידע / תקשוב types have no camp commander (one role handles them), so no "מפקד מחנה" line
-  const topicHandler = topicHandlerRole(bookingTypeId);
+  // ביטחון מידע / תקשוב types have no camp commander (their own roles handle them), so no "מפקד מחנה" line
+  const topicHandler = isTopicType(bookingTypeId);
 
   return (
     <section className="card dcard dcard-link" style={{ '--dc': domainColor(bookingTypeId), animationDelay: `${index * 40}ms` }} aria-label={name}>

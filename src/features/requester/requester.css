@@ -91,7 +91,8 @@
 .rq-form-head .ic img { width: 32px; height: 32px; }
 .rq-form-head h1 { margin: 0; font-size: 21px; }
 .rq-form-head p { margin: 2px 0 0; }
-.rq-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 18px; padding: 20px; }
+/* two columns, or the four a form was designed on (a field's col_span, the clearance grant): RequestForm sets --rq-cols */
+.rq-fields { display: grid; grid-template-columns: repeat(var(--rq-cols, 2), minmax(0, 1fr)); gap: 16px 18px; padding: 20px; }
 .rq-fields .field { display: flex; flex-direction: column; gap: 6px; }
 .rq-fields .field.wide { grid-column: 1 / -1; }
 .rq-fields .field > label, .rq-fields .field > .label { font-weight: 600; font-size: 14px; }
@@ -99,6 +100,10 @@
 .rq-fields textarea { resize: vertical; min-height: 96px; }
 .rq-fields [aria-invalid="true"] { border-color: var(--bad); }
 .rq-err { color: var(--bad); font-size: 13px; }
+/* what the person lookup by ID number said (RequestForm): looking, found and filled, not found, not available */
+.rq-lookup { font-size: 13px; color: var(--mute); }
+.rq-lookup.found { color: var(--ok); }
+.rq-lookup.none, .rq-lookup.error { color: var(--warn); }
 .rq-drop { display: flex; align-items: center; gap: 12px; padding: 14px; border: 1px dashed var(--line); border-radius: 12px; }
 .rq-files { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 6px; }
 .rq-files li { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 10px; background: var(--hover); font-size: 14px; }

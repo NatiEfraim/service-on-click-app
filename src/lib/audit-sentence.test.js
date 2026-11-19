@@ -300,3 +300,27 @@ describe('category and reason', () => {
     expect(auditReason({ reason: 'something unexpected', result: 'denied' })).toBe('something unexpected');
   });
 });
+
+describe('the clearance grant (the requester portal, the handler, the scheduler)', () => {
+  it('a request submitted on the portal, and the blocked management attempt as before', () => {
+    expect(sentence(row({ action: 'booking.create', source: 'web', booking_serial: 919704, booking_type_id: 14, after: { status_id: 101 } }))).toBe('רועי סחייק פתח/ה קריאה חדשה 919704 (תחום 14)');
+    expect(sentence(row({ action: 'booking.create', result: 'denied', reason: 'web_system_cannot_create_bookings' }))).toContain('נחסמה');
+  });
+
+  it('a handler assigned, cleared, or refused', () => {
+    expect(sentence(row({ action: 'booking.handler_change', booking_serial: 5, booking_type_id: 14, after: { handler_user_id: 3, handler_name: 'מיכל ברק' } }))).toBe('רועי סחייק הקצה/תה את מיכל ברק כמטפל/ת בקריאה 5 (תחום 14)');
+    expect(sentence(row({ action: 'booking.handler_change', booking_serial: 5, after: { handler_user_id: null, handler_name: null } }))).toBe('רועי סחייק ביטל/ה את הקצאת המטפל בקריאה 5');
+    const denied = row({ action: 'booking.handler_change', result: 'denied', booking_serial: 5, reason: 'not_an_assigner' });
+    expect(sentence(denied)).toBe('רועי סחייק ניסה/תה להקצות מטפל לקריאה 5 ונחסם/ה');
+    expect(auditReason(denied)).toBe('הפעולה אינה זמינה למשתמש בשלב הנוכחי של הקריאה');
+  });
+
+  it('the route\'s moves, by a person or by the scheduler', () => {
+    expect(sentence(row({ action: 'booking.status_change', booking_serial: 7, after: { status_id: 104 } }))).toBe('רועי סחייק העביר/ה לקבלת הכשר את קריאה 7');
+    expect(sentence(row({ action: 'booking.status_change', actor_name: null, actor_id: null, source: 'system', booking_serial: 7, after: { status_id: 103 } }))).toBe('המערכת סימן/ה כתוחקר/ת את קריאה 7');
+  });
+
+  it('a person lookup names no number', () => {
+    expect(sentence(row({ action: 'person.lookup', booking_type_id: 14 }))).toBe('רועי סחייק איתר/ה פרטי אדם לפי תעודת זהות (תחום 14)');
+  });
+});

@@ -13,6 +13,8 @@ export const DEFAULT_FILTERS = {
   statuses: '',
   units: '',
   handler: '',
+  // route types (lib/routeTypes): the assigned handler - `me`, `none`, or a handler's uuid (the API's assigned_to)
+  assigned: '',
   from: '',
   to: '',
   ids: '',
@@ -27,11 +29,13 @@ export const SORTS = [
   { value: 'created_at|desc', label: 'נפתחו לאחרונה', sort: 'created_at', dir: 'desc' },
   { value: 'created_at|asc', label: 'נפתחו ראשונות', sort: 'created_at', dir: 'asc' },
   { value: 'serial_number|asc', label: 'מספר קריאה', sort: 'serial_number', dir: 'asc' },
+  // the interview moment of a route type's request (offered only to those who act on such a type)
+  { value: 'stage_due_at|asc', label: 'מועד התחקיר', sort: 'stage_due_at', dir: 'asc', routeOnly: true },
 ];
 
 const VIEWS = ['open', 'mine', 'overdue', 'decide', 'all'];
 const SORT_KEYS = SORTS.map((s) => s.sort);
-const TEXT_KEYS = ['q', 'types', 'stage', 'statuses', 'units', 'handler', 'from', 'to', 'ids'];
+const TEXT_KEYS = ['q', 'types', 'stage', 'statuses', 'units', 'handler', 'assigned', 'from', 'to', 'ids'];
 
 /** URL -> filters; unknown or malformed values fall back to the default. */
 export function parseFilters(params) {
@@ -77,6 +81,7 @@ export function toApiParams(filters, perPage = 25) {
     statuses: filters.statuses,
     units: filters.units,
     handler: filters.handler,
+    assigned_to: filters.assigned,
     from: filters.from,
     to: filters.to,
     ids: filters.ids,
@@ -93,7 +98,7 @@ export function toApiParams(filters, perPage = 25) {
 
 /** Count of active advanced filters (button badge). */
 export function advancedCount(filters) {
-  return (['types', 'stage', 'statuses', 'units', 'from', 'to', 'handler']).filter((key) => filters[key]).length;
+  return (['types', 'stage', 'statuses', 'units', 'from', 'to', 'handler', 'assigned']).filter((key) => filters[key]).length;
 }
 
 /** Preserve old queue deep links, including filters, sorting and an open booking. */

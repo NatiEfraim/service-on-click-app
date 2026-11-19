@@ -34,3 +34,18 @@ describe('workflow-aware filters',()=>{
   expect(workflowFilterOptions(me,catalog,'1').stages).not.toContain('control_officer');
  });
 });
+describe('a type with a route of its own (the clearance grant)',()=>{
+ const withRoute={
+  booking_types:[...catalog.booking_types,{id:14,name:'clearance_grant_booking'}],
+  booking_type_statuses:{...catalog.booking_type_statuses,14:[4,101,102,103,104,105]},
+  statuses:[...catalog.statuses,{id:101,name:'interview_assignment'},{id:102,name:'interview_scheduled'},{id:103,name:'interviewed'},{id:104,name:'awaiting_clearance'},{id:105,name:'clearance_granted'}],
+ };
+ it('offers its steps as stages, then closed, and its own statuses',()=>{
+  const result=workflowFilterOptions({managed_booking_types:[14]},withRoute);
+  expect(result.stages).toEqual(['interview_assignment','interview_scheduled','interviewed','awaiting_clearance','closed']);
+  expect(result.statuses.map(s=>s.id)).toEqual([4,101,102,103,104,105]);
+ });
+ it('keeps a route stage that was chosen',()=>{
+  expect(normalizeWorkflowFilters({types:'14',stage:'interviewed',statuses:'104'},{managed_booking_types:[14]},withRoute)).toEqual({types:'14',stage:'interviewed',statuses:'104'});
+ });
+});

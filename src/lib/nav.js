@@ -3,14 +3,25 @@ import { SHOW_DEPARTMENTS } from '@/lib/labels';
 
 /** Menu visibility is a convenience built from `GET /me`; the server enforces every call. */
 
-/** Holds an approver, vice approver or control officer role on at least one type. */
+/** Holds a role that moves bookings on at least one type: the approval route's, or a topic's / a route's handler role. */
 export function canAct(me) {
-  // the camp commander (admin) decides in the domain commander's turns too
-  return me.is_super_admin || me.permissions.some((permission) => /^(admin|approver|vice_approver|transportation_control_officer)_\d+$/.test(permission));
+  // the camp commander (admin) decides in the domain commander's turns too; the ביטחון מידע / תקשוב handlers and the
+  // clearance grant's roles (lib/routeTypes) act on their own types
+  return me.is_super_admin || me.permissions.some((permission) => /^(admin|approver|vice_approver|transportation_control_officer|infosec_officer|ict_handler|interview_coordinator)_\d+$/.test(permission));
 }
 
 export function can(me, capability) {
   return me.capabilities[capability] === true;
+}
+
+/** Owns a type with a route of its own (the קצין ביטחון מידע on the clearance grant): its dashboard and settings are theirs to read. */
+export function ownsRoutes(me) {
+  return (me.route_owner_booking_types ?? []).length > 0;
+}
+
+/** May open the service domains screens: the super admin (who edits them), or the owner of a route type (who reads their own). */
+export function canOpenDomains(me) {
+  return Boolean(me.is_super_admin) || ownsRoutes(me);
 }
 
 
@@ -37,7 +48,7 @@ export function buildNav(me) {
 
   if (!handlerOnly) {
     const items = [];
-    if (me.is_super_admin) items.push({ id: 'domains', href: '/manage/domains', label: 'תחומי שירות', description: 'מסלולי אישור, הגדרות, טופס ויעד טיפול', also: ['/manage/settings'] });
+    if (canOpenDomains(me)) items.push({ id: 'domains', href: '/manage/domains', label: 'תחומי שירות', description: me.is_super_admin ? 'מסלולי אישור, הגדרות, טופס ויעד טיפול' : 'ההגדרות והטופס של התחומים שבאחריותך', also: ['/manage/settings'] });
     if (can(me, 'users.manage')) items.push({ id: 'users', href: '/manage/users', label: 'משתמשים והרשאות', description: 'שיבוץ תפקידים ומחלקות' });
     if (can(me, 'config.global')) items.push({ id: 'org', href: '/manage/org', label: SHOW_DEPARTMENTS ? 'יחידות ומחלקות' : 'יחידות', description: 'שמות פנימיים ומיפוי לאותיות' });
     if (me.is_super_admin) items.push({ id: 'hatch', href: '/manage/hatch', label: 'צוהר דיגיטלי', description: 'ייצוא וייבוא ידני מול האפליקציה' });

@@ -32,6 +32,14 @@ import { usePublishDrawerList } from '@/features/bookings/drawerList';
 import { useInfiniteScroll } from '@/lib/useInfiniteScroll';
 import { Reveal } from '@/components/ui/Reveal';
 import { bookingKey } from '@/features/bookings/useBookingDrawer';
+import { hasOwnRoute } from '@/lib/routeTypes';
+
+/** The assigned handler of a route type's request (the API's assigned_to): everyone's, mine, nobody's. */
+const ASSIGNED_OPTIONS = [
+  { value: '', label: 'כל הקריאות' },
+  { value: 'me', label: 'שלי' },
+  { value: 'none', label: 'ללא מטפל' },
+];
 
 /** Every booking the user may see; filters live in the URL so links and Back reproduce the list. */
 export function RequestsScreen() {
@@ -141,6 +149,10 @@ export function RequestsScreen() {
 
   const managedTypes = catalog.booking_types.filter((type) => me.managed_booking_types.includes(type.id));
   const filterOptions = workflowFilterOptions(me, catalog, filters.types);
+  // route types (lib/routeTypes): the assigned-handler filter and the interview-moment sort, for those who act on one
+  const actsOnRoutes = (me.route_booking_types ?? []).length > 0;
+  const showAssigned = actsOnRoutes && (!filters.types || filters.types.split(',').some((id) => hasOwnRoute(id)));
+  const sorts = SORTS.filter((option) => !option.routeOnly || actsOnRoutes);
   const advanced = advancedCount(filters);
   const hasFilters = advanced > 0 || filters.ids || filters.q;
   const clearPresence = usePresence(Boolean(hasFilters), 220);
@@ -176,7 +188,7 @@ export function RequestsScreen() {
               if (chosen) update({ sort: chosen.sort, dir: chosen.dir });
             }}
           >
-            {SORTS.map((s) => (
+            {sorts.map((s) => (
               <option key={s.value} value={s.value}>
                 {s.label}
               </option>
@@ -218,6 +230,17 @@ export function RequestsScreen() {
               ))}
             </Select>
           </Field>
+          {showAssigned ? (
+            <Field label="הקצאת מטפל">
+              <Select autoWidth className="input" value={filters.assigned} onChange={(event) => update({ assigned: event.target.value })}>
+                {ASSIGNED_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          ) : null}
           {handlers.data?.length ? (
             <Field label="גורם מטפל">
               <Select autoWidth className="input" value={filters.handler} onChange={(event) => update({ handler: event.target.value })}>

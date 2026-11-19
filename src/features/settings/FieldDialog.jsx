@@ -4,10 +4,12 @@ import { useMutation } from '@tanstack/react-query';
 import { Select } from '@/components/ui/Select';
 import { useId, useState } from 'react';
 import { Button } from '@/components/ui/Button';
+import { Seg } from '@/components/ui/Controls';
 import { FormError } from '@/components/ui/Feedback';
 import { Field } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
 import { settingsApi } from '@/lib/api/endpoints';
+import { hasOwnRoute, SECTION_LABELS } from '@/lib/routeTypes';
 
 import { useToast } from '@/providers/UiProvider';
 import { fieldNameError, fieldTypeName, newOptionsError, parseOptionLines, retypeChoices } from './fieldRules';
@@ -16,21 +18,35 @@ import { FieldOptionsEditor } from './FieldOptionsEditor';
 import { Switch } from './Switch';
 import { handleWriteError, useReloadSettings } from './useSettings';
 
+/** The widths a field may take on a route form's 4-column grid. */
+const COL_SPANS = [
+  { value: 1, label: 'רבע שורה (1 מתוך 4)' },
+  { value: 2, label: 'חצי שורה (2 מתוך 4)' },
+  { value: 4, label: 'שורה שלמה (4 מתוך 4)' },
+];
 
-
-/** Add or edit a field. An edit sends only the changed values with the shown `version` (stale means 409). */
+/**
+ * Add or edit a field. An edit sends only the changed values with the shown `version` (stale means 409).
+ * On a form with a route of its own (lib/routeTypes) a new field also says who fills it (the requester on submission,
+ * or the handlers during the route) and how wide it is on the 4-column grid; both are fixed once the field exists.
+ */
 export function FieldDialog({ unitId, bookingTypeId, settings, field, onClose }) {
   const toast = useToast();
   const reload = useReloadSettings(unitId, bookingTypeId);
   const ids = useId();
   const isNew = !field;
   const { field_types: fieldTypes } = settings;
+  const routeForm = hasOwnRoute(bookingTypeId);
+  const sections = settings.sections?.length ? settings.sections : Object.entries(SECTION_LABELS).map(([id, label]) => ({ id, label }));
+  const sectionName = (id) => sections.find((section) => section.id === id)?.label ?? SECTION_LABELS[id] ?? id;
 
   const [name, setName] = useState(field?.field_display_name ?? '');
   const [typeId, setTypeId] = useState(field?.field_type_id ?? fieldTypes.find((type) => type.name === 'text')?.id ?? fieldTypes[0]?.id ?? 2);
   const [optionsText, setOptionsText] = useState('');
   const [required, setRequired] = useState(field?.is_required ?? true);
   const [editable, setEditable] = useState(field?.editable ?? false);
+  const [section, setSection] = useState(field?.section ?? 'requester');
+  const [colSpan, setColSpan] = useState(Number(field?.col_span) || 1);
   const [nameError, setNameError] = useState('');
   const [optionsError, setOptionsError] = useState('');
   const [error, setError] = useState('');
@@ -46,6 +62,10 @@ export function FieldDialog({ unitId, bookingTypeId, settings, field, onClose })
       if (isNew) {
         const body = { field_display_name: name.trim(), field_type_id: typeId, is_required: required, editable: editable && canEditable };
         if (hasOptions) body.options = parseOptionLines(optionsText);
+        if (routeForm) {
+          body.section = section;
+          body.col_span = colSpan;
+        }
         return settingsApi.createField(unitId, bookingTypeId, body);
       }
       const body = { version: field.version };
@@ -152,6 +172,31 @@ export function FieldDialog({ unitId, bookingTypeId, settings, field, onClose })
           </>
         )}
       </div>
+
+      {routeForm ? (
+        isNew ? (
+          <>
+            <div className="field">
+              <span>מי ממלא את השדה</span>
+              <Seg label="מי ממלא את השדה" value={section} onChange={setSection} options={sections.map((candidate) => ({ value: candidate.id, label: candidate.label }))} />
+              <span className="small muted">{section === 'handler' ? 'ממולא על ידי הגורמים המטפלים במהלך הטיפול; אינו מוצג למבקש בהגשה.' : 'ממולא על ידי המבקש בעת ההגשה.'}</span>
+            </div>
+            <Field label="רוחב השדה בטופס">
+              <Select className="input" value={colSpan} onChange={(event) => setColSpan(Number(event.target.value))}>
+                {COL_SPANS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          </>
+        ) : (
+          <p className="small muted" style={{ margin: 0 }}>
+            מקטע: {sectionName(field.section ?? 'requester')} · רוחב: {Number(field.col_span) || 1} מתוך 4 (נקבעים בעת יצירת השדה).
+          </p>
+        )
+      ) : null}
 
       {hasOptions ? (
         <>

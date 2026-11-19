@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { OPEN_STATUS_IDS, requesterApi } from '@/lib/api/endpoints';
-import { fetchMyRequests, requestCategories, requestRoute, stageOf } from './requesterData';
+import { counterOf, fetchMyRequests, requestCategories, requestRoute, stageOf } from './requesterData';
 
 /** Booking type ids: a plain domain (בינוי), הובלות (starts at the control officer), the barber. */
 const CONSTRUCTION = 13;
@@ -105,5 +105,32 @@ describe('requestRoute (drawn as the management screens draw it)', () => {
   it('ends a completed request finished and a rejected one stopped', () => {
     expect(requestRoute(5, CONSTRUCTION).mode).toBe('finished');
     expect(requestRoute(4, CONSTRUCTION).mode).toBe('stopped');
+  });
+});
+
+describe('the clearance grant (14): a route of its own', () => {
+  it('stages its statuses by its steps, closed at the end or the refusal', () => {
+    expect(stageOf(101, 14)).toBe('interview_assignment');
+    expect(stageOf(102, 14)).toBe('interview_scheduled');
+    expect(stageOf(103, 14)).toBe('interviewed');
+    expect(stageOf(104, 14)).toBe('awaiting_clearance');
+    expect(stageOf(105, 14)).toBe('closed');
+    expect(stageOf(4, 14)).toBe('closed');
+  });
+
+  it('draws its steps as the route, finished when the clearance was granted', () => {
+    const scheduled = requestRoute(102, 14);
+    expect(scheduled.stations.map((station) => station.label)).toEqual(['הוגשה', 'הקצאה לתחקיר', 'נקבע מול המועמד', 'תוחקר', 'ממתין לקבלת הכשר', 'קיבל הכשר ביטחוני']);
+    expect(scheduled.stations[scheduled.here].id).toBe('interview_scheduled');
+    expect(scheduled.mode).toBe('here');
+    expect(requestRoute(105, 14).mode).toBe('finished');
+    expect(requestRoute(4, 14).mode).toBe('stopped');
+  });
+
+  it('counts a granted clearance as done and its open steps as handling', () => {
+    expect(counterOf({ statusId: 105 })).toBe('done');
+    expect(counterOf({ statusId: 101 })).toBe('handling');
+    expect(counterOf({ statusId: 104 })).toBe('handling');
+    expect(counterOf({ statusId: 4 })).toBeNull();
   });
 });

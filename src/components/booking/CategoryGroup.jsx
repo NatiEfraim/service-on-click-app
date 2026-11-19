@@ -3,7 +3,7 @@
 import { useId } from 'react';
 import { CountBadge } from '@/components/ui/CountBadge';
 import { Icon } from '@/components/ui/Icon';
-import { topicHandlerRole } from '@/lib/topicTypes';
+import { topicOf } from '@/lib/topicTypes';
 import { CATEGORY_ICONS } from './ServiceIcon';
 import './categoryGroup.css';
 import { Reveal } from '@/components/ui/Reveal';
@@ -18,12 +18,12 @@ export const TOPIC_SECTIONS = [
   { id: 'ict', label: 'תקשוב', tint: '#9ED3F0' },
 ];
 
-/** The main category of a booking type: 'infosec', 'ict', or 'service' for every other domain. */
+/**
+ * The main category of a booking type: 'infosec', 'ict', or 'service' for every other domain. By the type's topic, not
+ * by its handler role: the clearance grant (14) belongs to ביטחון מידע although several roles work it (lib/routeTypes).
+ */
 export function sectionOf(bookingTypeId) {
-  const role = topicHandlerRole(bookingTypeId);
-  if (role === 'infosec_officer') return 'infosec';
-  if (role === 'ict_handler') return 'ict';
-  return 'service';
+  return topicOf(bookingTypeId) ?? 'service';
 }
 
 /**

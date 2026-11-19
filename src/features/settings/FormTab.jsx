@@ -60,6 +60,9 @@ function FieldRow({
           {field.is_required ? <Chip>חובה</Chip> : null}
           {field.editable ? <Chip tone="acc">מאשר יכול לעדכן</Chip> : null}
           {field.is_custom ? <Chip tone="info">נוסף כאן</Chip> : null}
+          {/* a route form (lib/routeTypes): the section the handlers fill, and a field wider than a quarter of the row */}
+          {field.section === 'handler' ? <Chip tone="hold">למילוי הגורמים המטפלים</Chip> : null}
+          {Number(field.col_span) > 1 ? <Chip>רוחב {field.col_span} מתוך 4</Chip> : null}
         </div>
         <div className="t2">
           {fieldTypeName(field.field_type_id, settings.field_types)}
@@ -270,7 +273,7 @@ export function FormTab({ unitId, bookingTypeId, settings }) {
         {canEdit && total > 1 ? <div className="st-fields-end">אפשר לגרור שדה בעזרת הידית, או להזיז אותה במקלדת: רווח להרמה, חצים להזזה, רווח להצבה.</div> : null}
       </div>
 
-      <FormPreview roots={roots} options={settings.options} />
+      <FormPreview roots={roots} options={settings.options} sections={settings.sections} />
 
       {editing ? <FieldDialog unitId={unitId} bookingTypeId={bookingTypeId} settings={settings} field={editing === 'new' ? undefined : editing} onClose={() => setEditing(null)} /> : null}
     </div>

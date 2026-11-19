@@ -23,6 +23,12 @@ const VERB = {
   16: 'העביר/ה לביטול סופי',
   17: 'אישר/ה כרמ"ד תו"ב',
   18: 'דחה/תה כרמ"ד תו"ב',
+  // the clearance grant's route (lib/routeTypes); 102 and 105 may be the scheduler's ("המערכת")
+  101: 'החזיר/ה להקצאה לתחקיר',
+  102: 'קבע/ה תחקיר מול המועמד ב',
+  103: 'סימן/ה כתוחקר/ת',
+  104: 'העביר/ה לקבלת הכשר',
+  105: 'סגר/ה לאחר קבלת הכשר ביטחוני',
 };
 
 /** Setting keys (`system_reference` values) in user-facing words. */
@@ -50,6 +56,8 @@ const ACTION_NOUN = {
   'booking.status_change': 'לשנות סטטוס של קריאה',
   'booking.values.update': 'לעדכן פרטים בקריאה',
   'booking.create': 'לפתוח קריאה חדשה',
+  'booking.handler_change': 'להקצות מטפל לקריאה',
+  'person.lookup': 'לאתר פרטי אדם לפי תעודת זהות',
   'config.view': 'לפתוח הגדרות תחום',
   'config.restriction_impact': 'לבדוק חסימת תאריכים',
   'config.sla_target.set': 'לקבוע יעד טיפול',
@@ -73,7 +81,7 @@ const ACTION_NOUN = {
 };
 
 /** Actions whose denied sentence is more specific than the generic one. */
-const HAS_OWN_DENIED_SENTENCE = new Set(['booking.status_change', 'booking.values.update', 'booking.create', 'user.permissions.change', 'audit.modify']);
+const HAS_OWN_DENIED_SENTENCE = new Set(['booking.status_change', 'booking.values.update', 'booking.create', 'booking.handler_change', 'user.permissions.change', 'audit.modify']);
 
 
 
@@ -247,7 +255,16 @@ export function auditSentence(row, names, context = {}) {
       return `${who} עדכן/ה בקריאה ${serial}${inType}${changes.length ? `: ${changes.join(', ')}` : ''}`;
     }
     case 'booking.create':
+      // a request submitted on the requester portal; the management screens never open bookings (refused and audited)
+      if (!denied) return `${who} פתח/ה קריאה חדשה${serial ? ` ${serial}` : ''}${inType}`;
       return `${who} ניסה/תה לפתוח קריאה חדשה - הפעולה נחסמה (קריאות נפתחות באפליקציה בלבד)`;
+    case 'booking.handler_change': {
+      if (denied) return `${who} ניסה/תה להקצות מטפל לקריאה ${serial}${inType} ונחסם/ה`;
+      const handler = text(after, 'handler_name');
+      return handler ? `${who} הקצה/תה את ${handler} כמטפל/ת בקריאה ${serial}${inType}` : `${who} ביטל/ה את הקצאת המטפל בקריאה ${serial}${inType}`;
+    }
+    case 'person.lookup':
+      return `${who} איתר/ה פרטי אדם לפי תעודת זהות${inType}`;
     case 'booking.canceled_by_restriction':
       return `קריאה ${serial}${inType} בוטלה אוטומטית בעקבות חסימת תאריך`;
 
@@ -372,6 +389,7 @@ export const AUDIT_CATEGORIES = [
   { id: 'user.', label: 'הרשאות' },
   { id: 'org.', label: 'ארגון' },
   { id: 'sync.', label: 'סנכרון' },
+  { id: 'person.', label: 'איתור פרטים' },
 ];
 
 /** Shows a person's comment as written and translates the server's refusal codes; null when empty. */
@@ -396,6 +414,7 @@ export function auditReason(row, names) {
     web_system_cannot_create_bookings: 'קריאות נפתחות באפליקציה בלבד',
     outside_admin_scope: 'ההרשאה מחוץ לתחומים וליחידה של המשתמש שהקצה אותה',
     self_grant: 'ניסיון להעניק הרשאה לעצמו',
+    not_an_assigner: 'הפעולה אינה זמינה למשתמש בשלב הנוכחי של הקריאה',
   };
   return codes[reason] ?? reason;
 }

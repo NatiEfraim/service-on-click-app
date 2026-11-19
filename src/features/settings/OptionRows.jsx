@@ -27,6 +27,7 @@ export function OptionRows({ nodes, depth, canEdit, fieldTypes, onEdit, onAddChi
           <div key={option.id}>
             <div className={`st-opt${isCategory ? ' cat' : ''}${removingId === option.id ? ' leaving' : ''}`} style={{ '--depth': depth, '--i': Math.min(index, 12) }}>
               <span className="name"><AnimatedText>{option.name}</AnimatedText></span>
+              {option.code ? <Chip tone="info" title="הקוד הקבוע של האפשרות"><span className="ltr">{option.code}</span></Chip> : null}
               {option.is_input ? <Chip tone="acc">הזנת ערך</Chip> : null}
               {typed ? <Chip>{fieldTypeName(option.field_type_id, fieldTypes)}</Chip> : null}
               {isCategory ? <Chip>{node.children.length} תתי-אפשרויות</Chip> : null}

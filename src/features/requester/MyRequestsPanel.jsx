@@ -25,6 +25,7 @@ import { RowBridge } from './RowBridge';
 import { celebrationKey, isChanged, markCelebrated, markSeen, useSeen, wasCelebrated } from './seen';
 import { counterOf, requestCategories, stageOf } from './requesterData';
 import { STAGE_SHORT } from '@/lib/labels';
+import { ROUTE_STAGE_ORDER } from '@/lib/routeTypes';
 import { useCatalog, useMyRequests } from './useRequester';
 import { TypePicture } from '@/components/booking/TypePicture';
 import { domainIconSrc } from '@/lib/labels';
@@ -319,7 +320,8 @@ export function MyRequestsPanel({ full = false, extraCategories = null, category
   const markAll = usePresence(changedRows.length > 0, MARK_ALL_EXIT_MS);
   const [markAllCount, setMarkAllCount] = useState(changedRows.length);
   if (changedRows.length && changedRows.length !== markAllCount) setMarkAllCount(changedRows.length);
-  const STAGE_ORDER = ['control_officer', 'vice_approver', 'approver', 'supplier_files', 'supplier_approval', 'supplier_number', 'barber', 'realization', 'closed'];
+  // the approval route's stages, then the clearance grant's own steps (lib/routeTypes), then closed
+  const STAGE_ORDER = ['control_officer', 'vice_approver', 'approver', 'supplier_files', 'supplier_approval', 'supplier_number', 'barber', 'realization', ...ROUTE_STAGE_ORDER, 'closed'];
   const stageOptions = STAGE_ORDER.filter((id) => allRows.some((row) => stageOf(row.statusId, row.bookingTypeId) === id));
   const statusNames = [...new Set(allRows.map(statusNameOf).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'he'));
   const inRange = (row) => {

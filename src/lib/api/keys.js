@@ -9,6 +9,8 @@ export const keys = {
   bookingList: (params) => ['bookings', 'list', params],
   bookingDetail: (serial) => ['bookings', 'detail', serial],
   bookingSearch: (q) => ['bookings', 'search', q],
+  /** Who may be assigned a route-type request (refreshed with every booking write). */
+  handlerCandidates: (uuid) => ['bookings', 'handler-candidates', uuid],
 
   overview: ['overview'],
   home: ['home'],

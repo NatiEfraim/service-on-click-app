@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { actionTone, commentError, COMMENT_MAX, domainIconSrc, statusTone } from './labels';
+import { actionTone, actionVariant, commentError, COMMENT_MAX, domainIconSrc, statusTone } from './labels';
 
 describe('commentError (the rule the server enforces on a decision)', () => {
   it('accepts Hebrew letters and spaces', () => {
@@ -50,5 +50,23 @@ describe('domainIconSrc', () => {
   it('points at the bundled icon of a known domain and at nothing for an unknown one', () => {
     expect(domainIconSrc(13)).toBe('/icons/domains/13.svg');
     expect(domainIconSrc(99)).toBeNull();
+  });
+});
+
+describe('the clearance grant\'s route (statuses 101-105, actions with a direction)', () => {
+  it('colours its statuses: granted is good, the steps in between are progress', () => {
+    expect(statusTone(105)).toBe('ok');
+    expect(statusTone(101)).toBe('warn');
+    expect(statusTone(103)).toBe('acc');
+  });
+
+  it('reads an action\'s direction: a refusal is destructive, a move back a plain button, a step forward the main action', () => {
+    expect(actionTone({ status_id: 4, direction: 'reject' })).toBe('danger');
+    expect(actionTone({ status_id: 101, direction: 'back' })).toBe('secondary');
+    expect(actionTone({ status_id: 102, direction: 'forward' })).toBe('primary');
+    expect(actionTone({ status_id: 105, direction: 'close' })).toBe('primary');
+    expect(actionVariant({ status_id: 101, direction: 'back' })).toBe('default');
+    expect(actionVariant({ status_id: 4, direction: 'reject' })).toBe('danger');
+    expect(actionVariant({ status_id: 9 })).toBe('hold');
   });
 });

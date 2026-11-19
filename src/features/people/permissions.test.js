@@ -354,3 +354,43 @@ describe('ביטחון מידע / תקשוב roles (roles & permissions guide)',
     expect(Object.keys(cells(1)).sort()).toEqual(['admin', 'approver', 'vice_approver']);
   });
 });
+
+describe('the clearance grant\'s roles (lib/routeTypes)', () => {
+  const answer = {
+    role_options: { approver: 3, vice_approver: 4, infosec_officer: 7, ict_handler: 8, department_security_officer: 9, interview_coordinator: 10 },
+    user: { full_name: 'x', personal_number: '1' },
+    permissions: [{ booking_type_id: 14, is_infosec_officer: false, is_department_security_officer: true, is_interview_coordinator: false }],
+  };
+
+  it('applies exactly the route\'s three roles to the type, and none of them elsewhere', () => {
+    expect(roleApplies('department_security_officer', 14)).toBe(true);
+    expect(roleApplies('interview_coordinator', 14)).toBe(true);
+    expect(roleApplies('infosec_officer', 14)).toBe(true);
+    expect(roleApplies('approver', 14)).toBe(false);
+    expect(roleApplies('interview_coordinator', 15)).toBe(false);
+    expect(roleApplies('department_security_officer', 1)).toBe(false);
+  });
+
+  it('reads the three flags of the type-14 row and sends all three back on a change', () => {
+    const matrix = buildMatrix({ approver: answer, permissionNames: [], caller: SUPER_CALLER, targetUuid: 'p' });
+    // every role the server offers is a column, in reading order; the row itself has only the route's three
+    expect(matrix.roles).toEqual(['approver', 'vice_approver', 'ict_handler', 'infosec_officer', 'interview_coordinator', 'department_security_officer']);
+    expect(Object.keys(matrix.rows[0].cells).sort()).toEqual(['department_security_officer', 'infosec_officer', 'interview_coordinator']);
+    expect(approverAssignments(matrix, { [cellKey('interview_coordinator', 14)]: true, [cellKey('department_security_officer', 14)]: false })).toEqual([
+      { booking_type_id: 14, is_infosec_officer: false, is_interview_coordinator: true, is_department_security_officer: false },
+    ]);
+  });
+
+  it('builds the super admin fallback with the three roles when the server sends no row', () => {
+    const fallback = buildMatrix({ approver: { ...answer, permissions: [] }, admin: adminAnswer([{ id: 14, admin: null }]), permissionNames: ['interview_coordinator_14'], caller: SUPER_CALLER, targetUuid: 'p' });
+    const cells = fallback.rows.find((row) => row.bookingTypeId === 14).cells;
+    expect(Object.keys(cells).sort()).toEqual(['department_security_officer', 'infosec_officer', 'interview_coordinator']);
+    expect(cells.interview_coordinator.value).toBe(true);
+    expect(cells.infosec_officer.value).toBe(false);
+  });
+
+  it('names the new roles on a person\'s chips', () => {
+    expect(grantChip({ role: 'department_security_officer', bookingTypeIds: [14] }, typeName).label).toBe('קב"ט מחלקתי: תחום 14');
+    expect(grantChip({ role: 'interview_coordinator', bookingTypeIds: [14] }, typeName).label).toBe('מתאם תחקיר: תחום 14');
+  });
+});

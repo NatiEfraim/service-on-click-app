@@ -1,7 +1,9 @@
 import { STAGE_ORDER, STAGE_SHORT } from '@/lib/labels';
+import { hasOwnRoute, ROUTE_STAGE_ORDER } from '@/lib/routeTypes';
 import { topicHandlerName } from '@/lib/topicTypes';
 
-export const CHART_STAGE_ORDER = ['topic_handler', ...STAGE_ORDER];
+/** Every stage a chart may show, in reading order: the topics' one handler, the approval route, the clearance grant's own steps. */
+export const CHART_STAGE_ORDER = ['topic_handler', ...STAGE_ORDER, ...ROUTE_STAGE_ORDER];
 
 export function chartStageLabel(stage, bookingTypeId) {
   return stage === 'topic_handler' ? topicHandlerName(bookingTypeId) ?? STAGE_SHORT.topic_handler : STAGE_SHORT[stage];
@@ -35,13 +37,13 @@ export const WINDOWS = [
 
 export const DEFAULT_WINDOW_DAYS = 30;
 
-/** Stages where a booking waits for an approver's decision. */
-export const APPROVAL_STAGES = ['control_officer', 'vice_approver', 'approver', 'barber'];
+/** Stages where a booking waits for someone's decision (the clearance grant: its assignment and the step after the interview). */
+export const APPROVAL_STAGES = ['control_officer', 'vice_approver', 'approver', 'barber', 'interview_assignment', 'interviewed'];
 
 /** The cards of the stage pipeline, in route order; each is shown only for types that reach its statuses. */
-export const PIPELINE_STAGES = ['control_officer', 'vice_approver', 'approver', 'barber', 'supplier_approval', 'supplier_number', 'realization'];
+export const PIPELINE_STAGES = ['control_officer', 'vice_approver', 'approver', 'barber', 'supplier_approval', 'supplier_number', 'realization', ...ROUTE_STAGE_ORDER];
 
-/** The statuses that put a type on each card (14 / 17 / 18 control officer, 8 / 9 / 10 supplier holds, 11 / 12 the barber). */
+/** The statuses that put a type on each card (14 / 17 / 18 control officer, 8 / 9 / 10 supplier holds, 11 / 12 the barber, 101-104 the clearance grant's steps). */
 const STAGE_STATUSES = {
   control_officer: [14, 17, 18],
   vice_approver: [15, 16],
@@ -50,13 +52,22 @@ const STAGE_STATUSES = {
   supplier_approval: [8, 9],
   supplier_number: [10],
   realization: [5, 7],
+  interview_assignment: [101],
+  interview_scheduled: [102],
+  interviewed: [103],
+  awaiting_clearance: [104],
 };
 
-/** The pipeline cards of these types, from `catalog.booking_type_statuses`; every card when the catalog does not know them. */
+/**
+ * The pipeline cards of these types, from `catalog.booking_type_statuses`; every card when the catalog does not know
+ * them. A type with a route of its own gets its steps only: its refusal (4) is no card of the approval route.
+ */
 export function pipelineStagesFor(bookingTypeIds, catalog) {
-  const reachable = bookingTypeIds.flatMap((id) => catalog?.booking_type_statuses?.[String(id)] ?? []);
-  if (reachable.length === 0) return PIPELINE_STAGES;
-  return PIPELINE_STAGES.filter((stage) => STAGE_STATUSES[stage].some((status) => reachable.includes(status)));
+  const reachableOf = (ids) => ids.flatMap((id) => catalog?.booking_type_statuses?.[String(id)] ?? []);
+  const generic = reachableOf(bookingTypeIds.filter((id) => !hasOwnRoute(id)));
+  const route = reachableOf(bookingTypeIds.filter((id) => hasOwnRoute(id)));
+  if (generic.length === 0 && route.length === 0) return PIPELINE_STAGES;
+  return PIPELINE_STAGES.filter((stage) => STAGE_STATUSES[stage].some((status) => (ROUTE_STAGE_ORDER.includes(stage) ? route : generic).includes(status)));
 }
 
 /** Short side stages are counted inside the pipeline card next to them, when they have no card of their own. */
@@ -70,9 +81,13 @@ export const STAT_COLOR = { open: '#3D314A', awaiting: '#2E7470', overdue: '#B44
 
 /**
  * The stage columns of one domain's chart, in route order: the stages of its workflow (the barber has only "barber";
- * "supplier_files" goes with the supplier stages), plus any other stage that still holds open bookings.
+ * "supplier_files" goes with the supplier stages; a type with a route of its own has its steps), plus any other stage
+ * that still holds open bookings.
  */
 export function workflowColumns(bookingTypeId, catalog, stages, order) {
+  if (hasOwnRoute(bookingTypeId)) {
+    return order.filter((id) => ROUTE_STAGE_ORDER.includes(id) || (stages[id] ?? 0) > 0);
+  }
   const workflow = bookingTypeId == null ? order : pipelineStagesFor([bookingTypeId], catalog);
   if (topicHandlerName(bookingTypeId)) {
     return order.filter((id) => id === 'topic_handler' || id === 'realization' || (stages[id] ?? 0) > 0);

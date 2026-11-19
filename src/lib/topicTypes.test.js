@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { routeFor, routePosition } from '@/features/bookings/route';
-import { topicBooking, topicHandlerName, topicStatusLabel } from './topicTypes';
+import { isTopicType, topicBooking, topicHandlerName, topicHandlerRole, topicOf, topicStatusLabel } from './topicTypes';
 
 describe('topic handler and status names', () => {
   it('names the one handler of each topic, and none for other domains', () => {
@@ -9,11 +9,30 @@ describe('topic handler and status names', () => {
     expect(topicHandlerName(1)).toBeNull();
   });
   it('names statuses by the handler, not a technical factor', () => {
-    expect(topicStatusLabel(4, 14)).toBe('נדחתה ע"י קצין ביטחון מידע');
+    expect(topicStatusLabel(4, 15)).toBe('נדחתה ע"י קצין ביטחון מידע');
     expect(topicStatusLabel(15, 20)).toBe('בטיפול מנהל תקשוב');
     expect(topicStatusLabel(1, 20)).toBe('הקריאה נשלחה');
     expect(topicStatusLabel(4, 1)).toBeNull();
     expect(topicStatusLabel(99, 20)).toBeNull();
+  });
+});
+
+describe('the clearance grant (14): a ביטחון מידע type with a route of its own', () => {
+  it('belongs to the topic but has no single handler: its roles come from the route', () => {
+    expect(topicOf(14)).toBe('infosec');
+    expect(isTopicType(14)).toBe(true);
+    expect(topicHandlerRole(14)).toBeNull();
+    expect(topicHandlerName(14)).toBeNull();
+    expect(topicHandlerRole(15)).toBe('infosec_officer');
+  });
+  it('keeps the server names of its own statuses; the refusal is the officer\'s', () => {
+    expect(topicStatusLabel(101, 14)).toBeNull();
+    expect(topicStatusLabel(105, 14)).toBeNull();
+    expect(topicStatusLabel(4, 14)).toBe('נדחתה ע"י קצין ביטחון מידע');
+  });
+  it('is left as the server sent it by topicBooking', () => {
+    const booking = { booking_type_id: 14, status_id: 102, stage: 'interview_scheduled', status_label: 'נקבע מול המועמד', stage_label: 'תחקיר נקבע - ממתין למועד', actions: [{ status_id: 101, label: 'החזרה להקצאה לתחקיר' }] };
+    expect(topicBooking(booking)).toBe(booking);
   });
 });
 
@@ -23,12 +42,12 @@ describe('topic route', () => {
   });
   it('puts every open stage at the handler, and a closed one at the end', () => {
     for (const stage of ['vice_approver', 'approver', 'supplier_files']) {
-      const booking = { booking_type_id: 14, stage, status_id: 15 };
+      const booking = { booking_type_id: 15, stage, status_id: 15 };
       expect(routePosition(booking, routeFor(booking)).here).toBe(1);
     }
-    const approved = { booking_type_id: 14, stage: 'realization', status_id: 3 };
+    const approved = { booking_type_id: 15, stage: 'realization', status_id: 3 };
     expect(routePosition(approved, routeFor(approved)).here).toBe(2);
-    const closed = { booking_type_id: 14, stage: 'closed', status_id: 5 };
+    const closed = { booking_type_id: 15, stage: 'closed', status_id: 5 };
     expect(routePosition(closed, routeFor(closed))).toEqual({ here: 3, mode: 'finished' });
   });
   it('leaves the other domains on the approval route', () => {

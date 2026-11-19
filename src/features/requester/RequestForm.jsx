@@ -1,12 +1,14 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { DatePicker } from '@/components/ui/DateRangePicker';
 import { EmptyState, ErrorNotice, FormError, Loading } from '@/components/ui/Feedback';
 import { Icon } from '@/components/ui/Icon';
 import { TimePicker } from '@/components/ui/TimePicker';
+import { requesterApi } from '@/lib/api/endpoints';
+import { validateValue } from '@/lib/form-fields';
 import { ChoiceField } from './ChoiceField';
 import { ATTACH_ACCEPT, choicePath, fetchForm, MAX_FILE_BYTES, MAX_FILES, submitRequest } from './requesterData';
 import { markSeen } from './seen';
@@ -16,11 +18,11 @@ import { TypePicture } from '@/components/booking/TypePicture';
 /** The file types POST /bookings/{id} accepts (jpg, jpeg, png, gif, webp, pdf). */
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
 
-/** The error of one field, or '' when its value is fine (the server checks the same again). */
+/** The error of one field, or '' when its value is fine (the server checks the same again, with the same messages). */
 function fieldError(field, raw, typed) {
   const value = String(raw ?? '').trim();
-  if (!value) return field.required ? 'שדה חובה' : '';
   if (field.kind === 'select') {
+    if (!value) return field.required ? field.rules.required ?? 'שדה חובה' : '';
     const chosen = choicePath(field.options, value).at(-1);
     if (chosen?.children.length) return 'יש לבחור תת-אפשרות';
     if (chosen?.isInput) {
@@ -30,17 +32,31 @@ function fieldError(field, raw, typed) {
     }
     return '';
   }
-  if (field.regex && !field.regex.test(value)) return 'הערך אינו בפורמט הנדרש';
-  if (field.inputType === 'number' && Number.isNaN(Number(value))) return 'יש להזין מספר';
-  return '';
+  return validateValue(field.rules, value, { required: field.required, kind: field.inputType }) ?? '';
 }
 
 /** Every field to draw, in order: a field, then its sub-fields (indented). */
 const flatten = (fields, depth = 0) => fields.flatMap((field) => [{ ...field, depth }, ...flatten(field.children, depth + 1)]);
 
 /**
+ * A field's width on the form's grid: its `col_span` on a form designed on four columns (the clearance grant); on the
+ * other forms the rule as it always was - two columns, a text area taking the whole row. A sub-field takes the row.
+ */
+function spanOf(field, columns) {
+  if (field.depth) return columns;
+  if (columns === 4) return Math.min(field.colSpan, 4);
+  return field.kind === 'textarea' ? 2 : 1;
+}
+
+/** How long after the ID number is complete the person lookup runs: not on every keystroke (20 lookups a minute). */
+const LOOKUP_DELAY_MS = 500;
+const ID_NUMBER = /^\d{9}$/;
+
+/**
  * One request form, built from GET /requester/form/{id}: breadcrumb, title, the fields the server sends (a select sends
  * its option id), attachments, send (POST /bookings/{id}). Server-side errors (422) show under their own field.
+ * A field with `lookup_source: "person"` (the candidate's ID number on the clearance grant) looks the person up once it
+ * holds 9 digits and fills the fields whose `autofill_key` the answer carries; the user may still correct them.
  */
 export function RequestForm({ found, onHome, onDone }) {
   const { topic, group, type } = found;
@@ -56,6 +72,46 @@ export function RequestForm({ found, onHome, onDone }) {
   const [serverErrors, setServerErrors] = useState({});
   const picker = useRef(null);
   const client = useQueryClient();
+  // a form designed on a 4-column grid (a field's col_span); every other form keeps its two columns
+  const columns = fields.some((field) => field.colSpan > 1) ? 4 : 2;
+
+  // the field that looks the person up by their ID number, and what the lookup said last
+  const lookupField = fields.find((field) => field.lookupSource === 'person') ?? null;
+  const [lookup, setLookup] = useState({ state: 'idle', message: '' });
+  const lookedUp = useRef('');
+  const lookupValue = lookupField ? String(values[lookupField.id] ?? '').trim() : '';
+
+  const runLookup = async (idNumber) => {
+    if (!lookupField || !ID_NUMBER.test(idNumber) || idNumber === lookedUp.current) return;
+    lookedUp.current = idNumber;
+    setLookup({ state: 'busy', message: 'מאתר פרטים…' });
+    try {
+      const data = await requesterApi.personLookup(type.id, idNumber);
+      if (data?.found && data.person) {
+        // every non-empty detail lands in the field whose autofill_key it names; the rest (the rank) stays the user's
+        setValues((previous) => {
+          const next = { ...previous };
+          for (const field of fields) {
+            const filled = field.autofillKey ? data.person[field.autofillKey] : null;
+            if (filled !== null && filled !== undefined && filled !== '') next[field.id] = String(filled);
+          }
+          return next;
+        });
+        setLookup({ state: 'found', message: 'הפרטים אותרו ומולאו בטופס; ניתן לתקן אותם לפני השליחה.' });
+      } else {
+        setLookup({ state: 'none', message: data?.message || 'לא נמצאו פרטים עבור תעודת הזהות שהוזנה' });
+      }
+    } catch (error) {
+      // the source is down (503), too many lookups (429) or a refused number (422): the fields stay the user's to fill
+      lookedUp.current = '';
+      setLookup({ state: 'error', message: error?.message || 'שירות איתור הפרטים אינו זמין כעת, ניתן להזין את הפרטים ידנית' });
+    }
+  };
+  useEffect(() => {
+    if (!lookupField || !ID_NUMBER.test(lookupValue)) return undefined;
+    const timer = window.setTimeout(() => void runLookup(lookupValue), LOOKUP_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [lookupValue]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const send = useMutation({
     mutationFn: () => submitRequest(type.id, values, files, typed),
@@ -87,6 +143,8 @@ export function RequestForm({ found, onHome, onDone }) {
       delete next[id];
       return next;
     });
+    // a new ID number: what the last lookup said no longer applies
+    if (lookupField && id === lookupField.id && String(value ?? '').trim() !== lookedUp.current) setLookup({ state: 'idle', message: '' });
   };
 
   const addFiles = (list) => {
@@ -153,9 +211,10 @@ export function RequestForm({ found, onHome, onDone }) {
           <EmptyState title="לטופס זה אין שדות ביחידה שלך">לא ניתן לפתוח בו קריאה כרגע. פנו למנהל המערכת.</EmptyState>
         ) : (
           <>
-            <div className="rq-fields">
+            <div className="rq-fields" style={{ '--rq-cols': columns }}>
               {fields.map((field) => {
                 const error = serverErrors[field.id] || (touched ? errors[field.id] : '');
+                const isLookup = lookupField !== null && field.id === lookupField.id;
                 const props = {
                   id: `rq-${field.id}`,
                   value: values[field.id] ?? '',
@@ -163,9 +222,15 @@ export function RequestForm({ found, onHome, onDone }) {
                   'aria-invalid': error ? true : undefined,
                   'aria-required': field.required || undefined,
                   dir: field.ltr ? 'ltr' : undefined,
+                  // the ID number: looked up as soon as the field is left (the pause after typing does it too)
+                  ...(isLookup ? { onBlur: (event) => void runLookup(event.target.value.trim()), inputMode: 'numeric', autoComplete: 'off' } : {}),
                 };
                 return (
-                  <div key={field.id} className={`field${field.kind === 'textarea' ? ' wide' : ''}${field.depth ? ' sub' : ''}`} style={field.depth ? { paddingInlineStart: field.depth * 18 } : undefined}>
+                  <div
+                    key={field.id}
+                    className={`field${field.depth ? ' sub' : ''}`}
+                    style={{ gridColumn: `span ${spanOf(field, columns)}`, ...(field.depth ? { paddingInlineStart: field.depth * 18 } : {}) }}
+                  >
                     <label htmlFor={props.id}>
                       {field.label}
                       {field.required ? <span className="req" aria-hidden> *</span> : null}
@@ -191,6 +256,8 @@ export function RequestForm({ found, onHome, onDone }) {
                       <input className="input" type={field.inputType} {...props} />
                     )}
                     {error ? <span className="rq-err">{error}</span> : null}
+                    {/* what the person lookup said: found and filled, not found, or not available right now */}
+                    {isLookup && lookup.state !== 'idle' ? <span className={`rq-lookup ${lookup.state}`} aria-live="polite">{lookup.message}</span> : null}
                   </div>
                 );
               })}
