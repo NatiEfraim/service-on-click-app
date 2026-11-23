@@ -31,7 +31,10 @@ describe('personFromUser', () => {
         ],
       }),
     );
-    expect(person.grants).toEqual([{ role: 'approver', bookingTypeIds: [1, 3] }]);
+    expect(person.grants).toEqual([
+      { role: 'approver', bookingTypeIds: [1, 3] },
+      { role: 'user', bookingTypeIds: [1] },
+    ]);
     expect(person.affiliation).toEqual({ unitName: 'N', departmentName: 'לוגיסטיקה' });
     expect(person.isSuperAdmin).toBe(false);
   });

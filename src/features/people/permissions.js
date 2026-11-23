@@ -47,7 +47,14 @@ function groupGrants(entries) {
 /** From the permission names of `GET /users`. */
 export function grantsFromPermissionNames(names) {
   const parsed = names.map(parsePermissionName).filter((entry) => entry !== null);
-  return groupGrants(parsed);
+  const grants = groupGrants(parsed);
+
+  // The requester access (user_{id}) is not a domain role, but it is still named, last: a person who only
+  // opens requests (e.g. the imported booking-type lists) is "משתמש: תחומים", not "ללא תפקיד".
+  const requesterIds = [...new Set(parsed.filter((entry) => entry.role === REQUESTER).map((entry) => entry.bookingTypeId))];
+  if (requesterIds.length) grants.push({ role: REQUESTER, bookingTypeIds: requesterIds.sort((a, b) => a - b) });
+
+  return grants;
 }
 
 /** From a row of `get-approvers`. */

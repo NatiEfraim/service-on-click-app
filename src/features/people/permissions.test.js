@@ -72,13 +72,19 @@ describe('parsePermissionName', () => {
 });
 
 describe('grants', () => {
-  it('groups permission names by role, in reading order, leaving out the plain user role', () => {
+  it('groups permission names by role, in reading order, with the requester access named last', () => {
     const grants = grantsFromPermissionNames(['user_1', 'vice_approver_3', 'approver_8', 'vice_approver_1', 'admin_2', 'approver_3', 'user_8']);
     expect(grants).toEqual([
       { role: 'admin', bookingTypeIds: [2] },
       { role: 'approver', bookingTypeIds: [3, 8] },
       { role: 'vice_approver', bookingTypeIds: [1, 3] },
+      { role: 'user', bookingTypeIds: [1, 8] },
     ]);
+  });
+
+  it('names a person who only opens requests as a requester, never "ללא תפקיד"', () => {
+    const grants = grantsFromPermissionNames(['user_5', 'user_1', 'user_15']);
+    expect(grants).toEqual([{ role: 'user', bookingTypeIds: [1, 5, 15] }]);
   });
 
   it('reads the rows of get-approvers', () => {
