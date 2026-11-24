@@ -135,25 +135,60 @@ describe('the clearance grant (14): a route of its own', () => {
   });
 });
 
-describe('shownFields (fields tied to a choice of another field)', () => {
+describe('shownFields (a field that depends on another field\'s choice: the server\'s depends_on)', () => {
   const choice = (id, name) => ({ id, name, code: null, isInput: false, inputType: 'text', ltr: false, children: [] });
-  const installType = { id: 1, fieldName: 'install_type', required: true, options: [choice(11, 'מדפסת מחוברת'), choice(12, 'מדפסת חדשה')] };
-  const printerIp = { id: 2, fieldName: 'printer_ip', required: false, options: [] };
+  const installType = { id: 1, fieldName: 'install_type', kind: 'select', required: true, dependsOn: null, options: [choice(11, 'מדפסת מחוברת'), choice(12, 'מדפסת חדשה')] };
+  const printerIp = { id: 2, fieldName: 'printer_ip', kind: 'text', required: true, dependsOn: { field: 'install_type', values: ['מדפסת מחוברת'] }, options: [] };
   const fields = [installType, printerIp];
 
   it('hides the printer IP until a connected printer is picked', () => {
-    expect(shownFields(21, fields, {}).map((f) => f.id)).toEqual([1]);
-    expect(shownFields(21, fields, { 1: 12 }).map((f) => f.id)).toEqual([1]);
+    expect(shownFields(fields, {}).map((f) => f.id)).toEqual([1]);
+    expect(shownFields(fields, { 1: 12 }).map((f) => f.id)).toEqual([1]);
   });
 
-  it('shows the printer IP, required, for a connected printer', () => {
-    const shown = shownFields(21, fields, { 1: 11 });
+  it('shows the printer IP, required as the server marks it, for a connected printer', () => {
+    const shown = shownFields(fields, { 1: 11 });
     expect(shown.map((f) => f.id)).toEqual([1, 2]);
     expect(shown[1].required).toBe(true);
   });
 
-  it('leaves other types alone', () => {
-    expect(shownFields(22, fields, {})).toBe(fields);
+  it('compares a typed parent by its value, and hides a field whose parent is not on the form', () => {
+    const network = { id: 3, fieldName: 'network', kind: 'text', required: true, dependsOn: null, options: [] };
+    const extra = { id: 4, fieldName: 'extra', kind: 'text', required: false, dependsOn: { field: 'network', values: ['TNG'] }, options: [] };
+    expect(shownFields([network, extra], { 3: 'TNG' }).map((f) => f.id)).toEqual([3, 4]);
+    expect(shownFields([network, extra], { 3: 'ARMY' }).map((f) => f.id)).toEqual([3]);
+    expect(shownFields([extra], {}).map((f) => f.id)).toEqual([]);
+  });
+
+  it('leaves a form without dependent fields as it is', () => {
+    const plain = [installType, { ...printerIp, dependsOn: null }];
+    expect(shownFields(plain, {})).toBe(plain);
+  });
+});
+
+describe('the service desk (20-25): a route of its own for the requester too', () => {
+  it('stages its statuses: the queue, a representative\'s hands, closed', () => {
+    expect(stageOf(1, 20)).toBe('service_desk_queue');
+    expect(stageOf(151, 20)).toBe('service_desk_handling');
+    expect(stageOf(5, 20)).toBe('closed');
+    expect(stageOf(7, 20)).toBe('closed');
+  });
+
+  it('draws the submission, its queue and handling, and its closing, placing the request at its stage', () => {
+    const sent = requestRoute(1, 20);
+    expect(sent.stations.map((station) => station.id)).toEqual(['received', 'service_desk_queue', 'service_desk_handling', 'closed']);
+    expect(sent.stations.map((station) => station.label)).toEqual(['הוגשה', 'הקריאה נשלחה', 'בטיפול המוקד', 'סיום טיפול']);
+    expect(sent).toMatchObject({ here: 1, mode: 'here' });
+    expect(requestRoute(151, 20)).toMatchObject({ here: 2, mode: 'here' });
+    expect(requestRoute(5, 20)).toMatchObject({ here: 3, mode: 'finished' });
+    expect(requestRoute(7, 20)).toMatchObject({ here: 3, mode: 'stopped' });
+  });
+
+  it('counts a request in the desk\'s hands as handling and a completed one as done', () => {
+    expect(counterOf({ statusId: 151 })).toBe('handling');
+    expect(counterOf({ statusId: 1 })).toBe('handling');
+    expect(counterOf({ statusId: 5 })).toBe('done');
+    expect(counterOf({ statusId: 7 })).toBeNull();
   });
 });
 
@@ -176,8 +211,9 @@ describe('accessibleBookingTypeIds (every category a user has access to)', () =>
     expect(accessibleBookingTypeIds(me, ALL)).toEqual(range(1, 16));
   });
 
-  it('ICT handler: 17-25, which the server does not count as managed', () => {
-    expect(accessibleBookingTypeIds({ permissions: perms('ict_handler', range(17, 25)), managed_booking_types: [] }, ALL)).toEqual(range(17, 25));
+  it('the service desk: its representative and its commander see the six תקשוב types', () => {
+    expect(accessibleBookingTypeIds({ permissions: perms('vice_approver', range(20, 25)), managed_booking_types: range(20, 25) }, ALL)).toEqual(range(20, 25));
+    expect(accessibleBookingTypeIds({ permissions: perms('admin_ict', range(20, 25)), managed_booking_types: range(20, 25), dashboard_booking_types: range(20, 25) }, ALL)).toEqual(range(20, 25));
   });
 
   it('department security officer and interview coordinator: the clearance grant', () => {

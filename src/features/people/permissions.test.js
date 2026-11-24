@@ -17,6 +17,7 @@ import {
   pendingChanges,
   reasonError,
   REQUESTER,
+  roleLabel,
   shownValue,
 } from './permissions';
 
@@ -145,10 +146,11 @@ const approverAnswer = (rows) => ({
   })),
 });
 
+// each type answers one commander flag: the camp commander's (`admin`) on a camp type, the service desk's (`ict`) on a תקשוב type; the other is null
 const adminAnswer = (rows) => ({
-  role_options: { admin: 2 },
+  role_options: { admin: 2, admin_ict: 152 },
   user: { full_name: 'x', personal_number: '1' },
-  permissions: rows.map((row) => ({ booking_type_id: row.id, name: `type_${row.id}`, display_name: `ניהול ${row.id}`, icon: null, is_admin: row.admin })),
+  permissions: rows.map((row) => ({ booking_type_id: row.id, name: `type_${row.id}`, display_name: `ניהול ${row.id}`, icon: null, is_admin: row.admin ?? null, is_admin_ict: row.ict ?? null })),
 });
 
 const ADMIN_CALLER = callerFrom(ADMIN_ME);
@@ -338,44 +340,49 @@ describe('barber roles', () => {
 
 describe('ביטחון מידע / תקשוב roles (roles & permissions guide)', () => {
   const guideAnswer = {
-    role_options: { approver: 3, vice_approver: 4, transportation_control_officer: 6, infosec_officer: 7, ict_handler: 8 },
+    role_options: { approver: 3, vice_approver: 4, transportation_control_officer: 6, infosec_officer: 101 },
     user: { full_name: 'x', personal_number: '1' },
     permissions: [
       { booking_type_id: 1, is_approver: false, is_vice_approver: false },
       { booking_type_id: 5, is_approver: false },
       { booking_type_id: 8, is_approver: false, is_vice_approver: false, is_transportation_control_officer: false },
       { booking_type_id: 14, is_infosec_officer: false },
-      { booking_type_id: 17, is_ict_handler: false },
+      // the service desk's representative is the type's vice approver; every user may open its requests (is_user)
+      { booking_type_id: 20, is_vice_approver: false, is_user: true },
     ],
   };
   const matrix = buildMatrix({ approver: guideAnswer, permissionNames: [], caller: ADMIN_CALLER, targetUuid: 'p', controlOfficerTypes: [8] });
 
   it('shows every offered role as a column, in the guide order', () => {
-    expect(matrix.roles).toEqual(['approver', 'vice_approver', 'transportation_control_officer', 'ict_handler', 'infosec_officer']);
+    expect(matrix.roles).toEqual(['approver', 'vice_approver', 'transportation_control_officer', 'infosec_officer']);
   });
 
   it('gives a checkbox only where the row has the flag (else —)', () => {
     const cells = (id) => Object.keys(matrix.rows.find((row) => row.bookingTypeId === id).cells).sort();
     expect(cells(14)).toEqual(['infosec_officer']);
-    expect(cells(17)).toEqual(['ict_handler']);
+    expect(cells(20)).toEqual(['user', 'vice_approver']);
     expect(cells(5)).toEqual(['approver']);
     expect(cells(8)).toEqual(['approver', 'transportation_control_officer', 'vice_approver']);
   });
 
-  it('sends only the flags a changed row has - no approver flag on 14-19', () => {
-    // the super admin (a camp commander may assign only in the domains they manage, so 14 / 17 would be locked for one)
+  it('sends only the flags a changed row has - no approver flag on 14-25', () => {
+    // the super admin (a camp commander may assign only in the domains they manage, so 14 / 20 would be locked for one)
     const open = buildMatrix({ approver: guideAnswer, permissionNames: [], caller: SUPER_CALLER, targetUuid: 'p', controlOfficerTypes: [8] });
-    expect(approverAssignments(open, { [cellKey('infosec_officer', 14)]: true, [cellKey('ict_handler', 17)]: true })).toEqual([
+    expect(approverAssignments(open, { [cellKey('infosec_officer', 14)]: true, [cellKey('vice_approver', 20)]: true })).toEqual([
       { booking_type_id: 14, is_infosec_officer: true },
-      { booking_type_id: 17, is_ict_handler: true },
+      { booking_type_id: 20, is_vice_approver: true },
     ]);
   });
 
   it('applies each role only to its own types (the super admin fallback)', () => {
     expect(roleApplies('infosec_officer', 14)).toBe(true);
     expect(roleApplies('approver', 14)).toBe(false);
-    expect(roleApplies('ict_handler', 18)).toBe(true);
-    expect(roleApplies('infosec_officer', 18)).toBe(false);
+    expect(roleApplies('vice_approver', 20)).toBe(true);
+    expect(roleApplies('admin_ict', 20)).toBe(true);
+    expect(roleApplies('approver', 20)).toBe(false);
+    expect(roleApplies('infosec_officer', 20)).toBe(false);
+    expect(roleApplies('admin_ict', 1)).toBe(false);
+    expect(roleApplies('ict_handler', 20)).toBe(false);
     expect(roleApplies('infosec_officer', 1)).toBe(false);
     expect(roleApplies('vice_approver', 5)).toBe(false);
     expect(roleApplies('approver', 5)).toBe(true);
@@ -384,8 +391,8 @@ describe('ביטחון מידע / תקשוב roles (roles & permissions guide)',
   it('builds the super admin fallback without boxes where a role does not apply', () => {
     const fallback = buildMatrix({
       approver: { ...guideAnswer, permissions: [] },
-      admin: adminAnswer([{ id: 1, admin: false }, { id: 14, admin: null }, { id: 17, admin: null }]),
-      permissionNames: ['infosec_officer_14'],
+      admin: adminAnswer([{ id: 1, admin: false }, { id: 14 }, { id: 20, ict: false }]),
+      permissionNames: ['infosec_officer_14', 'vice_approver_20'],
       caller: SUPER_CALLER,
       targetUuid: 'p',
       controlOfficerTypes: [8],
@@ -393,14 +400,67 @@ describe('ביטחון מידע / תקשוב roles (roles & permissions guide)',
     const cells = (id) => fallback.rows.find((row) => row.bookingTypeId === id).cells;
     expect(Object.keys(cells(14))).toEqual(['infosec_officer']);
     expect(cells(14).infosec_officer.value).toBe(true);
-    expect(Object.keys(cells(17))).toEqual(['ict_handler']);
+    expect(Object.keys(cells(20)).sort()).toEqual(['admin_ict', 'vice_approver']);
+    expect(cells(20).vice_approver.value).toBe(true);
     expect(Object.keys(cells(1)).sort()).toEqual(['admin', 'approver', 'vice_approver']);
+  });
+});
+
+describe('the service desk\'s commander (admin_ict, the second commander flag)', () => {
+  const ICT = [20, 21, 22, 23, 24, 25];
+  const deskAnswer = {
+    role_options: { approver: 3, vice_approver: 4, infosec_officer: 101 },
+    user: { full_name: 'x', personal_number: '1' },
+    permissions: [{ booking_type_id: 1, is_approver: false, is_vice_approver: false }, { booking_type_id: 20, is_vice_approver: true, is_user: true }],
+  };
+  const admin = adminAnswer([{ id: 1, admin: true }, { id: 20, ict: false }]);
+
+  it('is a column of its own for the super admin, read from is_admin_ict where a type answers it', () => {
+    const matrix = buildMatrix({ approver: deskAnswer, admin, permissionNames: [], caller: SUPER_CALLER, targetUuid: 'p' });
+    // the two commanders first, then every role the server offers
+    expect(matrix.roles).toEqual(['admin', 'admin_ict', 'approver', 'vice_approver', 'infosec_officer']);
+    expect(matrix.rows.find((row) => row.bookingTypeId === 1).cells.admin.value).toBe(true);
+    expect(matrix.rows.find((row) => row.bookingTypeId === 1).cells.admin_ict).toBeUndefined();
+    expect(matrix.rows.find((row) => row.bookingTypeId === 20).cells.admin).toBeUndefined();
+    expect(matrix.rows.find((row) => row.bookingTypeId === 20).cells.admin_ict.value).toBe(false);
+  });
+
+  it('is sent to assign-admin-role with the flag its type answers, and never to the approvers\' request', () => {
+    const matrix = buildMatrix({ approver: deskAnswer, admin, permissionNames: [], caller: SUPER_CALLER, targetUuid: 'p' });
+    const edits = { [cellKey('admin_ict', 20)]: true, [cellKey('vice_approver', 20)]: false, [cellKey('admin', 1)]: false };
+    expect(adminAssignments(matrix, edits)).toEqual([
+      { booking_type_id: 1, is_admin: false },
+      { booking_type_id: 20, is_admin_ict: true },
+    ]);
+    expect(approverAssignments(matrix, edits)).toEqual([{ booking_type_id: 20, is_vice_approver: false }]);
+  });
+
+  it('is never offered to a camp commander or to the desk\'s commander, who appoint the desk\'s representatives only in their own domains', () => {
+    const commander = callerFrom({ is_super_admin: false, permissions: ICT.map((id) => `admin_ict_${id}`), user: { uuid: 'desk' } });
+    expect([...commander.administered]).toEqual(ICT);
+    expect(lockReason(commander, 'p', 20)).toBeNull();
+    expect(lockReason(commander, 'p', 1)).toBe(LOCK_DOMAIN);
+    expect(lockReason(commander, 'desk', 20)).toBe(LOCK_SELF);
+    const matrix = buildMatrix({ approver: { ...deskAnswer, permissions: [{ booking_type_id: 20, is_vice_approver: false, is_user: true }] }, admin: null, permissionNames: [], caller: commander, targetUuid: 'p' });
+    // no commander column without the super admin's answer; the desk's row offers the representative role and the requester flag alone
+    expect(matrix.roles).toEqual(['approver', 'vice_approver', 'infosec_officer']);
+    expect(Object.keys(matrix.rows[0].cells).sort()).toEqual(['user', 'vice_approver']);
+    expect(approverAssignments(matrix, { [cellKey('vice_approver', 20)]: true })).toEqual([{ booking_type_id: 20, is_vice_approver: true }]);
+  });
+
+  it('names the desk\'s roles the desk\'s way on its domains, and the shared way elsewhere', () => {
+    expect(roleLabel('vice_approver', 20)).toBe('נציג מוקד');
+    expect(roleLabel('vice_approver', 1)).toBe('גורם מטפל');
+    expect(roleLabel('vice_approver')).toBe('גורם מטפל');
+    expect(roleLabel('admin_ict')).toBe('מפקד תקשוב');
+    expect(grantChip({ role: 'admin_ict', bookingTypeIds: [20, 21, 22] }, typeName).label).toBe('מפקד תקשוב: 3 תחומים');
+    expect(grantChip({ role: 'commander', bookingTypeIds: null }, typeName).label).toBe('מפקד מחנה / מפקד תקשוב');
   });
 });
 
 describe('the clearance grant\'s roles (lib/routeTypes)', () => {
   const answer = {
-    role_options: { approver: 3, vice_approver: 4, infosec_officer: 7, ict_handler: 8, department_security_officer: 9, interview_coordinator: 10 },
+    role_options: { approver: 3, vice_approver: 4, infosec_officer: 101, department_security_officer: 103, interview_coordinator: 104 },
     user: { full_name: 'x', personal_number: '1' },
     permissions: [{ booking_type_id: 14, is_infosec_officer: false, is_department_security_officer: true, is_interview_coordinator: false }],
   };
@@ -417,7 +477,7 @@ describe('the clearance grant\'s roles (lib/routeTypes)', () => {
   it('reads the three flags of the type-14 row and sends all three back on a change', () => {
     const matrix = buildMatrix({ approver: answer, permissionNames: [], caller: SUPER_CALLER, targetUuid: 'p' });
     // every role the server offers is a column, in reading order; the row itself has only the route's three
-    expect(matrix.roles).toEqual(['approver', 'vice_approver', 'ict_handler', 'infosec_officer', 'interview_coordinator', 'department_security_officer']);
+    expect(matrix.roles).toEqual(['approver', 'vice_approver', 'infosec_officer', 'interview_coordinator', 'department_security_officer']);
     expect(Object.keys(matrix.rows[0].cells).sort()).toEqual(['department_security_officer', 'infosec_officer', 'interview_coordinator']);
     expect(approverAssignments(matrix, { [cellKey('interview_coordinator', 14)]: true, [cellKey('department_security_officer', 14)]: false })).toEqual([
       { booking_type_id: 14, is_infosec_officer: false, is_interview_coordinator: true, is_department_security_officer: false },
@@ -425,7 +485,7 @@ describe('the clearance grant\'s roles (lib/routeTypes)', () => {
   });
 
   it('builds the super admin fallback with the three roles when the server sends no row', () => {
-    const fallback = buildMatrix({ approver: { ...answer, permissions: [] }, admin: adminAnswer([{ id: 14, admin: null }]), permissionNames: ['interview_coordinator_14'], caller: SUPER_CALLER, targetUuid: 'p' });
+    const fallback = buildMatrix({ approver: { ...answer, permissions: [] }, admin: adminAnswer([{ id: 14 }]), permissionNames: ['interview_coordinator_14'], caller: SUPER_CALLER, targetUuid: 'p' });
     const cells = fallback.rows.find((row) => row.bookingTypeId === 14).cells;
     expect(Object.keys(cells).sort()).toEqual(['department_security_officer', 'infosec_officer', 'interview_coordinator']);
     expect(cells.interview_coordinator.value).toBe(true);

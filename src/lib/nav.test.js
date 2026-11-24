@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildNav, canAct, canOpenDomains, homeKind, isActivePath, requestsHref } from './nav';
+import { buildNav, canAct, canOpenDomains, homeKind, isActivePath, isCommander, requestsHref } from './nav';
 
 const NO_CAPABILITIES = {
   'audit.view': false,
@@ -68,6 +68,7 @@ describe('canAct', () => {
   it('is true for admins, approvers, vice approvers and control officers, false for plain users', () => {
     expect(canAct(makeMe({ permissions: ['vice_approver_8'] }))).toBe(true);
     expect(canAct(makeMe({ permissions: ['transportation_control_officer_8'] }))).toBe(true);
+    expect(canAct(makeMe({ permissions: ['in_unit_food_control_officer_11'] }))).toBe(true);
     expect(canAct(makeMe({ permissions: ['approver_1'] }))).toBe(true);
     expect(canAct(makeMe({ permissions: ['admin_1', 'user_1'] }))).toBe(true);
     expect(canAct(makeMe({ permissions: ['user_1'] }))).toBe(false);
@@ -117,6 +118,39 @@ describe('unified requests navigation', () => {
   });
   it('lets the super admin see the mine view even without per-type permissions', () => {
     expect(canAct(makeMe({ is_super_admin: true }))).toBe(true);
+  });
+});
+
+describe('the service desk\'s roles (תקשוב)', () => {
+  const ICT = [20, 21, 22, 23, 24, 25];
+  const commander = makeMe({
+    is_ict_admin: true,
+    permissions: ICT.map((id) => `admin_ict_${id}`),
+    caps: ['users.manage', 'dashboard.view', 'reports.view', 'targets.manage'],
+    managed_booking_types: ICT,
+    dashboard_booking_types: ICT,
+    route_booking_types: ICT,
+    route_owner_booking_types: ICT,
+  });
+  const representative = makeMe({ is_handler_only: true, permissions: ['vice_approver_20', 'user_20'], managed_booking_types: [20], dashboard_booking_types: [], route_booking_types: [20], route_owner_booking_types: [] });
+
+  it('gives the commander the dashboard, the open requests, the reports, the service domains and the users', () => {
+    expect(isCommander(commander)).toBe(true);
+    expect(canAct(commander)).toBe(true);
+    expect(labels(commander)).toEqual(['start', 'home', 'requests', 'reports', 'manage']);
+    const manage = buildNav(commander).find((entry) => entry.id === 'manage');
+    expect(manage?.kind === 'group' && manage.items.map((item) => item.id)).toEqual(['domains', 'users']);
+    expect(canOpenDomains(commander)).toBe(true);
+    expect(requestsHref(commander)).toContain('view=open');
+    expect(homeKind(commander)).toBe('tiles');
+  });
+
+  it('reduces the representative to the queue of what waits for them', () => {
+    expect(isCommander(representative)).toBe(false);
+    expect(canAct(representative)).toBe(true);
+    expect(labels(representative)).toEqual(['start', 'requests']);
+    expect(requestsHref(representative)).toContain('view=mine');
+    expect(canOpenDomains(representative)).toBe(false);
   });
 });
 

@@ -30,6 +30,9 @@ export const STAGE_SHORT = {
   interview_scheduled: 'נקבע מול המועמד',
   interviewed: 'תוחקר',
   awaiting_clearance: 'ממתין לקבלת הכשר',
+  // the service desk's route (תקשוב, lib/routeTypes): waiting in the desk's queue, then in a representative's hands
+  service_desk_queue: 'ממתין לנציג מוקד',
+  service_desk_handling: 'בטיפול נציג מוקד',
 };
 
 /** One colour per stage for the dashboard charts. */
@@ -49,6 +52,8 @@ export const STAGE_COLOR = {
   interview_scheduled: '#39828C',
   interviewed: '#AD903F',
   awaiting_clearance: '#1F8E8B',
+  service_desk_queue: '#8C3F68',
+  service_desk_handling: '#1F8E8B',
 };
 
 export const WAIT_LABEL = {
@@ -66,12 +71,16 @@ export const ROLE_NAME = {
   vice_approver: 'גורם מטפל',
   transportation_control_officer: 'רמ"ד תו"ב',
   in_unit_food_control_officer: 'רמ"ד תו"ב',
-  // the ביטחון מידע and תקשוב handlers (RoleEnum on the API)
+  // the ביטחון מידע handler, and the service desk's commander who owns the תקשוב route (RoleEnum on the API)
   infosec_officer: 'קצין ביטחון מידע',
+  admin_ict: 'מפקד תקשוב',
+  // the single ICT handler of the old route; no type has it any more, but older audit rows still name it
   ict_handler: 'מנהל תקשוב',
   // the clearance grant's route (lib/routeTypes): the one who submits and the one who schedules the interview
   department_security_officer: 'קב"ט מחלקתי',
   interview_coordinator: 'מתאם תחקיר',
+  // a person from the commanders list (get-admins), which does not say whether they command a camp or the service desk
+  commander: 'מפקד מחנה / מפקד תקשוב',
   user: 'משתמש',
 };
 
@@ -118,13 +127,11 @@ const PICTURE = {
 };
 export const requesterIconSrc = (name) => (PICTURE[name] ? `/icons/requester/${PICTURE[name]}.svg` : null);
 
+/** The request types with a picture of their own, by their server name; the תקשוב types (20-25) draw theirs (TypeIcon). */
 const REQUEST_TYPE_NAMES = {
   14: 'clearance_grant',
   15: 'removable_media',
   16: 'security_incident',
-  17: 'folder_permission',
-  18: 'manta_permission',
-  19: 'network_folder',
 };
 
 export function domainIconSrc(bookingTypeId, name = REQUEST_TYPE_NAMES[bookingTypeId]) {
@@ -139,8 +146,8 @@ export function statusTone(statusId) {
   if ([4, 6, 7, 12, 13, 16, 18].includes(statusId)) return 'bad';
   // 19: parked for an external party, like the supplier holds
   if ([8, 9, 10, 19].includes(statusId)) return 'hold';
-  // 102-104: the interview is set, held, the clearance awaited
-  if ([3, 11, 15, 17, 102, 103, 104].includes(statusId)) return 'acc';
+  // 102-104: the interview is set, held, the clearance awaited; 151: a desk representative has the request in hand
+  if ([3, 11, 15, 17, 102, 103, 104, 151].includes(statusId)) return 'acc';
   return 'warn';
 }
 

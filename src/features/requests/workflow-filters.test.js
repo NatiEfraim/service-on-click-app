@@ -49,3 +49,22 @@ describe('a type with a route of its own (the clearance grant)',()=>{
   expect(normalizeWorkflowFilters({types:'14',stage:'interviewed',statuses:'104'},{managed_booking_types:[14]},withRoute)).toEqual({types:'14',stage:'interviewed',statuses:'104'});
  });
 });
+describe('the service desk (תקשוב): its queue and handling as stages',()=>{
+ const withDesk={
+  booking_types:[...catalog.booking_types,{id:20,name:'software_install'},{id:24,name:'user_open'}],
+  booking_type_statuses:{...catalog.booking_type_statuses,20:[1,151,5,6,7],24:[1,151,5,6,7]},
+  statuses:[...catalog.statuses,{id:151,name:'in_service_desk'}],
+  routes:{20:{key:'ict_service_desk',initial_status_id:1,success_status_id:5,status_ids:[1,151,5,7,6],steps:[{status_id:1,label:'ההזמנה נשלחה'},{status_id:151,label:'בטיפול המוקד'},{status_id:5,label:'סיום טיפול'}],requester_role:{id:5,name:'user',label:'משתמש'},owner_role:{id:152,name:'admin_ict',label:'מפקד תקשוב'},roles:[{id:4,name:'vice_approver',label:'גורם מטפל'},{id:152,name:'admin_ict',label:'מפקד תקשוב'}]}},
+ };
+ it('offers the desk\'s two stages, then closed, and never the vice approver\'s stage for its sent requests',()=>{
+  const result=workflowFilterOptions({managed_booking_types:[20,24]},withDesk);
+  expect(result.stages).toEqual(['service_desk_queue','service_desk_handling','closed']);
+  expect(result.statuses.map(s=>s.id)).toEqual([1,5,6,7,151]);
+ });
+ it('lists the desk\'s stages after the approval route\'s for the commander who sees both',()=>{
+  expect(workflowFilterOptions({managed_booking_types:[1,20]},withDesk).stages).toEqual(['vice_approver','approver','realization','service_desk_queue','service_desk_handling','closed']);
+ });
+ it('keeps a chosen desk stage',()=>{
+  expect(normalizeWorkflowFilters({types:'20',stage:'service_desk_handling',statuses:'151'},{managed_booking_types:[20]},withDesk)).toEqual({types:'20',stage:'service_desk_handling',statuses:'151'});
+ });
+});

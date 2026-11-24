@@ -121,6 +121,20 @@
 .rq-count { align-self: flex-end; margin-top: -2px; font-size: 12px; color: var(--mute); font-variant-numeric: tabular-nums; }
 .rq-declare { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; width: fit-content; }
 .rq-declare input { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
+/* a declaration whose guidelines were not opened yet: its box waits, dimmed */
+.rq-declare.waiting { color: var(--mute); cursor: not-allowed; }
+.rq-declare.waiting input { cursor: not-allowed; }
+/* the server's help line under a field (the way to write a new user name) */
+.rq-hint { font-size: 12.5px; color: var(--mute); line-height: 1.4; }
+/* the guidelines behind a field, beside its label; the icon sits on the text's line */
+.rq-help { display: inline-flex; align-items: center; gap: 4px; margin-inline-start: 8px; font-size: 13px; font-weight: 600; color: var(--accent); text-decoration: none; }
+.rq-help .ico { width: 14px; height: 14px; }
+.rq-help:hover { text-decoration: underline; }
+.rq-help:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+/* a field the person lookup filled and locked: marked beside its label, its box read only (a plain surface, no edit cursor) */
+.rq-lock { display: inline-block; margin-inline-start: 8px; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; color: var(--ink-2); background: var(--surface-2); vertical-align: middle; }
+.rq-fields .rq-locked .input[readonly] { background: var(--surface-2); color: var(--ink-2); cursor: default; }
+.rq-fields .rq-locked .input[readonly]:focus { box-shadow: none; }
 /* what the person lookup by ID number said (RequestForm): looking, found and filled, not found, not available */
 .rq-lookup { font-size: 13px; color: var(--mute); }
 .rq-lookup.found { color: var(--ok); }

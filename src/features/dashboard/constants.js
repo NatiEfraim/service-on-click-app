@@ -1,8 +1,8 @@
 import { STAGE_ORDER, STAGE_SHORT } from '@/lib/labels';
-import { hasOwnRoute, ROUTE_STAGE_ORDER } from '@/lib/routeTypes';
+import { hasOwnRoute, ROUTE_STAGE_ORDER, routeStages } from '@/lib/routeTypes';
 import { topicHandlerName } from '@/lib/topicTypes';
 
-/** Every stage a chart may show, in reading order: the topics' one handler, the approval route, the clearance grant's own steps. */
+/** Every stage a chart may show, in reading order: the topics' one handler, the approval route, the routes' own steps (the clearance grant's, the service desk's). */
 export const CHART_STAGE_ORDER = ['topic_handler', ...STAGE_ORDER, ...ROUTE_STAGE_ORDER];
 
 export function chartStageLabel(stage, bookingTypeId) {
@@ -37,13 +37,16 @@ export const WINDOWS = [
 
 export const DEFAULT_WINDOW_DAYS = 30;
 
-/** Stages where a booking waits for someone's decision (the clearance grant: its assignment and the step after the interview). */
-export const APPROVAL_STAGES = ['control_officer', 'vice_approver', 'approver', 'barber', 'interview_assignment', 'interviewed'];
+/** Stages where a booking waits for someone's decision (the clearance grant: its assignment and the step after the interview; the service desk: its queue). */
+export const APPROVAL_STAGES = ['control_officer', 'vice_approver', 'approver', 'barber', 'interview_assignment', 'interviewed', 'service_desk_queue'];
 
 /** The cards of the stage pipeline, in route order; each is shown only for types that reach its statuses. */
 export const PIPELINE_STAGES = ['control_officer', 'vice_approver', 'approver', 'barber', 'supplier_approval', 'supplier_number', 'realization', ...ROUTE_STAGE_ORDER];
 
-/** The statuses that put a type on each card (14 / 17 / 18 control officer, 8 / 9 / 10 supplier holds, 11 / 12 the barber, 101-104 the clearance grant's steps). */
+/**
+ * The statuses that put a type on each card (14 / 17 / 18 control officer, 8 / 9 / 10 supplier holds, 11 / 12 the barber,
+ * 101-104 the clearance grant's steps, 1 / 151 the service desk's queue and handling - on the route types only).
+ */
 const STAGE_STATUSES = {
   control_officer: [14, 17, 18],
   vice_approver: [15, 16],
@@ -56,16 +59,19 @@ const STAGE_STATUSES = {
   interview_scheduled: [102],
   interviewed: [103],
   awaiting_clearance: [104],
+  service_desk_queue: [1],
+  service_desk_handling: [151],
 };
 
 /**
  * The pipeline cards of these types, from `catalog.booking_type_statuses`; every card when the catalog does not know
- * them. A type with a route of its own gets its steps only: its refusal (4) is no card of the approval route.
+ * them. A type with a route of its own gets its steps only: its refusal (4) is no card of the approval route, and its
+ * sent request (1) no card of the vice approver.
  */
 export function pipelineStagesFor(bookingTypeIds, catalog) {
   const reachableOf = (ids) => ids.flatMap((id) => catalog?.booking_type_statuses?.[String(id)] ?? []);
-  const generic = reachableOf(bookingTypeIds.filter((id) => !hasOwnRoute(id)));
-  const route = reachableOf(bookingTypeIds.filter((id) => hasOwnRoute(id)));
+  const generic = reachableOf(bookingTypeIds.filter((id) => !hasOwnRoute(id, catalog)));
+  const route = reachableOf(bookingTypeIds.filter((id) => hasOwnRoute(id, catalog)));
   if (generic.length === 0 && route.length === 0) return PIPELINE_STAGES;
   return PIPELINE_STAGES.filter((stage) => STAGE_STATUSES[stage].some((status) => (ROUTE_STAGE_ORDER.includes(stage) ? route : generic).includes(status)));
 }
@@ -85,8 +91,9 @@ export const STAT_COLOR = { open: '#3D314A', awaiting: '#2E7470', overdue: '#B44
  * that still holds open bookings.
  */
 export function workflowColumns(bookingTypeId, catalog, stages, order) {
-  if (hasOwnRoute(bookingTypeId)) {
-    return order.filter((id) => ROUTE_STAGE_ORDER.includes(id) || (stages[id] ?? 0) > 0);
+  if (hasOwnRoute(bookingTypeId, catalog)) {
+    const own = routeStages(bookingTypeId, catalog);
+    return order.filter((id) => own.includes(id) || (stages[id] ?? 0) > 0);
   }
   const workflow = bookingTypeId == null ? order : pipelineStagesFor([bookingTypeId], catalog);
   if (topicHandlerName(bookingTypeId)) {

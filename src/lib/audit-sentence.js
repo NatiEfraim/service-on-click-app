@@ -29,6 +29,8 @@ const VERB = {
   103: 'סימן/ה כתוחקר/ת',
   104: 'העביר/ה לקבלת הכשר',
   105: 'סגר/ה לאחר קבלת הכשר ביטחוני',
+  // the service desk's route: a representative took the request (or the commander reopened it)
+  151: 'העביר/ה לטיפול המוקד את',
 };
 
 /** Setting keys (`system_reference` values) in user-facing words. */

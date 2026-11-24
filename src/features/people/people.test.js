@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { compareByName, loadAllPages, mergeRoleHolders, personFromUser } from './people';
+import { attachCommanderGrants, COMMANDER_LOOKUPS_MAX, compareByName, loadAllPages, mergeRoleHolders, personFromUser } from './people';
 
 const user = (patch) => ({
   uuid: 'u1',
@@ -58,16 +58,42 @@ const approver = (uuid, name, roles) => ({
 const admin = (uuid, name) => ({ uuid, full_name: name, personal_number: uuid });
 
 describe('mergeRoleHolders', () => {
-  it('lists approvers and camp commanders once each, alphabetically', () => {
+  it('lists approvers and commanders once each, alphabetically; the commanders list does not say which command they hold', () => {
     const rows = mergeRoleHolders([approver('2', 'דניאל', [['approver', 1]]), approver('3', 'אורי', [['vice_approver', 2]])], [admin('1', 'נתנאל'), admin('3', 'אורי')]);
     expect(rows.map((row) => row.name)).toEqual(['אורי', 'דניאל', 'נתנאל']);
-    expect(rows.find((row) => row.uuid === '3')?.grants.map((grant) => grant.role)).toEqual(['admin', 'vice_approver']);
-    expect(rows.find((row) => row.uuid === '1')?.grants).toEqual([{ role: 'admin', bookingTypeIds: null }]);
+    expect(rows.find((row) => row.uuid === '3')?.grants.map((grant) => grant.role)).toEqual(['commander', 'vice_approver']);
+    expect(rows.find((row) => row.uuid === '1')?.grants).toEqual([{ role: 'commander', bookingTypeIds: null }]);
     expect(rows.every((row) => row.affiliation === null)).toBe(true);
   });
 
-  it('does not repeat a camp commander twice', () => {
+  it('does not repeat a commander twice', () => {
     expect(mergeRoleHolders([], [admin('1', 'נתנאל'), admin('1', 'נתנאל')])).toHaveLength(1);
+  });
+});
+
+describe('attachCommanderGrants', () => {
+  const rows = mergeRoleHolders([approver('3', 'אורי', [['vice_approver', 2]])], [admin('1', 'נתנאל'), admin('2', 'טל'), admin('3', 'אורי')]);
+  const records = {
+    1: user({ uuid: '1', permissions: [{ name: 'admin_1' }, { name: 'admin_2' }, { name: 'user_1' }] }),
+    2: user({ uuid: '2', permissions: [{ name: 'admin_ict_20' }, { name: 'admin_ict_21' }] }),
+  };
+
+  it('names each commander\'s command from their record: the camp\'s or the service desk\'s, with its domains', async () => {
+    const named = await attachCommanderGrants(rows, async (row) => records[row.uuid] ?? null);
+    expect(named.find((row) => row.uuid === '1')?.grants).toEqual([{ role: 'admin', bookingTypeIds: [1, 2] }]);
+    expect(named.find((row) => row.uuid === '2')?.grants).toEqual([{ role: 'admin_ict', bookingTypeIds: [20, 21] }]);
+    // a record that cannot be read keeps the generic chip; a plain approver is not read at all
+    expect(named.find((row) => row.uuid === '3')?.grants.map((grant) => grant.role)).toEqual(['commander', 'vice_approver']);
+    expect(named).not.toBe(rows);
+  });
+
+  it('reads nothing when the list is too long, or when a lookup fails', async () => {
+    const many = mergeRoleHolders([], Array.from({ length: COMMANDER_LOOKUPS_MAX + 1 }, (_, i) => admin(String(i), `מפקד ${i}`)));
+    let asked = 0;
+    expect(await attachCommanderGrants(many, async () => { asked++; return null; })).toBe(many);
+    expect(asked).toBe(0);
+    const failing = await attachCommanderGrants(rows, async () => { throw new Error('down'); });
+    expect(failing.find((row) => row.uuid === '1')?.grants).toEqual([{ role: 'commander', bookingTypeIds: null }]);
   });
 });
 

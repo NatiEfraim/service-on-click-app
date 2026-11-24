@@ -142,11 +142,30 @@ The menu is computed from `GET /me` (`capabilities`, `is_*`, `permissions`); the
 | היסטוריית שינויים | `audit.view` (super admin) | append-only log; a red banner when the hash chain does not verify |
 | סנכרון עם האפליקציה | `sync.view` (super admin) | files sent to the mobile app, blocked/failed, conflicts and their resolution |
 
-### Types with a route of their own (מתן סיווג ביטחוני, type 14)
+### Types with a route of their own (מתן סיווג ביטחוני 14, מוקד תקשוב 20-25)
 
-The clearance grant does not follow the approver chain: the API serves its route in `catalog.routes` (steps, roles, assignment
-rules), and `src/lib/routeTypes.js` holds the same knowledge as a fallback for screens without the catalog (the requester portal).
-Its guide is `../service-on-click-api/docs/frontend-clearance-grant-refactoring-guide.md`.
+Two kinds of request do not follow the approver chain: the API serves their routes in `catalog.routes` (steps, roles), and
+`src/lib/routeTypes.js` holds the same knowledge as a fallback for screens without the catalog (the requester portal) plus what
+the catalog does not say, by the route's `key`: the stage of each status, whether the form has a handler section, the words the
+route uses for its roles and statuses. The guides are `../service-on-click-api/docs/frontend-clearance-grant-refactoring-guide.md`
+and `../service-on-click-api/docs/frontend-system-domains-guide.md` (the three systems - מפקדת מחנה, ביטחון מידע, תקשוב - and the
+service desk route).
+
+#### מוקד תקשוב (the service desk, types 20-25)
+
+- Every signed-in user submits one of the six תקשוב forms. The form reads the server's field extras: `hint` (a help line under the
+  field), `help_url` (a link beside the label; a declaration can be ticked only once it was opened), `autofill_locked` (a field the
+  person lookup filled is read-only unless the server says it may be edited - the mobile phone) and `depends_on` (the printer's IP is
+  shown, and required, only for "מדפסת מחוברת"; the server enforces the same rule).
+- **נציג מוקד** (`vice_approver_20..25`, the type's vice approver) takes the request (`לקיחה לטיפול` → 151, becoming its handler),
+  closes it (`סגירת פנייה - טופלה` → 5, `סגירה ללא ביצוע` → 7, with a comment) or puts it back in the queue (→ 1, the handler released).
+- **מפקד תקשוב** (`admin_ict_20..25`) owns the route: assigns representatives, reopens closed requests (→ 151, with a comment), has the
+  desk's dashboard, reports and users screen (the ICT types only), and reads its settings. The super admin grants this role from the
+  permissions dialog (`is_admin_ict` on the ICT types, next to `is_admin` on the camp types).
+- Stages: `service_desk_queue` (waiting for a representative) and `service_desk_handling`; the shared statuses are named for a
+  request ("הקריאה נשלחה", "נסגרה ללא ביצוע").
+
+#### מתן סיווג ביטחוני (the clearance grant, type 14)
 
 - **קב"ט מחלקתי** (`department_security_officer_14`) submits it on the requester portal: the form is laid out on a 4-column grid
   (`col_span`), the ID-number field looks the person up (`GET /requester/person-lookup`) and fills the fields with an `autofill_key`.

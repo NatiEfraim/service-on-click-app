@@ -10,7 +10,8 @@ import { Chip, StatusChip } from '@/components/ui/Chips';
 import { Drawer } from '@/components/ui/Drawer';
 import { EmptyState, ErrorNotice, Loading, Notice } from '@/components/ui/Feedback';
 import { AttachmentsPanel } from '@/features/bookings/Attachments';
-import { progressRoute } from '@/features/bookings/route';
+import { isFinishedStatus, progressRoute } from '@/features/bookings/route';
+import { CLOSED_STATUS_IDS } from '@/lib/api/endpoints';
 import { usePresence } from '@/components/ui/usePresence';
 import { holdDescription, isHoldStatus } from '@/lib/booking-workflow';
 import { fmtDate, fmtDateTime } from '@/lib/format';
@@ -77,7 +78,9 @@ function RequestStepper({ row, rows, onGo }) {
 const CELEBRATION_EXIT_MS = 450;
 
 function ProgressRail({ statusId, bookingTypeId, progress, label, since, celebrate = false, onCelebrated }) {
-  const { stations, here, mode } = progress ? progressRoute(progress) : requestRoute(statusId, bookingTypeId);
+  // closed without completing (cancelled, closed without doing): the server's bar does not know that end, so it is told
+  const stopped = CLOSED_STATUS_IDS.includes(Number(statusId)) && !isFinishedStatus(statusId) ? label : null;
+  const { stations, here, mode } = progress ? progressRoute(progress, stopped) : requestRoute(statusId, bookingTypeId);
   // how long it has been at this step (from its last update), while it is still moving: not once completed or stopped
   const waited = mode === 'here' || mode === 'hold' ? waitedLabel(daysSince(since)) : '';
   // the celebration fades out however it ends (its own timer, or the same request's celebration in the list finishing

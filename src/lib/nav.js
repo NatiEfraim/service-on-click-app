@@ -5,9 +5,14 @@ import { SHOW_DEPARTMENTS } from '@/lib/labels';
 
 /** Holds a role that moves bookings on at least one type: the approval route's, or a topic's / a route's handler role. */
 export function canAct(me) {
-  // the camp commander (admin) decides in the domain commander's turns too; the ביטחון מידע / תקשוב handlers and the
-  // clearance grant's roles (lib/routeTypes) act on their own types
-  return me.is_super_admin || me.permissions.some((permission) => /^(admin|approver|vice_approver|transportation_control_officer|infosec_officer|ict_handler|interview_coordinator)_\d+$/.test(permission));
+  // the camp commander (admin) decides in the domain commander's turns too; the control officers, the ביטחון מידע
+  // handler and the roles of the routes (lib/routeTypes: the coordinator, the service desk's commander) act on their own types
+  return me.is_super_admin || me.permissions.some((permission) => /^(admin|admin_ict|approver|vice_approver|transportation_control_officer|in_unit_food_control_officer|infosec_officer|ict_handler|interview_coordinator)_\d+$/.test(permission));
+}
+
+/** Commands a set of domains: the camp commander (admin_N) or the service desk's commander (admin_ict_N); both review the system. */
+export function isCommander(me) {
+  return Boolean(me.is_admin || me.is_ict_admin);
 }
 
 export function can(me, capability) {
@@ -70,7 +75,7 @@ export function buildNav(me) {
  * GET overview, see HomeScreen), over a single domain that domain's dashboard.
  */
 export function homeKind(me) {
-  if (!can(me, 'dashboard.view')) return me.is_super_admin || me.is_admin ? 'requests' : 'requests';
+  if (!can(me, 'dashboard.view')) return 'requests';
   return me.dashboard_booking_types.length > 1 ? 'tiles' : 'dashboard';
 }
 
@@ -79,9 +84,9 @@ export function isActivePath(pathname, href, also = []) {
   return candidates.map((candidate) => candidate.split('?')[0]).some((candidate) => (candidate === '/' ? pathname === '/' : pathname === candidate || pathname.startsWith(`${candidate}/`)));
 }
 
-/** One list; handlers and domain approvers enter their work queue, senior administrators enter open bookings. */
+/** One list; handlers and domain approvers enter their work queue, the commanders and the system admin enter open bookings. */
 export function requestsHref(me) {
-  return me.is_handler_only || (!me.is_admin && !me.is_super_admin && canAct(me))
+  return me.is_handler_only || (!isCommander(me) && !me.is_super_admin && canAct(me))
     ? '/requests?view=mine&sort=stage_age_hours&dir=desc'
     : '/requests?view=open';
 }

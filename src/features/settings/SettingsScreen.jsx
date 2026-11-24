@@ -51,10 +51,13 @@ export function SettingsScreen() {
   const showStatement = false;
   const hidden = new Set(showStatement && (me.is_super_admin || me.is_admin) ? [] : ['statement']);
   // ביטחון מידע / תקשוב forms live on the website only (not in the mobile app), so the system admin edits them here:
-  // the whole form (fields, their order, types and choice lists) and its choice options. Every other domain's form is
-  // the mobile app's, and stays read-only until mobile synchronization is available.
+  // the whole form (fields, their order, types and choice lists) and its choice options; the owner of a route type (the
+  // קצין ביטחון מידע, the מפקד תקשוב) reads the form's structure. Every other domain's form is the mobile app's, and stays
+  // read-only until mobile synchronization is available.
   const webForm = isTopicType(bookingTypeId);
-  if (!webForm || !me.is_super_admin) hidden.add('form');
+  const ownsType = (me.route_owner_booking_types ?? []).map(Number).includes(bookingTypeId);
+  const seesForm = webForm && (me.is_super_admin || ownsType);
+  if (!seesForm) hidden.add('form');
   if (!webForm) hidden.add('options');
   // these requests have no handling target (one role handles them; there is no approval route to time)
   if (webForm) hidden.add('target');
@@ -72,7 +75,7 @@ export function SettingsScreen() {
   if (bookingTypeId !== BARBER_BOOKING_TYPE_ID) hidden.add('barber');
   const tabs = TABS.filter((candidate) => !hidden.has(candidate.id));
   const requested = search.get('tab');
-  const tab = tabs.find((candidate) => candidate.id === requested)?.id ?? tabs[0].id;
+  const tab = tabs.find((candidate) => candidate.id === requested)?.id ?? tabs[0]?.id ?? '';
 
   if (!unitId || !bookingTypeId) return <Denied>הכתובת אינה תקינה.</Denied>;
 
@@ -127,7 +130,7 @@ export function SettingsScreen() {
         <Tabs tabs={tabs} value={tab} onChange={setTab} label="הגדרות התחום" />
         <div className="st-panel st-panel-scroll" role="tabpanel" aria-label={tabs.find((candidate) => candidate.id === tab)?.label}>
           <div dir="rtl">
-          {tab === 'form' && webForm && me.is_super_admin ? <FormTab unitId={unitId} bookingTypeId={bookingTypeId} settings={settings} /> : null}
+          {tab === 'form' && seesForm ? <FormTab unitId={unitId} bookingTypeId={bookingTypeId} settings={settings} /> : null}
           {tab === 'target' ? <TargetTab bookingTypeId={bookingTypeId} /> : null}
           {tab === 'refs' ? <OperationsTab unitId={unitId} bookingTypeId={bookingTypeId} settings={settings} ownUnit={ownUnit} /> : null}
           {tab === 'dates' ? <DatesTab unitId={unitId} bookingTypeId={bookingTypeId} settings={settings} ownUnit={ownUnit} ownUnitId={me.user.unit_id} typeName={name} /> : null}

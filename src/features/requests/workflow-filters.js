@@ -4,7 +4,7 @@ import { topicHandlerRole } from '@/lib/topicTypes';
 
 const COMMON_STATUSES = [1, 15, 16, 3, 4, 5, 6, 7];
 const TERMINAL = new Set([4, 5, 6, 7, 12, 13, 105]);
-/** Every stage the filter may offer, in reading order: the approval route, the topics' one handler, the clearance grant's own steps, closed. */
+/** Every stage the filter may offer, in reading order: the approval route, the topics' one handler, the routes' own steps (the clearance grant's, the service desk's), closed. */
 const FILTER_ORDER = [...STAGE_FILTER_ORDER, 'topic_handler', ...ROUTE_STAGE_ORDER, 'closed'];
 
 /** Mirror the API's stageOf rules, scoped by its per-type catalog and the user's access. */
@@ -18,8 +18,8 @@ export function workflowFilterOptions(me, catalog, selectedTypes = '') {
     const barber = type.name === 'barber_booking' || Number(type.id) === 5;
     const ids = (catalog.booking_type_statuses?.[String(type.id)] ?? (barber ? [1, 6, 11, 12, 13] : COMMON_STATUSES)).map(Number);
     if (topicHandlerRole(type.id)) stages.add('topic_handler');
-    // a type with a route of its own: its steps are its stages (lib/routeTypes)
-    if (hasOwnRoute(type.id)) {
+    // a type with a route of its own: its steps are its stages (lib/routeTypes; the catalog's routes first)
+    if (hasOwnRoute(type.id, catalog)) {
       for (const id of ids) {
         statuses.add(id);
         stages.add(routeStageOf(id, type.id, catalog));

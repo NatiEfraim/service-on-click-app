@@ -31,9 +31,12 @@ export function campCommanders(managers) {
 
 /** Stations of a booking type with their holders, inferred from its reachable statuses. */
 export function stationsForType(bookingTypeId, catalog, managers) {
-  // a type with a route of its own (lib/routeTypes): whoever submits it, owns it and schedules its interview
-  if (hasOwnRoute(bookingTypeId)) {
-    return routeRoles(bookingTypeId, catalog).map((role) => ({ id: role.name, label: role.label ?? ROLE_NAME[role.name] ?? role.name, people: peopleWithRoles(managers, [role.name]) }));
+  // a type with a route of its own (lib/routeTypes): whoever submits it (unless every user may, as at the service desk),
+  // owns it and handles it, each named as the route names them (the desk's נציג מוקד)
+  if (hasOwnRoute(bookingTypeId, catalog)) {
+    return routeRoles(bookingTypeId, catalog)
+      .filter((role) => role.name !== 'user')
+      .map((role) => ({ id: role.name, label: role.label ?? ROLE_NAME[role.name] ?? role.name, people: peopleWithRoles(managers, [role.name]) }));
   }
   // ביטחון מידע / תקשוב: no approval route, one role handles the request (קצין ביטחון מידע / מנהל תקשוב)
   const handler = topicHandlerRole(bookingTypeId);

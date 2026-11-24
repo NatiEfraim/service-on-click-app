@@ -5,7 +5,7 @@ import { peopleApi } from '@/lib/api/endpoints';
 import { keys } from '@/lib/api/keys';
 
 import { useSession } from '@/providers/SessionProvider';
-import { loadAllPages, mergeRoleHolders, PAGE_SIZE, personFromUser } from './people';
+import { attachCommanderGrants, loadAllPages, mergeRoleHolders, PAGE_SIZE, personFromUser } from './people';
 
 /** All role holders merged into one list; few enough to load whole and search in memory. */
 export function useRoleHolders(enabled) {
@@ -20,7 +20,8 @@ export function useRoleHolders(enabled) {
         loadAllPages((page) => peopleApi.approvers('', signal, page)),
         withAdmins ? loadAllPages((page) => peopleApi.admins('', signal, page)) : Promise.resolve([]),
       ]);
-      return mergeRoleHolders(approvers, admins);
+      // the commanders' list does not say which command each holds (a camp's, the service desk's): their records do
+      return attachCommanderGrants(mergeRoleHolders(approvers, admins), (row) => findPerson({ uuid: row.uuid, personalNumber: row.personalNumber, personalId: row.personalId }, signal));
     },
   });
 }

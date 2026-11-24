@@ -32,9 +32,9 @@ const TILE_GROUPS = [
   { name: 'רכב', types: [1, 2], iconType: 1, iconSrc: '/icons/groups/car.svg' },
   { name: 'ציוד', types: [3, 4], iconType: 3, iconSrc: '/icons/groups/equipment.svg' },
   { name: 'מזון', types: [10, 11], iconType: 10, iconSrc: '/icons/groups/food.svg' },
-  // the two request topics, all their types in one tile each (lib/topicTypes: תקשוב is 17-25)
+  // the two request topics, all their types in one tile each (lib/topicTypes: תקשוב is 20-25, the service desk)
   { name: 'ביטחון מידע', types: INFOSEC_TYPES, iconType: 14, iconSrc: '/icons/requester/infosec.svg' },
-  { name: 'תקשוב', types: ICT_TYPES, iconType: 17, iconSrc: '/icons/requester/it.svg' },
+  { name: 'תקשוב', types: ICT_TYPES, iconType: 20, iconSrc: '/icons/requester/it.svg' },
 ];
 
 /**
@@ -66,7 +66,8 @@ function homeFromOverview(overview, typeIds, typeName) {
 export function HomeScreen() {
   const router = useRouter();
   const { me, typeName } = useSession();
-  // the system admin and camp commanders read GET admin/home; a domain commander's tiles come from GET overview
+  // the system admin and camp commanders read GET admin/home (the API serves it to them alone); a domain commander's
+  // and the service desk commander's tiles come from GET overview
   const fullHome = me.is_super_admin || me.is_admin;
   const query = useQuery(
     fullHome

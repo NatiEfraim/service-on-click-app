@@ -59,6 +59,17 @@ describe('stationsForType', () => {
   });
 });
 
+describe('the service desk (20-25): the commander and the representatives, never the requester every user is', () => {
+  it('lists the commander and the representatives with their holders, named the desk\'s way', () => {
+    const people = [manager('רוני', 'vice_approver'), manager('טל', 'admin_ict'), manager('גיל', 'vice_approver')];
+    const stations = stationsForType(20, catalog, people);
+    expect(stations.map((s) => s.id)).toEqual(['admin_ict', 'vice_approver']);
+    expect(stations.map((s) => s.label)).toEqual(['מפקד תקשוב', 'נציג מוקד']);
+    expect(stations.map((s) => s.people)).toEqual([['טל'], ['רוני', 'גיל']]);
+    expect(hasEmptyStation(stationsForType(24, catalog, [manager('טל', 'admin_ict')]))).toBe(true);
+  });
+});
+
 describe('the clearance grant (14): whoever works its route', () => {
   it('lists the requester, the owner and the coordinator with their holders', () => {
     const people = [manager('דנה', 'department_security_officer'), manager('יוסי', 'infosec_officer'), manager('מיכל', 'interview_coordinator')];

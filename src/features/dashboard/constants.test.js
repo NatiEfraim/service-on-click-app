@@ -9,12 +9,13 @@ const catalog = {
     '5': [1, 6, 11, 12, 13],
     '8': [1, 3, 4, 5, 6, 7, 8, 9, 10, 14, 15, 16, 17, 18],
     '14': [4, 101, 102, 103, 104, 105],
+    '20': [1, 5, 6, 7, 151],
   },
 };
 
 describe('workflowColumns', () => {
-  // 15 and 22: a type with one handler (the clearance grant, 14, has a route of its own - below)
-  it.each([[15, 'קצין ביטחון מידע'], [22, 'מנהל תקשוב']])('merges both approval buckets for type %i', (type, handler) => {
+  // 15 and 16: the ביטחון מידע types with one handler (the clearance grant, 14, and the service desk have routes of their own - below)
+  it.each([[15, 'קצין ביטחון מידע'], [16, 'קצין ביטחון מידע']])('merges both approval buckets for type %i', (type, handler) => {
     const stages = chartStageCounts(type, { vice_approver: 9, approver: 14, realization: 4 });
     expect(stages).toEqual({ topic_handler: 23, realization: 4 });
     expect(workflowColumns(type, catalog, stages, CHART_STAGE_ORDER)).toEqual(['topic_handler', 'realization']);
@@ -50,5 +51,20 @@ describe('the clearance grant (14): its own steps as stages', () => {
   it('puts its steps on the pipeline cards, and no card of the approval route', () => {
     expect(pipelineStagesFor([14], catalog)).toEqual(['interview_assignment', 'interview_scheduled', 'interviewed', 'awaiting_clearance']);
     expect(pipelineStagesFor([1], catalog)).toEqual(['vice_approver', 'approver', 'realization']);
+  });
+});
+
+describe('the service desk (20-25): its queue and handling as stages', () => {
+  it('gives its chart its two stages, counts untouched, plus any other stage still holding bookings', () => {
+    expect(chartStageCounts(20, { service_desk_queue: 3, service_desk_handling: 1 })).toEqual({ service_desk_queue: 3, service_desk_handling: 1 });
+    expect(workflowColumns(20, catalog, { service_desk_queue: 3 }, CHART_STAGE_ORDER)).toEqual(['service_desk_queue', 'service_desk_handling']);
+    expect(workflowColumns(20, catalog, { vice_approver: 1 }, CHART_STAGE_ORDER)).toEqual(['vice_approver', 'service_desk_queue', 'service_desk_handling']);
+    expect(chartStageLabel('service_desk_handling', 20)).toBe('בטיפול נציג מוקד');
+  });
+
+  it('puts its two stages on the pipeline cards: its sent request (1) is no card of the vice approver, and the clearance grant\'s steps are not its own', () => {
+    expect(pipelineStagesFor([20], catalog)).toEqual(['service_desk_queue', 'service_desk_handling']);
+    // the commander who sees a camp type and the desk: the approval route's cards for the camp type, the desk's for the desk
+    expect(pipelineStagesFor([1, 20], catalog)).toEqual(['vice_approver', 'approver', 'realization', 'service_desk_queue', 'service_desk_handling']);
   });
 });

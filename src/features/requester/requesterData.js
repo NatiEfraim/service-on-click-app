@@ -131,10 +131,18 @@ export function choicePath(options, id) {
   return [];
 }
 
+/** The field this one depends on and the choices (by name) that show it: `{ field, values }`, or null. */
+function toDependsOn(raw) {
+  if (!raw || typeof raw !== 'object' || !raw.field) return null;
+  return { field: String(raw.field), values: Array.isArray(raw.values) ? raw.values.map(String) : [] };
+}
+
 /**
  * A field as the form draws it: its input (lib/form-fields), its rules (`rules`, from `validations`, with the server's
- * own messages), where it sits (`section`, `colSpan` on the form's 4-column grid), and the person lookup it starts
- * (`lookupSource: "person"`) or is filled from (`autofillKey`).
+ * own messages), where it sits (`section`, `colSpan` on the form's 4-column grid), the person lookup it starts
+ * (`lookupSource: "person"`) or is filled from (`autofillKey`; `autofillLocked` says whether what the lookup filled stays
+ * as it is - the mobile phone may still be edited), a help line under it (`hint`), a link beside its label (`helpUrl`),
+ * and the other field whose choice shows it (`dependsOn`).
  */
 function toField(raw) {
   const { kind, inputType, ltr } = fieldKind(raw.field_type?.name);
@@ -155,6 +163,10 @@ function toField(raw) {
     colSpan: Math.min(Math.max(Number(raw.col_span) || 1, 1), 4),
     lookupSource: raw.lookup_source ?? null,
     autofillKey: raw.autofill_key ?? null,
+    autofillLocked: raw.autofill_locked !== false,
+    hint: typeof raw.hint === 'string' && raw.hint.trim() ? raw.hint.trim() : null,
+    helpUrl: typeof raw.help_url === 'string' && raw.help_url.trim() ? raw.help_url.trim() : null,
+    dependsOn: toDependsOn(raw.depends_on),
     options: (raw.options ?? []).map(toChoice),
     children: [...(raw.children ?? [])].sort((a, b) => a.position - b.position).map(toField),
   };
@@ -224,24 +236,20 @@ export function todayIso(now = new Date()) {
 }
 
 /**
- * Fields the server keeps optional but that belong to one choice of another field (it has no conditional fields): shown,
- * and required, only while that choice is picked; never sent otherwise. By `field_name`. התקנת מדפסת: the printer's IP
- * is needed only for a connected printer.
+ * The fields to draw and send now, by the values chosen so far. A field that depends on another (`dependsOn`, the
+ * server's `depends_on`: התקנת מדפסת's printer IP on "מדפסת מחוברת") is shown - and required, when the server marks it so -
+ * only while the field it names holds one of the named choices (compared by the choice's name, as the server does), and
+ * is never sent otherwise; a field whose parent is not on the form stays hidden, as the server would skip it. The same
+ * list when nothing depends on anything.
  */
-const SHOWN_WHEN = {
-  21: { printer_ip: { field: 'install_type', option: 'מדפסת מחוברת' } },
-};
-
-/** The fields to draw and send now, by the values chosen so far; a conditional field that is shown is required. */
-export function shownFields(typeId, fields, values) {
-  const rules = SHOWN_WHEN[Number(typeId)];
-  if (!rules) return fields;
-  return fields.flatMap((field) => {
-    const rule = rules[field.fieldName];
-    if (!rule) return [field];
-    const on = fields.find((other) => other.fieldName === rule.field);
-    const picked = on ? choicePath(on.options, values[on.id]).at(-1) : null;
-    return picked?.name === rule.option ? [{ ...field, required: true }] : [];
+export function shownFields(fields, values) {
+  if (!fields.some((field) => field.dependsOn)) return fields;
+  return fields.filter((field) => {
+    if (!field.dependsOn) return true;
+    const on = fields.find((other) => other.fieldName === field.dependsOn.field);
+    if (!on) return false;
+    const held = on.kind === 'select' ? choicePath(on.options, values[on.id]).at(-1)?.name : values[on.id];
+    return field.dependsOn.values.includes(String(held ?? ''));
   });
 }
 

@@ -59,8 +59,12 @@ const ID_NUMBER = /^\d{9}$/;
 /**
  * One request form, built from GET /requester/form/{id}: breadcrumb, title, the fields the server sends (a select sends
  * its option id), attachments, send (POST /bookings/{id}). Server-side errors (422) show under their own field.
- * A field with `lookup_source: "person"` (the candidate's ID number on the clearance grant) looks the person up once it
- * holds 9 digits and fills the fields whose `autofill_key` the answer carries; the user may still correct them.
+ * A field with `lookup_source: "person"` (the candidate's ID number on the clearance grant, the new user's on פתיחת
+ * משתמש) looks the person up once it holds 9 digits and fills the fields whose `autofill_key` the answer carries: a
+ * filled field is then locked (the server writes it again on submission), unless the server marks it editable
+ * (`autofill_locked: false`, the mobile phone). A field may carry a help line (`hint`), a link beside its label
+ * (`help_url`: a declaration may be ticked only once its guidelines were opened) or depend on another field's choice
+ * (`depends_on`: shown, and required, only while that choice is picked).
  */
 export function RequestForm({ found, onHome, onDone }) {
   const { topic, group, type } = found;
@@ -68,7 +72,7 @@ export function RequestForm({ found, onHome, onDone }) {
   const allFields = flatten(form.data ?? []);
   const [values, setValues] = useState({});
   // what is drawn and sent now: a field tied to another field's choice (the printer's IP) only while that choice is picked
-  const fields = shownFields(type.id, allFields, values);
+  const fields = shownFields(allFields, values);
   // the value typed with a chosen "type in a value" choice, by its field id
   const [typed, setTyped] = useState({});
   const [touched, setTouched] = useState(false);
@@ -76,6 +80,9 @@ export function RequestForm({ found, onHome, onDone }) {
   const [fileNote, setFileNote] = useState('');
   // the server's own messages, by field id (values.<id>) and for the files; a field's goes once it is edited
   const [serverErrors, setServerErrors] = useState({});
+  // the fields the person lookup filled and locked, and the declarations whose guidelines were opened
+  const [locked, setLocked] = useState(() => new Set());
+  const [helpSeen, setHelpSeen] = useState(() => new Set());
   const picker = useRef(null);
   // the card is capped at the window's bottom, so only its fields scroll (useFitToWindow)
   const card = useRef(null);
@@ -97,22 +104,21 @@ export function RequestForm({ found, onHome, onDone }) {
     try {
       const data = await requesterApi.personLookup(type.id, idNumber);
       if (data?.found && data.person) {
-        // every non-empty detail lands in the field whose autofill_key it names; the rest (the rank) stays the user's
-        setValues((previous) => {
-          const next = { ...previous };
-          for (const field of fields) {
-            const filled = field.autofillKey ? data.person[field.autofillKey] : null;
-            if (filled !== null && filled !== undefined && filled !== '') next[field.id] = String(filled);
-          }
-          return next;
-        });
-        setLookup({ state: 'found', message: 'הפרטים אותרו ומולאו בטופס; ניתן לתקן אותם לפני השליחה.' });
+        // every non-empty detail lands in the field whose autofill_key it names and locks it there - the server writes
+        // those again on submission; a field marked editable (the mobile phone) and the rest (the rank) stay the user's
+        const filled = fields.filter((field) => field.autofillKey && data.person[field.autofillKey] !== null && data.person[field.autofillKey] !== undefined && data.person[field.autofillKey] !== '');
+        setValues((previous) => ({ ...previous, ...Object.fromEntries(filled.map((field) => [field.id, String(data.person[field.autofillKey])])) }));
+        const lockedNow = filled.filter((field) => field.autofillLocked).map((field) => field.id);
+        setLocked(new Set(lockedNow));
+        setLookup({ state: 'found', message: lockedNow.length ? 'הפרטים אותרו ומולאו בטופס; מה שמולא מהמאגר נעול, ואת השאר ניתן לתקן לפני השליחה.' : 'הפרטים אותרו ומולאו בטופס; ניתן לתקן אותם לפני השליחה.' });
       } else {
+        setLocked(new Set());
         setLookup({ state: 'none', message: data?.message || 'לא נמצאו פרטים עבור תעודת הזהות שהוזנה' });
       }
     } catch (error) {
       // the source is down (503), too many lookups (429) or a refused number (422): the fields stay the user's to fill
       lookedUp.current = '';
+      setLocked(new Set());
       setLookup({ state: 'error', message: error?.message || 'שירות איתור הפרטים אינו זמין כעת, ניתן להזין את הפרטים ידנית' });
     }
   };
@@ -152,9 +158,14 @@ export function RequestForm({ found, onHome, onDone }) {
       delete next[id];
       return next;
     });
-    // a new ID number: what the last lookup said no longer applies
-    if (lookupField && id === lookupField.id && String(value ?? '').trim() !== lookedUp.current) setLookup({ state: 'idle', message: '' });
+    // a new ID number: what the last lookup said no longer applies, and nothing it filled stays locked
+    if (lookupField && id === lookupField.id && String(value ?? '').trim() !== lookedUp.current) {
+      setLookup({ state: 'idle', message: '' });
+      setLocked(new Set());
+    }
   };
+  // a declaration with guidelines may be ticked only once its link was opened (the link opens in a new tab)
+  const openHelp = (id) => setHelpSeen((previous) => new Set(previous).add(id));
 
   const addFiles = (list) => {
     const picked = Array.from(list ?? []);
@@ -229,6 +240,10 @@ export function RequestForm({ found, onHome, onDone }) {
               {fields.map((field) => {
                 const error = serverErrors[field.id] || (touched ? errors[field.id] : '');
                 const isLookup = lookupField !== null && field.id === lookupField.id;
+                // filled by the person lookup and kept as the source says it (the server writes it again on submission)
+                const isLocked = locked.has(field.id);
+                // a declaration with guidelines waits for them to be opened
+                const needsHelp = field.kind === 'declaration' && field.helpUrl !== null && !helpSeen.has(field.id);
                 // what may be typed here (digits, letters, allowed characters...); the rest is dropped as it is typed
                 const rule = inputRuleOf(field.fieldName);
                 // a text's length limit: the field's own rule, else the server's `max` (on a number field `max` is a value)
@@ -247,21 +262,31 @@ export function RequestForm({ found, onHome, onDone }) {
                   ...(lengthCap ? { maxLength: lengthCap } : {}),
                   ...(rule?.digits ? { inputMode: 'numeric' } : {}),
                   ...(rule?.digits || rule?.ltr ? { dir: 'ltr' } : {}),
+                  ...(isLocked ? { readOnly: true, 'aria-readonly': true, 'aria-describedby': `rq-${field.id}-lock` } : {}),
                 };
                 return (
                   <div
                     key={field.id}
-                    className={`field${field.depth ? ' sub' : ''}`}
+                    className={`field${field.depth ? ' sub' : ''}${isLocked ? ' rq-locked' : ''}`}
                     style={{ gridColumn: `span ${spanOf(field, columns)}`, ...(field.depth ? { paddingInlineStart: field.depth * 18 } : {}) }}
                   >
                     <label htmlFor={props.id}>
                       {field.label}
                       {field.required ? <span className="req" aria-hidden> *</span> : null}
+                      {/* filled from the registry by the ID number: marked, and read only */}
+                      {isLocked ? <span id={`rq-${field.id}-lock`} className="rq-lock" data-tip="מולא מהמאגר לפי תעודת הזהות ואינו ניתן לעריכה">מולא מהמאגר</span> : null}
+                      {/* the guidelines behind the field (the infosec guidelines of a new user), in a new tab */}
+                      {field.helpUrl ? (
+                        <a className="rq-help" href={field.helpUrl} target="_blank" rel="noopener noreferrer" onClick={() => openHelp(field.id)}>
+                          <Icon name="file" />
+                          להנחיות
+                        </a>
+                      ) : null}
                     </label>
                     {field.kind === 'declaration' ? (
-                      // the label above is the declaration's text; the box under it ticks it (sent as "1")
-                      <label className="rq-declare">
-                        <input type="checkbox" id={props.id} checked={values[field.id] === '1'} onChange={(event) => set(field.id, event.target.checked ? '1' : '')} aria-invalid={Boolean(error) || undefined} />
+                      // the label above is the declaration's text; the box under it ticks it (sent as "1"), once its guidelines were opened
+                      <label className={`rq-declare${needsHelp ? ' waiting' : ''}`} data-tip={needsHelp ? 'יש לפתוח את ההנחיות לפני האישור' : undefined}>
+                        <input type="checkbox" id={props.id} checked={values[field.id] === '1'} disabled={needsHelp} onChange={(event) => set(field.id, event.target.checked ? '1' : '')} aria-invalid={Boolean(error) || undefined} />
                         מאשר/ת
                       </label>
                     ) : field.kind === 'textarea' ? (
@@ -295,6 +320,9 @@ export function RequestForm({ found, onHome, onDone }) {
                     ) : (
                       <input className="input" type={field.inputType} {...props} />
                     )}
+                    {/* the server's help line under the field ("יש להזין כך: ..."); a declaration says what it waits for */}
+                    {field.hint ? <span className="rq-hint">{field.hint}</span> : null}
+                    {needsHelp ? <span className="rq-hint">יש לפתוח את ההנחיות (הקישור ליד הכותרת) לפני סימון ההצהרה.</span> : null}
                     {/* the field's error and the lookup's word fold in and out (Fold), so the form around them glides */}
                     <Fold show={Boolean(error)}>
                       <span className="rq-err">{error}</span>

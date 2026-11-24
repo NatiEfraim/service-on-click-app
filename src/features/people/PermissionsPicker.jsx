@@ -56,12 +56,13 @@ function DomainCard({ index = 0, row, roles, edits, busy, changed, onSetRole, on
         {/* the site's domain tile (as in the requests list): the picture at a size where its outline stays sharp */}
         <DomainBadge bookingTypeId={row.bookingTypeId} />
         <b>{typeName(row.bookingTypeId)}</b>
-        <span key={now ?? 'none'} className={`pp-badge${now ? '' : ' none'}`}>{now ? roleLabel(now) : 'ללא תפקיד'}</span>
+        {/* a role as this domain's route names it (the desk's vice approver is its נציג מוקד) */}
+        <span key={now ?? 'none'} className={`pp-badge${now ? '' : ' none'}`}>{now ? roleLabel(now, row.bookingTypeId) : 'ללא תפקיד'}</span>
       </header>
       <div className="pp-card-roles">
         {rolesOf(row, roles).map((role) => (
           <button key={role} type="button" aria-pressed={now === role} disabled={Boolean(lock) || busy} onClick={() => onSetRole(row, now === role ? null : role)}>
-            {roleLabel(role)}
+            {roleLabel(role, row.bookingTypeId)}
           </button>
         ))}
       </div>

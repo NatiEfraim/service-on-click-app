@@ -19,9 +19,12 @@ export function personFromUser(user) {
   };
 }
 
-/** The camp commanders come from `get-admins` without their domains. */
-function adminGrant() {
-  return { role: 'admin', bookingTypeIds: null };
+/**
+ * The commanders come from `get-admins` without their domains, and without saying which command they hold - a camp's
+ * (admin_N) or the service desk's (admin_ict_N) - so the chip names both until the person's record is read (attachCommanderGrants).
+ */
+function commanderGrant() {
+  return { role: 'commander', bookingTypeIds: null };
 }
 
 const NAME_COLLATOR = new Intl.Collator('he');
@@ -46,7 +49,7 @@ const holderRow = (row, phone, grants) => ({
   grants,
 });
 
-/** Approvers and vice approvers, plus (for the super admin) the camp commanders - one row per person. */
+/** Approvers and vice approvers, plus (for the super admin) the commanders - one row per person. */
 export function mergeRoleHolders(approvers, admins) {
   const people = new Map();
 
@@ -57,13 +60,37 @@ export function mergeRoleHolders(approvers, admins) {
   for (const row of admins) {
     const existing = people.get(row.uuid);
     if (existing) {
-      if (!existing.grants.some((grant) => grant.role === 'admin')) existing.grants = [adminGrant(), ...existing.grants];
+      if (!existing.grants.some((grant) => grant.role === 'commander')) existing.grants = [commanderGrant(), ...existing.grants];
     } else {
-      people.set(row.uuid, holderRow(row, null, [adminGrant()]));
+      people.set(row.uuid, holderRow(row, null, [commanderGrant()]));
     }
   }
 
   return [...people.values()].sort(compareByName);
+}
+
+/** More commanders than this and their records are not read one by one; their chips keep the generic word. */
+export const COMMANDER_LOOKUPS_MAX = 12;
+
+/**
+ * Names each commander's command: the commanders' list says only that a person commands something, so the few of them
+ * are read whole (`loadUser(row)`: the person's record from GET /users, with their permission names, or null), and the
+ * generic chip gives way to the exact ones - "מפקד מחנה: רכב, מזון", "מפקד תקשוב: 6 תחומים". A record that cannot be read,
+ * or a list too long to read, keeps the generic chip.
+ */
+export async function attachCommanderGrants(rows, loadUser) {
+  const commanders = rows.filter((row) => row.grants.some((grant) => grant.role === 'commander'));
+  if (!commanders.length || commanders.length > COMMANDER_LOOKUPS_MAX) return rows;
+  const records = await Promise.all(commanders.map((row) => loadUser(row).catch(() => null)));
+  const named = new Map();
+  commanders.forEach((row, index) => {
+    const record = records[index];
+    if (!record?.permissions) return;
+    const exact = grantsFromPermissionNames(record.permissions.map((permission) => permission.name)).filter((grant) => grant.role !== 'user');
+    // the person's own record names their commands and every other role; nothing of the generic chip is left to say
+    if (exact.length) named.set(row.uuid, exact);
+  });
+  return rows.map((row) => (named.has(row.uuid) ? { ...row, grants: named.get(row.uuid) } : row));
 }
 
 /** Reads a 20-per-page list with no total until a page is not full (or `maxPages`). */

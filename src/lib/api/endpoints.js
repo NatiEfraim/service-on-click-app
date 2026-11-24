@@ -28,10 +28,11 @@ export const authApi = {
 
 /**
  * Statuses of a closed booking (mirror the API's StatusBookingEnum::isTerminal); every other status is open.
- * 101-105 are the clearance grant's own route (lib/routeTypes): 105 closes it well, 101-104 are its open steps.
+ * 101-105 are the clearance grant's own route (lib/routeTypes): 105 closes it well, 101-104 are its open steps;
+ * 151 is the service desk's "in handling" (תקשוב), an open step too.
  */
 export const CLOSED_STATUS_IDS = [4, 5, 6, 7, 11, 12, 13, 105];
-export const OPEN_STATUS_IDS = [1, 2, 3, 8, 9, 10, 14, 15, 16, 17, 18, 101, 102, 103, 104];
+export const OPEN_STATUS_IDS = [1, 2, 3, 8, 9, 10, 14, 15, 16, 17, 18, 101, 102, 103, 104, 151];
 
 /** A plain user (no management role): the requester endpoints the mobile app uses. */
 export const requesterApi = {

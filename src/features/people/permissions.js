@@ -1,17 +1,29 @@
 
 
 import { ROLE_NAME } from '@/lib/labels';
-import { hasOwnRoute, routeRoles } from '@/lib/routeTypes';
+import { hasOwnRoute, routeRoleLabel, routeRoles } from '@/lib/routeTypes';
 import { topicHandlerRole } from '@/lib/topicTypes';
 
 /**
- * The columns' order (roles & permissions guide): the camp commander, the stages of the approval route, the ICT and
- * infosec officers, then the clearance grant's other roles (the coordinator who schedules, the קב"ט who submits).
+ * The columns' order (roles & permissions guide): the commanders (a camp's, the service desk's), the stages of the
+ * approval route, the infosec officer, then the clearance grant's other roles (the coordinator who schedules, the קב"ט
+ * who submits).
  */
-const ROLE_ORDER = ['admin', 'approver', 'vice_approver', 'transportation_control_officer', 'in_unit_food_control_officer', 'ict_handler', 'infosec_officer', 'interview_coordinator', 'department_security_officer'];
+const ROLE_ORDER = ['commander', 'admin', 'admin_ict', 'approver', 'vice_approver', 'transportation_control_officer', 'in_unit_food_control_officer', 'ict_handler', 'infosec_officer', 'interview_coordinator', 'department_security_officer'];
 
 /** Roles every person has or that are not a "grant on a domain" - never drawn as a role chip. */
 const NOT_A_GRANT = new Set(['user', 'super_admin']);
+
+/**
+ * The commander flags of `get-admin-permissions` / `assign-admin-role` (the super admin's): the camp commander on a camp
+ * type (`is_admin`), the service desk's commander on a תקשוב type (`is_admin_ict`); a type answers one of them, the other is
+ * null. Neither is a role of the approvers' request.
+ */
+export const COMMANDER_FLAGS = [
+  { role: 'admin', flag: 'is_admin' },
+  { role: 'admin_ict', flag: 'is_admin_ict' },
+];
+const COMMANDER_ROLES = new Set(COMMANDER_FLAGS.map((commander) => commander.role));
 
 const roleRank = (role) => {
   const index = ROLE_ORDER.indexOf(role);
@@ -20,7 +32,8 @@ const roleRank = (role) => {
 
 const byRole = (a, b) => roleRank(a) - roleRank(b) || a.localeCompare(b);
 
-export const roleLabel = (role) => ROLE_NAME[role] ?? role;
+/** A role's name; on a type with a route of its own, the words its route uses (the desk's vice approver is its נציג מוקד). */
+export const roleLabel = (role, bookingTypeId) => (bookingTypeId != null ? routeRoleLabel(role, bookingTypeId) : null) ?? ROLE_NAME[role] ?? role;
 
 const PERMISSION_NAME = /^(.+)_(\d+)$/;
 
@@ -78,11 +91,12 @@ export function grantChip(grant, domainName) {
 
 
 
+/** Who the caller is: the super admin, or a commander with the types they command (a camp's admin_N, the desk's admin_ict_N). */
 export function callerFrom(me) {
   const administered = new Set();
   for (const name of me.permissions) {
     const parsed = parsePermissionName(name);
-    if (parsed?.role === 'admin') administered.add(parsed.bookingTypeId);
+    if (parsed && COMMANDER_ROLES.has(parsed.role)) administered.add(parsed.bookingTypeId);
   }
   return { isSuperAdmin: me.is_super_admin, administered, uuid: me.user.uuid };
 }
@@ -113,7 +127,7 @@ const FLAG = /^is_(.+)$/;
  * hold a role and also open requests, so it is a cell of its own (`user`) with its own toggle, sent only when changed.
  */
 export const REQUESTER = 'user';
-const isApproverSide = (role) => role !== 'admin' && !NOT_A_GRANT.has(role);
+const isApproverSide = (role) => !COMMANDER_ROLES.has(role) && !NOT_A_GRANT.has(role);
 
 /** Statuses only a control officer sets; a type reaching them has the control officer step. */
 const CONTROL_OFFICER_STATUSES = [14, 17, 18];
@@ -134,15 +148,16 @@ const ROUTE_ROLES = new Set(['department_security_officer', 'interview_coordinat
 /**
  * The roles a booking type has (roles & permissions guide, per-type table) - used only where the server sends no row of
  * flags to read it from (the super admin's fallback): a type with a route of its own has exactly the route's roles
- * (lib/routeTypes: the קב"ט who submits, the infosec officer who owns it, the coordinator); ביטחון מידע and תקשוב
- * (lib/topicTypes) have only their one handler (the infosec officer / the ICT handler); every other type the approver,
- * the vice approver (not the barber, 5) and the control officer (only where that step exists). When the server sends a
- * row, its flag keys are the answer and this is not used.
+ * (lib/routeTypes: on the clearance grant the קב"ט who submits, the infosec officer who owns it, the coordinator; at the
+ * service desk the representative - the type's vice approver - and the desk's commander); the other ביטחון מידע types
+ * (lib/topicTypes) have only their one handler (the infosec officer); every other type the approver, the vice approver
+ * (not the barber, 5) and the control officer (only where that step exists). When the server sends a row, its flag keys
+ * are the answer and this is not used.
  */
 export function roleApplies(role, bookingTypeId) {
   const id = Number(bookingTypeId);
   if (hasOwnRoute(id)) return routeRoles(id).some((candidate) => candidate.name === role);
-  if (ROUTE_ROLES.has(role)) return false;
+  if (ROUTE_ROLES.has(role) || role === 'admin_ict') return false;
   const handler = topicHandlerRole(id);
   if (handler) return role === handler;
   if (role === 'infosec_officer' || role === 'ict_handler') return false;
@@ -186,14 +201,18 @@ export function buildMatrix({ approver, admin, permissionNames, caller, targetUu
     }
   }
 
+  // each type answers one commander flag (a camp type the camp commander's, a תקשוב type the desk commander's); null means the type has no such role
   for (const row of adminRows) {
-    if (typeof row.is_admin === 'boolean') put(row.booking_type_id, 'admin', row.is_admin);
+    for (const { role, flag } of COMMANDER_FLAGS) {
+      if (typeof row[flag] === 'boolean') put(row.booking_type_id, role, row[flag]);
+    }
   }
 
   const sorted = [...rows.values()].sort((a, b) => a.bookingTypeId - b.bookingTypeId);
-  // a column for every role the server offers (role_options; the camp commander for the super admin), even with no row yet
-  // (no rows, no columns: the dialog then says there is no domain to assign)
-  const offered = sorted.length ? [...Object.keys(approver.role_options ?? {}).filter(isApproverSide), ...(caller.isSuperAdmin && adminRows.length ? ['admin'] : [])] : [];
+  // a column for every role the server offers (role_options; for the super admin each commander some type answers), even
+  // with no row yet (no rows, no columns: the dialog then says there is no domain to assign)
+  const commanders = caller.isSuperAdmin ? COMMANDER_FLAGS.filter(({ flag }) => adminRows.some((row) => typeof row[flag] === 'boolean')).map(({ role }) => role) : [];
+  const offered = sorted.length ? [...Object.keys(approver.role_options ?? {}).filter(isApproverSide), ...commanders] : [];
   // the requester flag is a cell of its own (its switch), never a role column
   const roles = [...new Set([...offered, ...sorted.flatMap((row) => Object.keys(row.cells))])].filter((role) => role !== REQUESTER).sort(byRole);
   return { roles, rows: sorted };
@@ -227,13 +246,13 @@ export function pendingChanges(matrix, edits) {
 
 /** `role_assignments` for `assign-approver-role`: changed booking types only, each with exactly the flags that row has (guide: none it lacks - e.g. no approver flag on ביטחון מידע / תקשוב, no vice approver on the barber). */
 export function approverAssignments(matrix, edits) {
-  const changed = new Set(pendingChanges(matrix, edits).filter((change) => change.role !== 'admin').map((change) => change.bookingTypeId));
+  const changed = new Set(pendingChanges(matrix, edits).filter((change) => !COMMANDER_ROLES.has(change.role)).map((change) => change.bookingTypeId));
   return matrix.rows
     .filter((row) => changed.has(row.bookingTypeId))
     .map((row) => {
       const assignment = { booking_type_id: row.bookingTypeId };
       for (const role of Object.keys(row.cells).sort(byRole)) {
-        if (role === 'admin' || role === REQUESTER) continue;
+        if (COMMANDER_ROLES.has(role) || role === REQUESTER) continue;
         assignment[`is_${role}`] = shownValue(row, role, edits) ?? false;
       }
       // the requester flag is optional: sent only when it was changed, so a role change never touches it
@@ -244,11 +263,11 @@ export function approverAssignments(matrix, edits) {
     });
 }
 
-/** `role_assignments` of `assign-admin-role` (super admin): the booking types whose camp-commander flag changed. */
+/** `role_assignments` of `assign-admin-role` (super admin): the booking types whose commander flag changed, each with the flag its type answers (`is_admin` on a camp type, `is_admin_ict` on a תקשוב type). */
 export function adminAssignments(matrix, edits) {
   return pendingChanges(matrix, edits)
-    .filter((change) => change.role === 'admin')
-    .map((change) => ({ booking_type_id: change.bookingTypeId, is_admin: change.to }));
+    .filter((change) => COMMANDER_ROLES.has(change.role))
+    .map((change) => ({ booking_type_id: change.bookingTypeId, [COMMANDER_FLAGS.find(({ role }) => role === change.role).flag]: change.to }));
 }
 
 /** The server's `reason` is optional (max 500); the product requires one for every change. */

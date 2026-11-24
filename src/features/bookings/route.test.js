@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { progressRoute, routeFor, routePosition } from './route';
+import { bookingRoute, isFinishedStatus, progressRoute, routeFor, routePosition } from './route';
 
 const catalog = {
   booking_type_statuses: {
@@ -105,7 +105,7 @@ describe('progressRoute (the server\'s progress bar)', () => {
 
   it('marks the current step and keeps the time each passed step was reached', () => {
     const route = progressRoute(steps(102));
-    expect(ids(route.stations)).toEqual(['received', 'interview_assignment', 'interview_scheduled', 'interviewed', 'awaiting_clearance', 'closed']);
+    expect(ids(route.stations)).toEqual(['submitted', 'interview_assignment', 'interview_scheduled', 'interviewed', 'awaiting_clearance', 'closed']);
     expect(route.here).toBe(2);
     expect(route.mode).toBe('here');
     expect(route.stations[1].at).toBe('2026-11-18T09:12:00+00:00');
@@ -119,12 +119,56 @@ describe('progressRoute (the server\'s progress bar)', () => {
   it('ends a refused request at the refusal, after the steps it reached', () => {
     const refused = [...steps(102).map((row) => ({ ...row, state: row.state === 'current' ? 'done' : row.state })), { key: 'rejected', status_id: 4, label: 'נדחה', state: 'rejected', at: '2026-11-19T08:00:00+00:00' }];
     const route = progressRoute(refused);
-    expect(ids(route.stations)).toEqual(['received', 'interview_assignment', 'interview_scheduled', 'closed']);
+    expect(ids(route.stations)).toEqual(['submitted', 'interview_assignment', 'interview_scheduled', 'closed']);
     expect(route.stations.at(-1).label).toBe('נדחה');
     expect(route).toMatchObject({ here: 3, mode: 'stopped' });
   });
 
   it('copes with nothing', () => {
     expect(progressRoute(null)).toEqual({ stations: [], here: 0, mode: 'here' });
+  });
+});
+
+describe('the service desk (תקשוב, 20-25)', () => {
+  const desk = {
+    statuses: [{ id: 1, name: 'received' }, { id: 5, name: 'completed' }, { id: 151, name: 'in_service_desk' }],
+    routes: { 20: { key: 'ict_service_desk', initial_status_id: 1, success_status_id: 5, status_ids: [1, 151, 5, 7, 6], steps: [{ status_id: 1, label: 'ההזמנה נשלחה' }, { status_id: 151, label: 'בטיפול המוקד' }, { status_id: 5, label: 'סיום טיפול' }] } },
+  };
+
+  it('draws the submission, the queue, the handling and the closing, every station once, from the catalog or without one', () => {
+    const fromCatalog = routeFor({ booking_type_id: 20, stage: 'service_desk_queue' }, desk);
+    expect(ids(fromCatalog)).toEqual(['received', 'service_desk_queue', 'service_desk_handling', 'closed']);
+    expect(fromCatalog.map((station) => station.label)).toEqual(['הוגשה', 'ההזמנה נשלחה', 'בטיפול המוקד', 'סיום טיפול']);
+    expect(ids(routeFor({ booking_type_id: 20, stage: 'service_desk_queue' }))).toEqual(ids(fromCatalog));
+  });
+
+  it('places a request in the queue, in a representative\'s hands, finished when done and stopped when closed without doing', () => {
+    const stations = routeFor({ booking_type_id: 20, stage: 'service_desk_queue' }, desk);
+    expect(routePosition({ stage: 'service_desk_queue', status_id: 1 }, stations)).toEqual({ here: 1, mode: 'here' });
+    expect(routePosition({ stage: 'service_desk_handling', status_id: 151 }, stations)).toEqual({ here: 2, mode: 'here' });
+    expect(routePosition({ stage: 'closed', status_id: 5 }, stations)).toEqual({ here: 3, mode: 'finished' });
+    expect(routePosition({ stage: 'closed', status_id: 7 }, stations)).toEqual({ here: 3, mode: 'stopped' });
+  });
+
+  it('names the server\'s progress bar the desk\'s way, and stops it at a closing the bar does not know', () => {
+    const progress = [
+      { key: 'submitted', label: 'הוגשה', state: 'done', at: '2026-11-24T08:00:00+00:00' },
+      { key: 'received', status_id: 1, label: 'ההזמנה נשלחה', state: 'done', at: '2026-11-24T08:00:00+00:00' },
+      { key: 'in_service_desk', status_id: 151, label: 'בטיפול המוקד', state: 'current', at: '2026-11-24T09:00:00+00:00' },
+      { key: 'completed', status_id: 5, label: 'סיום טיפול', state: 'upcoming', at: null },
+    ];
+    const handling = bookingRoute({ booking_type_id: 20, status_id: 151, stage: 'service_desk_handling', progress }, desk);
+    expect(ids(handling.stations)).toEqual(['submitted', 'received', 'in_service_desk', 'closed']);
+    expect(handling.stations.map((station) => station.label)).toEqual(['הוגשה', 'הקריאה נשלחה', 'בטיפול המוקד', 'סיום טיפול']);
+    expect(handling).toMatchObject({ here: 2, mode: 'here' });
+
+    // closed without doing (7): the server's bar still says the sent step is current; the route ends there, stopped
+    const notDone = progress.map((row) => (row.status_id === 151 ? { ...row, state: 'upcoming', at: null } : row.status_id === 1 ? { ...row, state: 'current' } : row));
+    const stopped = bookingRoute({ booking_type_id: 20, status_id: 7, stage: 'closed', status_label: 'נסגרה ללא ביצוע', progress: notDone }, desk);
+    expect(ids(stopped.stations)).toEqual(['submitted', 'received', 'closed']);
+    expect(stopped.stations.at(-1).label).toBe('נסגרה ללא ביצוע');
+    expect(stopped).toMatchObject({ here: 2, mode: 'stopped' });
+    expect(isFinishedStatus(5)).toBe(true);
+    expect(isFinishedStatus(7)).toBe(false);
   });
 });

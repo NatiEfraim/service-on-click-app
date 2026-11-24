@@ -9,7 +9,7 @@ import { FieldError, FormError } from '@/components/ui/Feedback';
 import { Field } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
 import { settingsApi } from '@/lib/api/endpoints';
-import { hasOwnRoute, SECTION_LABELS } from '@/lib/routeTypes';
+import { hasHandlerSection, hasOwnRoute, SECTION_LABELS } from '@/lib/routeTypes';
 
 import { useToast } from '@/providers/UiProvider';
 import { fieldNameError, fieldTypeName, newOptionsError, parseOptionLines, retypeChoices } from './fieldRules';
@@ -27,8 +27,9 @@ const COL_SPANS = [
 
 /**
  * Add or edit a field. An edit sends only the changed values with the shown `version` (stale means 409).
- * On a form with a route of its own (lib/routeTypes) a new field also says who fills it (the requester on submission,
- * or the handlers during the route) and how wide it is on the 4-column grid; both are fixed once the field exists.
+ * On a form with a route of its own (lib/routeTypes) a new field also says how wide it is on the 4-column grid and - where
+ * the route has a section the handlers fill (the clearance grant; the service desk's forms have none) - who fills it (the
+ * requester on submission, or the handlers during the route); both are fixed once the field exists.
  */
 export function FieldDialog({ unitId, bookingTypeId, settings, field, onClose }) {
   const toast = useToast();
@@ -37,6 +38,7 @@ export function FieldDialog({ unitId, bookingTypeId, settings, field, onClose })
   const isNew = !field;
   const { field_types: fieldTypes } = settings;
   const routeForm = hasOwnRoute(bookingTypeId);
+  const withHandlerSection = routeForm && hasHandlerSection(bookingTypeId);
   const sections = settings.sections?.length ? settings.sections : Object.entries(SECTION_LABELS).map(([id, label]) => ({ id, label }));
   const sectionName = (id) => sections.find((section) => section.id === id)?.label ?? SECTION_LABELS[id] ?? id;
 
@@ -63,7 +65,7 @@ export function FieldDialog({ unitId, bookingTypeId, settings, field, onClose })
         const body = { field_display_name: name.trim(), field_type_id: typeId, is_required: required, editable: editable && canEditable };
         if (hasOptions) body.options = parseOptionLines(optionsText);
         if (routeForm) {
-          body.section = section;
+          body.section = withHandlerSection ? section : 'requester';
           body.col_span = colSpan;
         }
         return settingsApi.createField(unitId, bookingTypeId, body);
@@ -170,17 +172,19 @@ export function FieldDialog({ unitId, bookingTypeId, settings, field, onClose })
       {routeForm ? (
         isNew ? (
           <>
-            <Field as="div" label="מי ממלא את השדה">
-              <Seg label="מי ממלא את השדה" value={section} onChange={setSection} options={sections.map((candidate) => ({ value: candidate.id, label: candidate.label }))} />
-              <span className="small muted">{section === 'handler' ? 'ממולא על ידי הגורמים המטפלים במהלך הטיפול; אינו מוצג למבקש בהגשה.' : 'ממולא על ידי המבקש בעת ההגשה.'}</span>
-            </Field>
+            {withHandlerSection ? (
+              <Field as="div" label="מי ממלא את השדה">
+                <Seg label="מי ממלא את השדה" value={section} onChange={setSection} options={sections.map((candidate) => ({ value: candidate.id, label: candidate.label }))} />
+                <span className="small muted">{section === 'handler' ? 'ממולא על ידי הגורמים המטפלים במהלך הטיפול; אינו מוצג למבקש בהגשה.' : 'ממולא על ידי המבקש בעת ההגשה.'}</span>
+              </Field>
+            ) : null}
             <Field label="רוחב השדה בטופס">
               <Select className="input" value={colSpan} onChange={(event) => setColSpan(Number(event.target.value))} options={COL_SPANS} />
             </Field>
           </>
         ) : (
           <p className="small muted" style={{ margin: 0 }}>
-            מקטע: {sectionName(field.section ?? 'requester')} · רוחב: {Number(field.col_span) || 1} מתוך 4 (נקבעים בעת יצירת השדה).
+            {withHandlerSection ? `מקטע: ${sectionName(field.section ?? 'requester')} · ` : ''}רוחב: {Number(field.col_span) || 1} מתוך 4 (נקבע בעת יצירת השדה).
           </p>
         )
       ) : null}

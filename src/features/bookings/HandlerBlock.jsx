@@ -14,12 +14,12 @@ import { bookingsApi } from '@/lib/api/endpoints';
 import { invalidateWork, keys } from '@/lib/api/keys';
 import { fmtDateTime } from '@/lib/format';
 import { ROLE_NAME } from '@/lib/labels';
-import { routeOf } from '@/lib/routeTypes';
+import { routeOf, routeRoleLabel } from '@/lib/routeTypes';
 import { useSaveMutation } from '@/lib/useSaveMutation';
 import { useSession } from '@/providers/SessionProvider';
 
-/** Picks the handler among the unit's candidates (GET …/handler-candidates: the coordinators and the officers, by name). */
-function AssignHandlerDialog({ booking, busy, error, onAssign, onClose }) {
+/** Picks the handler among the unit's candidates (GET …/handler-candidates: the route's handlers and its owner, by name, each with their roles as the route names them). */
+function AssignHandlerDialog({ booking, catalog, busy, error, onAssign, onClose }) {
   const candidates = useQuery({
     queryKey: keys.handlerCandidates(booking.uuid),
     queryFn: ({ signal }) => bookingsApi.handlerCandidates(booking.uuid, signal),
@@ -68,7 +68,7 @@ function AssignHandlerDialog({ booking, busy, error, onAssign, onClose }) {
             {rows.map((person) => (
               <option key={person.uuid} value={person.uuid}>
                 {person.full_name}
-                {person.roles?.length ? ` · ${person.roles.map((role) => ROLE_NAME[role] ?? role).join(', ')}` : ''}
+                {person.roles?.length ? ` · ${person.roles.map((role) => routeRoleLabel(role, booking.booking_type_id, catalog) ?? ROLE_NAME[role] ?? role).join(', ')}` : ''}
               </option>
             ))}
           </Select>
@@ -153,7 +153,7 @@ export function HandlerBlock({ booking }) {
         </span>
         <FormError>{error}</FormError>
       </div>
-      {assigning ? <AssignHandlerDialog booking={booking} busy={mutation.isPending} error={dialogError} onAssign={assign} onClose={() => setAssigning(false)} /> : null}
+      {assigning ? <AssignHandlerDialog booking={booking} catalog={catalog} busy={mutation.isPending} error={dialogError} onAssign={assign} onClose={() => setAssigning(false)} /> : null}
     </>
   );
 }

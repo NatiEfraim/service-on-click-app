@@ -49,7 +49,25 @@ describe('actionTone', () => {
 describe('domainIconSrc', () => {
   it('points at the bundled icon of a known domain and at nothing for an unknown one', () => {
     expect(domainIconSrc(13)).toBe('/icons/domains/13.svg');
+    expect(domainIconSrc(14)).toBe('/icons/requester/clearance-grant.svg');
+    // the service desk's types have no picture file: TypePicture draws theirs (TypeIcon)
+    expect(domainIconSrc(20, 'software_install')).toBeNull();
     expect(domainIconSrc(99)).toBeNull();
+  });
+});
+
+describe('the service desk\'s route (תקשוב: 1 sent, 151 in handling, 5 / 7 closed)', () => {
+  it('colours a request in a representative\'s hands as progress', () => {
+    expect(statusTone(151)).toBe('acc');
+    expect(statusTone(1)).toBe('warn');
+  });
+
+  it('draws its moves by their direction: taking it forward, closing it, closing without doing as destructive, back to the queue as a plain button', () => {
+    expect(actionTone({ status_id: 151, direction: 'forward' })).toBe('primary');
+    expect(actionTone({ status_id: 5, direction: 'close' })).toBe('primary');
+    expect(actionTone({ status_id: 7, direction: 'reject' })).toBe('danger');
+    expect(actionTone({ status_id: 1, direction: 'back' })).toBe('secondary');
+    expect(actionVariant({ status_id: 151, direction: 'back' })).toBe('default');
   });
 });
 

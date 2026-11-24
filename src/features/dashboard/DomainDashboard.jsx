@@ -22,9 +22,9 @@ import { keys } from '@/lib/api/keys';
 import { fmtAgo, fmtDateTime, fmtLongHours } from '@/lib/format';
 import { DEFAULT_TARGET_HOURS } from '@/lib/targets';
 import { isTopicType } from '@/lib/topicTypes';
-import { hasOwnRoute, ROUTE_STAGE_ORDER } from '@/lib/routeTypes';
+import { hasOwnRoute, routeHandlerStages, routeStages } from '@/lib/routeTypes';
 import { STAGE_COLOR, STAGE_ORDER, STAGE_SHORT } from '@/lib/labels';
-import { homeKind } from '@/lib/nav';
+import { homeKind, isCommander } from '@/lib/nav';
 import { useArrivals } from '@/lib/useArrivals';
 import { useHeldHeight } from '@/lib/useHeldHeight';
 import { useSetSearchParams } from '@/lib/useSetSearchParams';
@@ -48,6 +48,9 @@ const ACTIVITY_ROLES = [
   { id: 'approver', label: 'מפקד תחום' },
   { id: 'vice_approver', label: 'גורם מטפל' },
 ];
+
+/** The icons of a route owner's stage cards, in the route's order (the clearance grant has four steps, the service desk two). */
+const ROUTE_STAGE_ICONS = ['users', 'calendar', 'check', 'shield'];
 
 /** What the last action was, in words: a status change names the new status, an edit says the details were updated. */
 function actionText(action, statusLabel) {
@@ -127,13 +130,16 @@ export function DomainDashboard() {
   };
 
   const canGoBack = homeKind(me) === 'tiles';
-  // the camp commander and the system admin review the system; the others see their work only (see the return)
-  const isManager = Boolean(me.is_super_admin || me.is_admin);
+  // the commanders (a camp's, the service desk's) and the system admin review the system; the others see their work only (see the return)
+  const isManager = Boolean(me.is_super_admin || isCommander(me));
   // the vice approver: their work only, the count in the list's title
   const handlerView = !isManager && Boolean(me.is_handler_only);
-  // only types with a route of their own (the clearance grant, lib/routeTypes): their steps stand in for the approval stages
-  const routeOnly = data.booking_type_ids.length > 0 && data.booking_type_ids.every((id) => hasOwnRoute(id));
-  const myCount = routeOnly ? (data.by_stage.interview_assignment ?? 0) + (data.by_stage.interviewed ?? 0) : data.by_stage.vice_approver ?? 0;
+  // only types with a route of their own (lib/routeTypes: the clearance grant, the service desk): their steps stand in for the approval stages
+  const routeOnly = data.booking_type_ids.length > 0 && data.booking_type_ids.every((id) => hasOwnRoute(id, catalog));
+  const routeStageIds = routeOnly ? routeStages(data.booking_type_ids[0], catalog) : [];
+  // the stages where the route's handlers have the turn (the coordinator's two, the representative's queue and handling)
+  const handlerStageIds = routeOnly ? routeHandlerStages(data.booking_type_ids[0], catalog) : ['vice_approver'];
+  const myCount = handlerStageIds.reduce((sum, stage) => sum + (data.by_stage[stage] ?? 0), 0);
   // ביטחון מידע / תקשוב requests have no handling target (their own roles handle them): no target line, no target button
   const noTarget = data.booking_type_ids.length > 0 && data.booking_type_ids.every((id) => isTopicType(id));
   const canSetTarget = !noTarget && single !== null && me.capabilities['targets.manage'] && (me.is_super_admin || me.permissions.includes(`admin_${single}`));
@@ -264,8 +270,8 @@ export function DomainDashboard() {
       {/* the owner of a route type (the קצין ביטחון מידע on the clearance grant): its steps, right to left; a click lists them */}
       {!isManager && !me.is_handler_only && routeOnly ? (
         <div className="card stats stagger">
-          {ROUTE_STAGE_ORDER.map((stage, index) => (
-            <Stat key={stage} index={index} icon={index === 0 ? 'users' : index === 1 ? 'calendar' : index === 2 ? 'check' : 'shield'} color={STAGE_COLOR[stage]} label={STAGE_SHORT[stage]} value={data.by_stage[stage] ?? 0} foot={catalog?.stages?.find((candidate) => candidate.id === stage)?.label ?? ''} onClick={() => goStage(stage)} />
+          {routeStageIds.map((stage, index) => (
+            <Stat key={stage} index={index} icon={ROUTE_STAGE_ICONS[index] ?? 'users'} color={STAGE_COLOR[stage]} label={STAGE_SHORT[stage]} value={data.by_stage[stage] ?? 0} foot={catalog?.stages?.find((candidate) => candidate.id === stage)?.label ?? ''} onClick={() => goStage(stage)} />
           ))}
         </div>
       ) : null}
@@ -296,7 +302,7 @@ export function DomainDashboard() {
           hint="הוותיקות קודם"
           tools={
             handlerView ? (
-              <Button size="sm" variant="ghost" onClick={() => goStage('vice_approver')}>
+              <Button size="sm" variant="ghost" onClick={() => goStage(handlerStageIds[0] ?? 'vice_approver')}>
                 לכל הקריאות
                 <Icon name="left" />
               </Button>
