@@ -8,6 +8,7 @@ export const STAGE_ORDER = [
   'supplier_files',
   'supplier_approval',
   'supplier_number',
+  'external_party',
   'barber',
   'realization',
 ];
@@ -20,6 +21,7 @@ export const STAGE_SHORT = {
   supplier_files: 'קבצים מהלקוח',
   supplier_approval: 'אישור ספק',
   supplier_number: 'מספר ספק',
+  external_party: 'ממתין לגורם חיצוני',
   realization: 'מימוש וסגירה',
   barber: 'ממתין לספר',
   closed: 'סגורה',
@@ -39,6 +41,7 @@ export const STAGE_COLOR = {
   supplier_files: '#AD903F',
   supplier_approval: '#D9962F',
   supplier_number: '#C0782A',
+  external_party: '#9A7B4F',
   realization: '#14915F',
   barber: '#39828C',
   closed: '#8A8296',
@@ -62,6 +65,7 @@ export const ROLE_NAME = {
   approver: 'מפקד תחום',
   vice_approver: 'גורם מטפל',
   transportation_control_officer: 'רמ"ד תו"ב',
+  in_unit_food_control_officer: 'רמ"ד תו"ב',
   // the ביטחון מידע and תקשוב handlers (RoleEnum on the API)
   infosec_officer: 'קצין ביטחון מידע',
   ict_handler: 'מנהל תקשוב',
@@ -133,7 +137,8 @@ export function statusTone(statusId) {
   // 105: the clearance grant's successful end (lib/routeTypes)
   if ([5, 105].includes(statusId)) return 'ok';
   if ([4, 6, 7, 12, 13, 16, 18].includes(statusId)) return 'bad';
-  if ([8, 9, 10].includes(statusId)) return 'hold';
+  // 19: parked for an external party, like the supplier holds
+  if ([8, 9, 10, 19].includes(statusId)) return 'hold';
   // 102-104: the interview is set, held, the clearance awaited
   if ([3, 11, 15, 17, 102, 103, 104].includes(statusId)) return 'acc';
   return 'warn';
@@ -146,7 +151,7 @@ export function statusTone(statusId) {
  */
 export function actionTone(action) {
   if ([4, 7, 12, 16, 18].includes(action.status_id) || action.direction === 'reject') return 'danger';
-  if ([8, 9, 10].includes(action.status_id)) return 'hold';
+  if ([8, 9, 10, 19].includes(action.status_id)) return 'hold';
   if (action.direction === 'back') return 'secondary';
   return 'primary';
 }

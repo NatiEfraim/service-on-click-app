@@ -8,7 +8,7 @@ import { topicHandlerRole } from '@/lib/topicTypes';
  * The columns' order (roles & permissions guide): the camp commander, the stages of the approval route, the ICT and
  * infosec officers, then the clearance grant's other roles (the coordinator who schedules, the קב"ט who submits).
  */
-const ROLE_ORDER = ['admin', 'approver', 'vice_approver', 'transportation_control_officer', 'ict_handler', 'infosec_officer', 'interview_coordinator', 'department_security_officer'];
+const ROLE_ORDER = ['admin', 'approver', 'vice_approver', 'transportation_control_officer', 'in_unit_food_control_officer', 'ict_handler', 'infosec_officer', 'interview_coordinator', 'department_security_officer'];
 
 /** Roles every person has or that are not a "grant on a domain" - never drawn as a role chip. */
 const NOT_A_GRANT = new Set(['user', 'super_admin']);
@@ -118,6 +118,9 @@ const isApproverSide = (role) => role !== 'admin' && !NOT_A_GRANT.has(role);
 /** Statuses only a control officer sets; a type reaching them has the control officer step. */
 const CONTROL_OFFICER_STATUSES = [14, 17, 18];
 
+/** Each control-officer role (רמ"ד תו"ב) is bound to one booking type (the API's RoleEnum): shipments 8, in-unit food 11. */
+const CONTROL_OFFICER_TYPE = { transportation_control_officer: 8, in_unit_food_control_officer: 11 };
+
 /** The booking types with a control officer step, from `catalog.booking_type_statuses`. */
 export function controlOfficerTypesOf(catalog) {
   return Object.entries(catalog?.booking_type_statuses ?? {})
@@ -144,6 +147,7 @@ export function roleApplies(role, bookingTypeId) {
   if (handler) return role === handler;
   if (role === 'infosec_officer' || role === 'ict_handler') return false;
   if (role === 'vice_approver') return id !== 5;
+  if (role in CONTROL_OFFICER_TYPE) return id === CONTROL_OFFICER_TYPE[role];
   return true;
 }
 
@@ -156,8 +160,8 @@ export function buildMatrix({ approver, admin, permissionNames, caller, targetUu
   const put = (bookingTypeId, role, value) => {
     // The barber answers as the approver; stale permission names must not revive a handler role.
     if (Number(bookingTypeId) === 5 && role === 'vice_approver') return;
-    // The control officer (רמ"ד תו"ב) exists only on the types with that step (shipments).
-    if (role === 'transportation_control_officer' && controlOfficerTypes && !controlOfficerTypes.includes(Number(bookingTypeId))) return;
+    // A control officer (רמ"ד תו"ב) exists only on the types with that step; the server's own rows always pass.
+    if (role in CONTROL_OFFICER_TYPE && controlOfficerTypes && !controlOfficerTypes.includes(Number(bookingTypeId))) return;
     const row = rows.get(bookingTypeId) ?? { bookingTypeId, cells: {} };
     row.cells[role] = { value, lock: lockReason(caller, targetUuid, bookingTypeId) };
     rows.set(bookingTypeId, row);

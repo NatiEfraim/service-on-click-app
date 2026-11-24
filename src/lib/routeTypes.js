@@ -25,10 +25,11 @@ export const ROUTE_STAGE_ORDER = ['interview_assignment', 'interview_scheduled',
 /** The two sections of a route form (`catalog.sections`): who fills the field. */
 export const SECTION_LABELS = { requester: 'פרטים נוספים', handler: 'למילוי על ידי גורמים רלוונטיים' };
 
+// The web-only role ids moved to 101+ on the API (role 7 is now the mobile's in-unit food control officer).
 const ROLE = {
-  infosec_officer: { id: 7, name: 'infosec_officer', label: 'קצין ביטחון מידע' },
-  department_security_officer: { id: 9, name: 'department_security_officer', label: 'קב"ט מחלקתי' },
-  interview_coordinator: { id: 10, name: 'interview_coordinator', label: 'מתאם תחקיר' },
+  infosec_officer: { id: 101, name: 'infosec_officer', label: 'קצין ביטחון מידע' },
+  department_security_officer: { id: 103, name: 'department_security_officer', label: 'קב"ט מחלקתי' },
+  interview_coordinator: { id: 104, name: 'interview_coordinator', label: 'מתאם תחקיר' },
 };
 
 /** The steps of the clearance grant: each step's status, its stage key (the status name) and its label. */

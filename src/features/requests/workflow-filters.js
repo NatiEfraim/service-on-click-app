@@ -38,6 +38,7 @@ export function workflowFilterOptions(me, catalog, selectedTypes = '') {
       else if (id === 8) stages.add('supplier_files');
       else if (id === 9) stages.add('supplier_approval');
       else if (id === 10) stages.add('supplier_number');
+      else if (id === 19) stages.add('external_party');
     }
   }
   return {
