@@ -15,6 +15,7 @@ import { useSession } from '@/providers/SessionProvider';
 import { orderedActions } from '@/lib/booking-actions';
 import { isHoldStatus } from '@/lib/booking-workflow';
 import { hasOwnRoute } from '@/lib/routeTypes';
+import { DepartmentChip } from './DepartmentChip';
 import { DomainBadge } from './DomainBadge';
 import { AgeBar, MiniRoute } from './RouteViz';
 import { useLeave, useArrive } from './ticketMotion';
@@ -121,6 +122,7 @@ export function Ticket({ booking: given, showActions = true, onAction, outcome, 
         </div>
         <div className="t2">
           <span>{booking.booking_type_label}</span>
+          <DepartmentChip booking={booking} />
           {me.is_super_admin && booking.unit_id ? <span>· {unitName(booking.unit_id)}</span> : null}
           <span>·</span>
           <MiniRoute booking={booking} catalog={catalog} />

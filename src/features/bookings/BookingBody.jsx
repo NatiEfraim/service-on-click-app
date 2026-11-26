@@ -2,6 +2,7 @@
 
 import { Fragment, useState } from 'react';
 import { RequesterRows } from '@/components/booking/RequesterRows';
+import { DepartmentChip } from '@/components/booking/DepartmentChip';
 import { DomainBadge } from '@/components/booking/DomainBadge';
 import { Rail } from '@/components/booking/RouteViz';
 import { Button } from '@/components/ui/Button';
@@ -88,6 +89,7 @@ export function Body({ booking }) {
           <StatusChip statusId={booking.status_id} label={booking.status_label} bookingTypeId={booking.booking_type_id} />
         </FadingTag>
         <Chip>{booking.booking_type_label}</Chip>
+        <DepartmentChip booking={booking} />
         <Chip>{unitName(booking.unit_id)}</Chip>
         <FadingTag value={conflict || booking.has_conflict ? 'conflict' : null}><NeedsDecision /></FadingTag>
         <FadingTag value={booking.sync_state === 'pending' ? 'pending' : null}>
